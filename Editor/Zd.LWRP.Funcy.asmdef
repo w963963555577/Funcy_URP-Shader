@@ -1,0 +1,21 @@
+{
+    "name": "Zd.LWRP.Funcy",
+    "references": [
+        "Unity.RenderPipelines.Lightweight.Runtime",
+        "Unity.Postprocessing.Runtime",
+        "Unity.Postprocessing.Editor",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Core.Editor",
+        "Unity.ShaderGraph.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
