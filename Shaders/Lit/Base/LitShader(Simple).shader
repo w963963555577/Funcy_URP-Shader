@@ -53,8 +53,8 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
         [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
 
 
-        _Speed ("Speed", Range(0.1, 10)) = 0
-        _Amount ("Amount", Range(0.1, 10)) = 0
+        _Speed ("Speed", Range(0.1, 10)) = 0.1
+        _Amount ("Amount", Range(0.1, 10)) = .01
         _Distance ("Distance", Range(0, 0.5)) = 0.0
         _ZMotion ("Z Motion", Range(0, 1)) = 0.5
         _ZMotionSpeed ("Z Motion Speed", Range(0, 10)) = 10
@@ -173,6 +173,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
                 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
                 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
+                #include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
 
                 CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -289,13 +290,16 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #ifdef _MAIN_LIGHT_SHADOWS
                     float4 shadowCoord: TEXCOORD6; // compute shadow coord per-vertex for the main light
                 #endif
+                float4 positionOS: TEXCOORD7;
                 float4 positionCS: SV_POSITION;
             };
 
             Varyings LitPassVertex(Attributes input)
             {
-                Varyings output;
+                input.positionOS = WindAnimation(input.positionOS);
 
+                Varyings output;
+                output.positionOS = input.positionOS;
                 // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
                 // Our compiler will strip all unused references (say you don't use view space).
                 // Therefore there is more flexibility at no additional cost with this struct.
@@ -419,6 +423,14 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 // Mix the pixel color with fogColor. You can optionaly use MixFogColor to override the fogColor
                 // with a custom one.
                 color = MixFog(color, fogFactor);
+
+                if (_DebugMask == 1.0)
+                {
+                    float4 objectOrigin = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
+                    float4 positionMask = _PositionMask.Sample(sampler_PositionMask, TRANSFORM_TEX(input.positionOS, _PositionMask));
+                    color = positionMask.rrrr * positionMask.aaar;
+                }
+                
                 return half4(color, surfaceData.alpha);
             }
             ENDHLSL

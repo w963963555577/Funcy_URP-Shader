@@ -207,7 +207,7 @@ namespace Funcy_LWRP_ShaderGUI
 
             if (material.HasProperty("_SmoothnessTextureChannel"))
             {
-                CoreUtils.SetKeyword(material, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A",
+                CoreUtils.SetKeyword(material, "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A", 
                     GetSmoothnessMapChannel(material) == SmoothnessMapChannel.AlbedoAlpha && opaque);
             }
         }

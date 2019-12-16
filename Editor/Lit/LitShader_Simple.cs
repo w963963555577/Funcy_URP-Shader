@@ -10,12 +10,24 @@ namespace Funcy_LWRP_ShaderGUI
     {
         // Properties
         private LitGUI.LitProperties litProperties;
+        MaterialProperty speed { get; set; }
+        MaterialProperty amount { get; set; }
+        MaterialProperty distance { get; set; }
+
+        MaterialProperty positionMask { get; set; }
+        MaterialProperty debugMask { get; set; }
+
 
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
+            speed = FindProperty("_Speed", properties);
+            amount = FindProperty("_Amount", properties);
+            distance = FindProperty("_Distance", properties);
+            positionMask = FindProperty("_PositionMask", properties);
+            debugMask = FindProperty("_DebugMask", properties);
         }
 
         // material changed check
@@ -129,6 +141,21 @@ namespace Funcy_LWRP_ShaderGUI
             }
 
             MaterialChanged(material);
+        }
+
+        public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
+        {
+            base.OnGUI(materialEditorIn,properties);
+
+            DrawArea("Tree Winding",()=> {
+                materialEditor.ShaderProperty(speed, speed.displayName);
+                materialEditor.ShaderProperty(amount, amount.displayName);
+                materialEditor.ShaderProperty(distance, distance.displayName);
+                materialEditor.TexturePropertySingleLine(positionMask.displayName.ToGUIContent(), positionMask);
+                materialEditor.TextureScaleOffsetProperty(positionMask);
+                materialEditor.ShaderProperty(debugMask, debugMask.displayName);
+            });
+            
         }
     }
 }
