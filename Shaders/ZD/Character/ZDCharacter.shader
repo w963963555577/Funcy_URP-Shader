@@ -431,5 +431,5 @@ Shader "ZDShader/LWRP/Character"
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "Funcy_LWRP_ShaderGUI.ZDCharacter"
+    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ZDCharacter"
 }

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using UnityEditor.AnimatedValues;
 using System.Linq;
 
-namespace Funcy_LWRP_ShaderGUI
+namespace UnityEditor
 {
     public abstract class BaseFuncyShaderGUI : ShaderGUI
     {

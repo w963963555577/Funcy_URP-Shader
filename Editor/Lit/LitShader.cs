@@ -1,10 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Rendering;
-using UnityEditor.Rendering;
 
-namespace Funcy_LWRP_ShaderGUI
+namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
     internal class LitShader : BaseShaderGUI
     {

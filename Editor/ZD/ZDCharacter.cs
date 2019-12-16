@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-namespace Funcy_LWRP_ShaderGUI
+namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
     internal class ZDCharacter : BaseFuncyShaderGUI
     {

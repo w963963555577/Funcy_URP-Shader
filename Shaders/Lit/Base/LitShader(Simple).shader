@@ -174,7 +174,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
                 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
                 #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
-
+                //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
                 CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
@@ -452,5 +452,5 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "Funcy_LWRP_ShaderGUI.LitShader_Simple"
+    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.LitShader_Simple"
 }
