@@ -173,7 +173,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
                 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
                 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
-                #include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
+                #include "Package/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
 
                 CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
