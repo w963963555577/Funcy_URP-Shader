@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "unity": "2019.2",
   "unityRelease": "6f1",
-  "displayName": "ZD Funcy LWRP",
+  "displayName": "_ZD Funcy LWRP",
   "dependencies": {
     "com.unity.postprocessing": "2.1.6",
     "com.unity.render-pipelines.core": "6.9.2"
