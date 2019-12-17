@@ -215,6 +215,7 @@ Shader "ZDShader/LWRP/Character"
 
                 float4 posWorld: TEXCOORD7;
                 float3 normalDir: TEXCOORD8;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             // Transforms normal from object to world space
             inline float3 UnityObjectToWorldNormal(in float3 norm)
@@ -245,6 +246,9 @@ Shader "ZDShader/LWRP/Character"
             Varyings LitPassVertex(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
                 // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
                 // Our compiler will strip all unused references (say you don't use view space).
@@ -334,6 +338,9 @@ Shader "ZDShader/LWRP/Character"
             }
             half4 LitPassFragment(Varyings i): SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                
                 float pbr = PBRShadow(i);
                 //Prepare Property....
                 //......................

@@ -292,13 +292,18 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #endif
                 float4 positionOS: TEXCOORD7;
                 float4 positionCS: SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             Varyings LitPassVertex(Attributes input)
             {
-                input.positionOS = WindAnimation(input.positionOS);
-
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+
+                input.positionOS = WindAnimation(input.positionOS);
                 output.positionOS = input.positionOS;
                 // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
                 // Our compiler will strip all unused references (say you don't use view space).
@@ -344,6 +349,9 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
 
             half4 LitPassFragment(Varyings input): SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
                 // Surface data contains albedo, metallic, specular, smoothness, occlusion, emission and alpha
                 // InitializeStandarLitSurfaceData initializes based on the rules for standard shader.
                 // You can write your own function to initialize the surface data of your shader.

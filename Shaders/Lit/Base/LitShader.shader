@@ -7,50 +7,50 @@ Shader "ZDShader/LWRP/PBR Base"
     Properties
     {
         // Specular vs Metallic workflow
-        [HideInInspector] _WorkflowMode("WorkflowMode", Float) = 1.0
+        [HideInInspector] _WorkflowMode ("WorkflowMode", Float) = 1.0
 
-        [MainColor] _BaseColor("Color", Color) = (1,1,1,1)
-        [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
+        [MainColor] _BaseColor ("Color", Color) = (1, 1, 1, 1)
+        [MainTexture] _BaseMap ("Albedo", 2D) = "white" { }
 
-        _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
+        _Cutoff ("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
-        _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.0
-        _GlossMapScale("Smoothness Scale", Range(0.0, 1.0)) = 1.0
-        _SmoothnessTextureChannel("Smoothness texture channel", Float) = 0
+        _Smoothness ("Smoothness", Range(0.0, 1.0)) = 0.0
+        _GlossMapScale ("Smoothness Scale", Range(0.0, 1.0)) = 1.0
+        _SmoothnessTextureChannel ("Smoothness texture channel", Float) = 0
 
-        [Gamma] _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
-        _MetallicGlossMap("Metallic", 2D) = "white" {}
+        [Gamma] _Metallic ("Metallic", Range(0.0, 1.0)) = 0.0
+        _MetallicGlossMap ("Metallic", 2D) = "white" { }
 
-        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
-        _SpecGlossMap("Specular", 2D) = "white" {}
+        _SpecColor ("Specular", Color) = (0.2, 0.2, 0.2)
+        _SpecGlossMap ("Specular", 2D) = "white" { }
 
-        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
-        [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
+        [ToggleOff] _SpecularHighlights ("Specular Highlights", Float) = 1.0
+        [ToggleOff] _EnvironmentReflections ("Environment Reflections", Float) = 1.0
 
-        _BumpScale("Scale", Float) = 1.0
-        _BumpMap("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Scale", Float) = 1.0
+        _BumpMap ("Normal Map", 2D) = "bump" { }
 
-        _OcclusionStrength("Strength", Range(0.0, 1.0)) = 1.0
-        _OcclusionMap("Occlusion", 2D) = "white" {}
+        _OcclusionStrength ("Strength", Range(0.0, 1.0)) = 1.0
+        _OcclusionMap ("Occlusion", 2D) = "white" { }
 
-        _EmissionColor("Color", Color) = (0,0,0)
-        _EmissionMap("Emission", 2D) = "white" {}
+        _EmissionColor ("Color", Color) = (0, 0, 0)
+        _EmissionMap ("Emission", 2D) = "white" { }
 
         // Blending state
-        [HideInInspector] _Surface("__surface", Float) = 0.0
-        [HideInInspector] _Blend("__blend", Float) = 0.0
-        [HideInInspector] _AlphaClip("__clip", Float) = 0.0
-        [HideInInspector] _SrcBlend("__src", Float) = 1.0
-        [HideInInspector] _DstBlend("__dst", Float) = 0.0
-        [Enum(Off, 0, On, 1)]  _ZWrite("__zw", Float) = 1.0
+        [HideInInspector] _Surface ("__surface", Float) = 0.0
+        [HideInInspector] _Blend ("__blend", Float) = 0.0
+        [HideInInspector] _AlphaClip ("__clip", Float) = 0.0
+        [HideInInspector] _SrcBlend ("__src", Float) = 1.0
+        [HideInInspector] _DstBlend ("__dst", Float) = 0.0
+        [Enum(Off, 0, On, 1)]  _ZWrite ("__zw", Float) = 1.0
         [Enum(UnityEngine.Rendering.CompareFunction)]  _ZTest ("__zt", Float) = 4
         
-        [HideInInspector] _Cull("__cull", Float) = 2.0
+        [HideInInspector] _Cull ("__cull", Float) = 2.0
 
-        _ReceiveShadows("Receive Shadows", Float) = 1.0
+        _ReceiveShadows ("Receive Shadows", Float) = 1.0
 
         // Editmode props
-        [HideInInspector] _QueueOffset("Queue offset", Float) = 0.0
+        [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
     }
 
     SubShader
@@ -59,7 +59,7 @@ Shader "ZDShader/LWRP/PBR Base"
         // that can match multiple render pipelines. If a RenderPipeline tag is not set it will match
         // any render pipeline. In case you want your subshader to only run in LWRP set the tag to
         // "LightweightPipeline"
-        Tags{"RenderType" = "Opaque" "RenderPipeline" = "LightweightPipeline" "IgnoreProjector" = "True"}
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "LightweightPipeline" "IgnoreProjector" = "True" }
         LOD 300
 
         // ------------------------------------------------------------------
@@ -71,14 +71,15 @@ Shader "ZDShader/LWRP/PBR Base"
             // "Lightmode" tag must be "LightweightForward" or not be defined in order for
             // to render objects.
             Name "StandardLit"
-            Tags{"LightMode" = "LightweightForward"}
+            Tags { "LightMode" = "LightweightForward" }
 
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             ZTest [_ZTest]
             Cull[_Cull]
-
+            
             HLSLPROGRAM
+            
             // Required to compile gles 2.0 with standard SRP library
             // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
             #pragma prefer_hlslcc gles
@@ -139,7 +140,7 @@ Shader "ZDShader/LWRP/PBR Base"
             // Required by all Lightweight Render Pipeline shaders.
             // It will include Unity built-in shader variables (except the lighting variables)
             // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions. 
+            // It will also include many utilitary functions.
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
             // Include this if you are doing a lit shader. This includes lighting shader variables,
@@ -253,35 +254,39 @@ Shader "ZDShader/LWRP/PBR Base"
 
             struct Attributes
             {
-                float4 positionOS   : POSITION;
-                float3 normalOS     : NORMAL;
-                float4 tangentOS    : TANGENT;
-                float2 uv           : TEXCOORD0;
-                float2 uvLM         : TEXCOORD1;
+                float4 positionOS: POSITION;
+                float3 normalOS: NORMAL;
+                float4 tangentOS: TANGENT;
+                float2 uv: TEXCOORD0;
+                float2 uvLM: TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
-                float2 uv                       : TEXCOORD0;
-                float2 uvLM                     : TEXCOORD1;
-                float4 positionWSAndFogFactor   : TEXCOORD2; // xyz: positionWS, w: vertex fog factor
-                half3  normalWS                 : TEXCOORD3;
+                float2 uv: TEXCOORD0;
+                float2 uvLM: TEXCOORD1;
+                float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
+                half3 normalWS: TEXCOORD3;
 
                 #if _NORMALMAP
-                    half3 tangentWS                 : TEXCOORD4;
-                    half3 bitangentWS               : TEXCOORD5;
+                    half3 tangentWS: TEXCOORD4;
+                    half3 bitangentWS: TEXCOORD5;
                 #endif
 
                 #ifdef _MAIN_LIGHT_SHADOWS
-                    float4 shadowCoord              : TEXCOORD6; // compute shadow coord per-vertex for the main light
+                    float4 shadowCoord: TEXCOORD6; // compute shadow coord per-vertex for the main light
                 #endif
-                float4 positionCS               : SV_POSITION;
+                float4 positionCS: SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             Varyings LitPassVertex(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
                 // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
                 // Our compiler will strip all unused references (say you don't use view space).
@@ -325,8 +330,11 @@ Shader "ZDShader/LWRP/PBR Base"
                 return output;
             }
 
-            half4 LitPassFragment(Varyings input) : SV_Target
+            half4 LitPassFragment(Varyings input): SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
                 // Surface data contains albedo, metallic, specular, smoothness, occlusion, emission and alpha
                 // InitializeStandarLitSurfaceData initializes based on the rules for standard shader.
                 // You can write your own function to initialize the surface data of your shader.
@@ -387,7 +395,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     // Returns the amount of lights affecting the object being renderer.
                     // These lights are culled per-object in the forward renderer
                     int additionalLightsCount = GetAdditionalLightsCount();
-                    for (int i = 0; i < additionalLightsCount; ++i)
+                    for (int i = 0; i < additionalLightsCount; ++ i)
                     {
                         // Similar to GetMainLight, but it takes a for-loop index. This figures out the
                         // per-object light index and samples the light buffer accordingly to initialized the
@@ -409,13 +417,14 @@ Shader "ZDShader/LWRP/PBR Base"
                 return half4(color, surfaceData.alpha);
             }
             ENDHLSL
+            
         }
 
         // Used for rendering shadowmaps
         UsePass "Lightweight Render Pipeline/Lit/ShadowCaster"
 
         // Used for depth prepass
-        // If shadows cascade are enabled we need to perform a depth prepass. 
+        // If shadows cascade are enabled we need to perform a depth prepass.
         // We also need to use a depth prepass in some cases camera require depth texture
         // (e.g, MSAA is enabled and we can't resolve with Texture2DMS
         UsePass "Lightweight Render Pipeline/Lit/DepthOnly"
