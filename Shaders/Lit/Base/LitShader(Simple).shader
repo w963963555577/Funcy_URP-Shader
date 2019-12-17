@@ -701,8 +701,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             
         }
 
-        // This pass it not used during regular rendering, only for lightmap baking.
-        /*
         Pass
         {
             
@@ -820,7 +818,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             ENDHLSL
             
         }
-        */
+        
     }
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the

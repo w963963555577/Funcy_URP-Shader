@@ -349,13 +349,12 @@ Shader "ZDShader/LWRP/Character"
                 #else
                     Light mainLight = GetMainLight();
                 #endif
-
+                mainLight.direction = -mainLight.direction;
                 i.normalDir = normalize(i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
                 float3 normalDirection = i.normalDir;
-                float3 lightDirection = mainLight.direction;
                 float3 lightColor = mainLight.color.rgb;
-                float3 halfDirection = normalize(viewDirection + lightDirection);
+                float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 ////// Lighting:
                 float attenuation = 1;
                 ////// Emissive:
