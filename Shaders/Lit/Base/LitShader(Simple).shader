@@ -445,17 +445,382 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             
         }
 
-        // Used for rendering shadowmaps
-        UsePass "Lightweight Render Pipeline/Lit/ShadowCaster"
+        Pass
+        {
+            
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
 
-        // Used for depth prepass
-        // If shadows cascade are enabled we need to perform a depth prepass.
-        // We also need to use a depth prepass in some cases camera require depth texture
-        // (e.g, MSAA is enabled and we can't resolve with Texture2DMS
-        UsePass "Lightweight Render Pipeline/Lit/DepthOnly"
+            ZWrite On
+            ZTest LEqual
+            
+            HLSLPROGRAM
+            
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define _EMISSION
+            #define ASE_SRP_VERSION 60902
 
-        // Used for Baking GI. This pass is stripped from build.
-        UsePass "Lightweight Render Pipeline/Lit/Meta"
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+
+
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
+
+            
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            CBUFFER_END
+
+
+            struct GraphVertexInput
+            {
+                float4 vertex: POSITION;
+                float2 uv: TEXCOORD;
+
+                float3 ase_normal: NORMAL;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            CBUFFER_START(UnityPerMaterial)
+            CBUFFER_END
+
+
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                float2 uv: TEXCOORD;
+
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            
+            // x: global clip space bias, y: normal world space bias
+            float3 _LightDirection;
+
+            VertexOutput ShadowPassVertex(GraphVertexInput v)
+            {
+                VertexOutput o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+                v.vertex = WindAnimation(v.vertex);
+
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue ;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+
+                v.ase_normal = v.ase_normal ;
+
+                float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
+                float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
+
+                float invNdotL = 1.0 - saturate(dot(_LightDirection, normalWS));
+                float scale = invNdotL * _ShadowBias.y;
+
+                // normal bias is negative since we want to apply an inset normal offset
+                positionWS = _LightDirection * _ShadowBias.xxx + positionWS;
+                positionWS = normalWS * scale.xxx + positionWS;
+                float4 clipPos = TransformWorldToHClip(positionWS);
+
+                // _ShadowBias.x sign depens on if platform has reversed z buffer
+                //clipPos.z += _ShadowBias.x;
+
+                #if UNITY_REVERSED_Z
+                    clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+                #else
+                    clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+                #endif
+                o.uv = v.uv;
+                o.clipPos = clipPos;
+
+                return o;
+            }
+
+            half4 ShadowPassFragment(VertexOutput IN): SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+
+                half4 albedoAlpha = _BaseMap.Sample(sampler_BaseMap, IN.uv);
+                float alpha = albedoAlpha.a;
+
+                if (alpha < 0.5)
+                {
+                    discard;
+                }
+
+                float Alpha = 1;
+                float AlphaClipThreshold = AlphaClipThreshold;
+
+                //clip(albedoAlpha.a);
+                return half4(0, 0, 0, 0);
+            }
+            
+            ENDHLSL
+            
+        }
+
+        
+        Pass
+        {
+            
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+
+            ZWrite On
+            ZTest LEqual
+
+            ColorMask 0
+            
+            HLSLPROGRAM
+            
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define _EMISSION
+            #define ASE_SRP_VERSION 60902
+
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #pragma vertex vert
+            #pragma fragment frag
+
+
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
+
+            
+
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            CBUFFER_END
+
+
+            struct GraphVertexInput
+            {
+                float4 vertex: POSITION;
+                float2 uv: TEXCOORD;
+                float3 ase_normal: NORMAL;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                float2 uv: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            
+
+            VertexOutput vert(GraphVertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+                v.vertex = WindAnimation(v.vertex);
+                
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue ;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+
+                v.ase_normal = v.ase_normal ;
+                o.uv = v.uv;
+                o.clipPos = TransformObjectToHClip(v.vertex.xyz);
+                return o;
+            }
+
+            half4 frag(VertexOutput IN): SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+
+                half4 albedoAlpha = _BaseMap.Sample(sampler_BaseMap, IN.uv);
+                float alpha = albedoAlpha.a;
+
+                if (alpha < 0.5)
+                {
+                    discard;
+                }
+
+                float Alpha = 1;
+                float AlphaClipThreshold = AlphaClipThreshold;
+
+                //clip(albedoAlpha.a);
+                return half4(0, 0, 0, 0);
+            }
+            ENDHLSL
+            
+        }
+
+        // This pass it not used during regular rendering, only for lightmap baking.
+        /*
+        Pass
+        {
+            
+            Name "Meta"
+            Tags { "LightMode" = "Meta" }
+
+            Cull Off
+            
+            HLSLPROGRAM
+            
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define _EMISSION
+            #define ASE_SRP_VERSION 60902
+            #define REQUIRE_OPAQUE_TEXTURE 1
+
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+
+            #pragma vertex vert
+            #pragma fragment frag
+
+            
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/MetaInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+
+            
+
+            CBUFFER_START(UnityPerMaterial)
+            float4 _Color0;
+            CBUFFER_END
+
+
+            #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            struct GraphVertexInput
+            {
+                float4 vertex: POSITION;
+                float3 ase_normal: NORMAL;
+                float4 texcoord1: TEXCOORD1;
+                float4 texcoord2: TEXCOORD2;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                float4 ase_texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            
+            VertexOutput vert(GraphVertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
+                float4 screenPos = ComputeScreenPos(ase_clipPos);
+                o.ase_texcoord = screenPos;
+                
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue ;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+
+                v.ase_normal = v.ase_normal ;
+                #if !defined(ASE_SRP_VERSION) || ASE_SRP_VERSION > 51300
+                    o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord1.xy, unity_LightmapST, unity_DynamicLightmapST);
+                #else
+                    o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord2.xy, unity_LightmapST);
+                #endif
+                return o;
+            }
+
+            half4 frag(VertexOutput IN): SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+                float4 screenPos = IN.ase_texcoord;
+                float4 ase_screenPosNorm = screenPos / screenPos.w;
+                ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
+                float4 fetchOpaqueVal51 = float4(SHADERGRAPH_SAMPLE_SCENE_COLOR(ase_screenPosNorm.xy), 1.0);
+                
+                
+                float3 Albedo = _Color0.rgb;
+                float3 Emission = fetchOpaqueVal51.rgb;
+                float Alpha = 1;
+                float AlphaClipThreshold = 0;
+
+                #if _AlphaClip
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+
+                MetaInput metaInput = (MetaInput)0;
+                metaInput.Albedo = Albedo;
+                metaInput.Emission = Emission;
+                
+                return MetaFragment(metaInput);
+            }
+            ENDHLSL
+            
+        }
+        */
     }
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
