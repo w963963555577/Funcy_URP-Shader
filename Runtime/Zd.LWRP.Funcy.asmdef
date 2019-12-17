@@ -1,5 +1,5 @@
 {
-    "name": "Unity.RenderPipelines.ZDShader.Runtime",
+    "name": "ZD.ZDShader.Runtime",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

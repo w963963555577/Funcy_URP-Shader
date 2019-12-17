@@ -1,5 +1,5 @@
 {
-    "name": "Unity.RenderPipelines.ZDShader.Editor",
+    "name": "ZD.ZDShader.Editor",
     "references": [
         "Unity.RenderPipelines.Lightweight.Runtime",
         "Unity.Postprocessing.Runtime",
