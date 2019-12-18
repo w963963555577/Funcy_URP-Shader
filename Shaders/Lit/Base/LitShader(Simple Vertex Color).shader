@@ -2,7 +2,7 @@
 // However, if you want to author shaders in shading language you can use this teamplate as a base.
 // Please note, this shader does not match perfomance of the built-in LWRP Lit shader.
 // This shader works with LWRP 5.7.2 version and above
-Shader "ZDShader/LWRP/PBR Base(Simple)"
+Shader "ZDShader/LWRP/PBR Base(Simple Vertex Color)"
 {
     Properties
     {
@@ -272,6 +272,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float4 tangentOS: TANGENT;
                 float2 uv: TEXCOORD0;
                 float2 uvLM: TEXCOORD1;
+                float4 color: COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -291,6 +292,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                     float4 shadowCoord: TEXCOORD6; // compute shadow coord per-vertex for the main light
                 #endif
                 float4 positionOS: TEXCOORD7;
+                float4 color: TEXCoord8;
                 float4 positionCS: SV_POSITION;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -305,6 +307,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
 
                 input.positionOS = WindAnimation(input.positionOS);
                 output.positionOS = input.positionOS;
+                output.color = input.color;
                 // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
                 // Our compiler will strip all unused references (say you don't use view space).
                 // Therefore there is more flexibility at no additional cost with this struct.
@@ -382,7 +385,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 // It's easy to plugin your own shading fuction. You just need replace LightingPhysicallyBased function
                 // below with your own.
                 BRDFData brdfData;
-                InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
+                InitializeBRDFData(surfaceData.albedo * input.color, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
 
                 // Light struct is provide by LWRP to abstract light shader variables.
                 // It contains light direction, color, distanceAttenuation and shadowAttenuation.
@@ -807,7 +810,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             ENDHLSL
             
         }
-        
     }
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
