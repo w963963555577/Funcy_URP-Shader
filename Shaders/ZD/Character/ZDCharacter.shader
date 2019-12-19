@@ -45,6 +45,8 @@ Shader "ZDShader/LWRP/Character"
         [Toggle]_ReceiveShadow ("Receive Shadow", Float) = 1.0
         
         _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
+
+        [Toggle] _InvertLightDirection ("Invert Light Direction", Float) = 0
     }
 
     SubShader
@@ -178,6 +180,7 @@ Shader "ZDShader/LWRP/Character"
                 half4 _Discoloration;
                 half _ReceiveShadow;
                 half _ShadowRefraction;
+                half _InvertLightDirection;
                 CBUFFER_END
 
                 TEXTURE2D(_mask);            SAMPLER(sampler_mask);
@@ -349,7 +352,11 @@ Shader "ZDShader/LWRP/Character"
                 #else
                     Light mainLight = GetMainLight();
                 #endif
-                mainLight.direction = -mainLight.direction;
+                
+                if (_InvertLightDirection == 1.0)
+                {
+                    mainLight.direction = -mainLight.direction;
+                }                
                 i.normalDir = normalize(i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
                 float3 normalDirection = i.normalDir;
@@ -405,7 +412,7 @@ Shader "ZDShader/LWRP/Character"
 
 
                 float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
-                + specularColor + diffuseColor) * mainLight.color * _Color.rgb / 2.0 +
+                + specularColor + diffuseColor) * mainLight.color * _Color.rgb +
                 (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var) +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
