@@ -230,9 +230,9 @@ Shader "ZDShader/LWRP/Character"
             inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
             {
                 half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
-                outSurfaceData.alpha = Alpha(albedoAlpha.a, _Color, _Cutoff);
+                outSurfaceData.alpha = Alpha(albedoAlpha.a, float4(1, 1, 1, 1), _Cutoff);
 
-                outSurfaceData.albedo = albedoAlpha.rgb * _Color.rgb;
+                outSurfaceData.albedo = albedoAlpha.rgb ;
                 
                 outSurfaceData.metallic = 0.0h;
                 outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
@@ -405,7 +405,7 @@ Shader "ZDShader/LWRP/Character"
 
 
                 float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
-                + specularColor + diffuseColor) * mainLight.color / 2.0 +
+                + specularColor + diffuseColor) * mainLight.color * _Color.rgb / 2.0 +
                 (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var) +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
