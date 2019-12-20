@@ -17,21 +17,29 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         private void Reset()
         {
             currentRenderer = GetComponent<Renderer>();
+            ClearTexture();
+#if UNITY_EDITOR
+            SceneView.duringSceneGui += UpdateSceneView;
+#endif
         }
         private void OnEnable()
         {
             if (!currentRenderer) return;
 
-            RenderTexture.active = paintedTex;
-            GL.Clear(true, true, Color.white);
-            RenderTexture.active = null;
-
-            
+            ClearTexture();
 #if UNITY_EDITOR
             SceneView.duringSceneGui += UpdateSceneView;            
 #endif
         }
+        public void ClearTexture()
+        {
+            runtimeTex.Release();
+            paintedTex.Release();
+            RenderTexture.active = paintedTex;
+            GL.Clear(true, true, Color.white);
+            RenderTexture.active = null;
 
+        }
         private void OnDisable()
         {
             DestroyImmediate(isolateCamera);
@@ -162,7 +170,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             GUI.DrawTexture(rect, data.paintedTex);
             GUILayout.Box("", GUILayout.Width(rect.width), GUILayout.Height(rect.height));
             EditorGUI.EndDisabledGroup();
-
+            if (GUILayout.Button("Clear Texture as white")) data.ClearTexture();
             data.selectProperty = SelectPopupShaderProperties("Select Property", data.currentRenderer.sharedMaterial.shader, data.selectProperty, ShaderUtil.ShaderPropertyType.TexEnv);
             
 

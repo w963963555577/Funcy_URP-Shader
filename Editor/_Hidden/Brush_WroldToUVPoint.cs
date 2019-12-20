@@ -46,7 +46,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             if (material == null)
                 return;
 
-            Debug.Log("Change");
+            //Debug.Log("Change");
         }
     }
 }
