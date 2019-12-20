@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: a09c1164cbc94f9429bde49814d78709
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - worldToUVPoint: {fileID: 2100000, guid: 8eb030cbdc5a7b448a2f2a648c4dd5bb, type: 2}
+  - brushMask: {fileID: 2100000, guid: de2435dc87b646240b1d9dc25a25cfb6, type: 2}
+  - runtimeTex: {fileID: 8400000, guid: ae3cb27b4c1f8704094bcb482d8c3ee4, type: 2}
+  - paintedTex: {fileID: 8400000, guid: bf0d84c4a1c44f14e806131fc391b579, type: 2}
+  - isolateCamera: {instanceID: 0}
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: f177ec744547a2c4b8dd06f19d40d6fc, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
