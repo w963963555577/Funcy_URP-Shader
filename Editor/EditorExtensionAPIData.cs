@@ -168,7 +168,7 @@ namespace UnityEditor
                 EditorExtensionAPIData.data.AllAssetPath = all;
             }
 
-            EditorApplication.projectWindowChanged += delegate
+            EditorApplication.projectChanged += delegate
             {
                 if (EditorExtensionAPIData.data == null) return;
                 all = allAssetPath;
@@ -191,15 +191,20 @@ namespace UnityEditor
                 if (Resources.FindObjectsOfTypeAll<T>().Length == 0 || Resources.FindObjectsOfTypeAll<T>().ToList().Find(x => x.name == fileName) == null)
                 {
                     ScriptableObject asset = ScriptableObject.CreateInstance<T>();
-                    AssetDatabase.CreateAsset(asset, assetPath + "/" + fileName + ".asset");
+                    if (!Directory.Exists(Application.dataPath + "/Editor"))
+                        Directory.CreateDirectory(Application.dataPath + "/Editor");
+                    AssetDatabase.CreateAsset(asset, assetPath + "/Editor/" + fileName + ".asset");
+
                 }
-                EditorApplication.projectWindowChanged += delegate
+                EditorApplication.projectChanged += delegate
                 {
                     if (Resources.FindObjectsOfTypeAll<T>().Length == 0 || Resources.FindObjectsOfTypeAll<T>().ToList().Find(x => x.name == fileName) == null)
                     {
                         ScriptableObject asset = ScriptableObject.CreateInstance<T>();
-                        AssetDatabase.CreateAsset(asset, assetPath + "/" + fileName + ".asset");
-                        Debug.Log(fileName + "曰 : " + "你刪不掉  (́◉◞౪◟◉‵). ヽ(́◕◞౪◟◕‵)ﾉ.");
+                        if(!Directory.Exists(Application.dataPath+ "/Editor"))
+                            Directory.CreateDirectory(Application.dataPath + "/Editor");
+                        AssetDatabase.CreateAsset(asset, assetPath + "/Editor/" + fileName + ".asset");
+                        //Debug.Log(fileName + "曰 : " + "你刪不掉  (́◉◞౪◟◉‵). ヽ(́◕◞౪◟◕‵)ﾉ.");
                     }
                 };
 
