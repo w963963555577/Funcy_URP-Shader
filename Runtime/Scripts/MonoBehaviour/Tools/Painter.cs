@@ -155,8 +155,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         private void OnEnable()
         {
             data = target as Painter;
-            worldToUVPoint = (MaterialEditor)Editor.CreateEditor(data.worldToUVPoint);
-            brushMask = (MaterialEditor)Editor.CreateEditor(data.brushMask);
+            worldToUVPoint = CreateEditor(data.worldToUVPoint) as MaterialEditor;
+            brushMask = CreateEditor(data.brushMask) as MaterialEditor;
         }
         public override void OnInspectorGUI()
         {
@@ -172,12 +172,16 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             EditorGUI.EndDisabledGroup();
             if (GUILayout.Button("Clear Texture as white")) data.ClearTexture();
             data.selectProperty = SelectPopupShaderProperties("Select Property", data.currentRenderer.sharedMaterial.shader, data.selectProperty, ShaderUtil.ShaderPropertyType.TexEnv);
+
+            GUILayout.BeginVertical("Box");
             
+            worldToUVPoint.ShaderProperty(data.worldToUVPoint.shader, 0);
+            worldToUVPoint.ShaderProperty(data.worldToUVPoint.shader, 1);
+            brushMask.ShaderProperty(data.brushMask.shader, 0);
 
-            worldToUVPoint.OnInspectorGUI();
-            brushMask.OnInspectorGUI();
+            GUILayout.EndVertical();
 
-            if (GUILayout.Button("Save to Texture"))
+            if (GUILayout.Button("Save to Texture")) 
                 SaveRenderTextureToPNG("painter_texture", data.paintedTex);
 
             Repaint();

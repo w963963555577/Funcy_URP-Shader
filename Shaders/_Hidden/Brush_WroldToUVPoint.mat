@@ -28,9 +28,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BrushHardness: 0.126
+    - _BrushHardness: 1
     - _BrushOpacity: 1
-    - _BrushSize: 12.6
+    - _BrushSize: 1.4
     m_Colors:
     - _BrushColor: {r: 1, g: 0.20461819, b: 0, a: 1}
     - _HitTexCoord: {r: -0.91424215, g: 2.531776, b: -9.533042, a: 0}
