@@ -56,13 +56,13 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             if (!isolateCamera)
             {
                 GameObject go = new GameObject("Brush isolate camera" + GetInstanceID(), typeof(Camera));
-                isolateCamera = go.GetComponent<Camera>();                                
+                isolateCamera = go.GetComponent<Camera>();
+                isolateCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;
             }
             else
             {
                 isolateCamera.transform.position = currentRenderer.bounds.center;                
-                isolateCamera.transform.rotation = Quaternion.identity;
-                isolateCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;
+                isolateCamera.transform.rotation = Quaternion.identity;                
                 isolateCamera.clearFlags = CameraClearFlags.SolidColor;
                 isolateCamera.backgroundColor = Color.black;
                 isolateCamera.orthographic = true;
@@ -72,6 +72,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 isolateCamera.targetTexture = runtimeTex;
             }
         }
+
 
         Ray ray;
 #if UNITY_EDITOR
@@ -108,11 +109,15 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
             {
                 worldToUVPoint.SetVector("_Point", hit.point);
+
                 if (!Input.GetLeftAltPress() && Input.GetMouseLeftPress())
                 {
-                    Graphics.Blit(null, paintedTex, brushMask);
+                    if (currentPoint != hit.point && Vector3.Distance(currentPoint, hit.point) > worldToUVPoint.GetFloat("_BrushSize") / 3000.0f * Vector3.Distance(currentPoint, hit.point)) 
+                    {
+                        currentPoint = hit.point;
+                        Graphics.Blit(null, paintedTex, brushMask);
+                    }                    
                 }
-
                 Debug.DrawLine(hit.point, hit.point + hit.normal, Color.red);
             }
             else
@@ -122,6 +127,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         }
 #if UNITY_EDITOR
 
+        [HideInInspector] [SerializeField] private Vector3 currentPoint;
         public class Input
         {
             public static bool GetMouseLeftPress() { return GetAsyncKeyState(0x01) != 0; }
@@ -143,8 +149,10 @@ namespace UnityEngine.Funcy.LWRP.Runtime
 
         public Renderer currentRenderer;
         public string selectProperty = "";
+
         #endregion
     }
+    #region Editor
 #if UNITY_EDITOR
     [InitializeOnLoad]
     [CustomEditor(typeof(Painter))]
@@ -192,6 +200,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             DestroyImmediate(worldToUVPoint);
             DestroyImmediate(brushMask);
         }
+
+
         public string SelectPopupShaderProperties(string title,Shader shader, string nowSelection, params ShaderUtil.ShaderPropertyType[] includeTypes)
         {
             List<string> props = new List<string>();
@@ -251,4 +261,5 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         }
     }
 #endif
+    #endregion Editor
 }
