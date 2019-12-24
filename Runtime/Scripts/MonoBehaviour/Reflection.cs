@@ -7,7 +7,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
     {
         #region Variables
         public bool m_DisablePixelLights = true;
-        public int m_TextureSize = 256;
+        public int m_TextureSize = 128;
         public float m_ClipPlaneOffset = 0.07f;
 
         public LayerMask m_ReflectLayers = -1;
