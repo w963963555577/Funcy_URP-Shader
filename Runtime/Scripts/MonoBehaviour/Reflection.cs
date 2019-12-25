@@ -14,7 +14,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
 
         private Hashtable m_ReflectionCameras = new Hashtable(); // Camera -> Camera table
 
-        [SerializeField] private RenderTexture m_ReflectionTexture = null;
+        
         private int m_OldReflectionTextureSize = 0;
 
         private static bool s_InsideRendering = false;
@@ -25,6 +25,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
 
         public float reflectionCamFarClippingPlane = 5;
 
+        public string materialPropertyName = "_ReflectionMap";
+        [SerializeField] private RenderTexture m_ReflectionTexture = null;
 
 #if UNITY_5_3 || UNITY_5_4 || UNITY_5_5
     public bool disableInEditMode;
@@ -117,8 +119,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             Material[] materials = GetComponent<Renderer>().sharedMaterials;
             foreach (Material mat in materials)
             {
-                if (mat.HasProperty("_ReflectionTex"))
-                    mat.SetTexture("_ReflectionTex", m_ReflectionTexture);
+                if (mat.HasProperty(materialPropertyName))
+                    mat.SetTexture(materialPropertyName, m_ReflectionTexture);
             }
 
             // Set matrix on the shader that transforms UVs from object space into screen

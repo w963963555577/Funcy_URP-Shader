@@ -109,8 +109,14 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
             {
                 worldToUVPoint.SetVector("_Point", hit.point);
+                bool isMousePress = false;
+#if UNITY_EDITOR
+                isMousePress = !Input.GetLeftAltPress() && Input.GetMouseLeftPress();
+#else
+                isMousePress = UnityEngine.Input.GetMouseButton(0) && UnityEngine.Input.GetKey(KeyCode.LeftAlt);
+#endif
 
-                if (!Input.GetLeftAltPress() && Input.GetMouseLeftPress())
+                if (isMousePress)
                 {
                     if (currentPoint != hit.point && Vector3.Distance(currentPoint, hit.point) > worldToUVPoint.GetFloat("_BrushSize") / 3000.0f * Vector3.Distance(currentPoint, hit.point)) 
                     {
@@ -134,7 +140,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             public static bool GetLeftAltPress() { return GetAsyncKeyState(18) != 0; }
         }
 #endif
-        #region Properties
+#region Properties
 #if UNITY_EDITOR
         [DllImport("user32.dll")]
         public static extern short GetAsyncKeyState(UInt16 virtualKeyCode);
@@ -150,9 +156,9 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         public Renderer currentRenderer;
         public string selectProperty = "";
 
-        #endregion
+#endregion
     }
-    #region Editor
+#region Editor
 #if UNITY_EDITOR
     [InitializeOnLoad]
     [CustomEditor(typeof(Painter))]
@@ -261,5 +267,5 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         }
     }
 #endif
-    #endregion Editor
+#endregion Editor
 }
