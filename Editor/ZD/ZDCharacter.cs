@@ -27,7 +27,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         MaterialProperty receiveShadow { get; set; }
         MaterialProperty shadowRefrection { get; set; }
-        MaterialProperty invertLightDirection { get; set; }
+        //MaterialProperty invertLightDirection { get; set; }
         
 
         bool drawBaseMap = false;
@@ -56,7 +56,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             receiveShadow = FindProperty("_ReceiveShadow", props);
             shadowRefrection= FindProperty("_ShadowRefraction", props);
-            invertLightDirection = FindProperty("_InvertLightDirection", props);
+            //invertLightDirection = FindProperty("_InvertLightDirection", props);
         }
         public override void OnEnable()
         {            
@@ -164,7 +164,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName);
                 materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
-                materialEditor.ShaderProperty(invertLightDirection, invertLightDirection.displayName);
+                //materialEditor.ShaderProperty(invertLightDirection, invertLightDirection.displayName);
             });
 
             //base.OnMaterialGUI();
