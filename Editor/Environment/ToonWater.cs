@@ -155,7 +155,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Foam & Wave", () => {
                 materialEditor.TexturePropertyTwoLines("Map".ToGUIContent(), foamMap, foamScale, "Color".ToGUIContent(), foamColor);
-                materialEditor.ShaderProperty(waveSpeed, reflection.displayName);
+                materialEditor.ShaderProperty(waveSpeed, waveSpeed.displayName);
                 RadiusSlider(waveDirection);
 
             });
