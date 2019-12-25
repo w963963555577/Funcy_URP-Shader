@@ -46,7 +46,6 @@ Shader "ZDShader/LWRP/Character"
         
         _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
 
-        [Toggle] _InvertLightDirection ("Invert Light Direction", Float) = 0
     }
 
     SubShader
@@ -180,7 +179,6 @@ Shader "ZDShader/LWRP/Character"
                 half4 _Discoloration;
                 half _ReceiveShadow;
                 half _ShadowRefraction;
-                half _InvertLightDirection;
                 CBUFFER_END
 
                 TEXTURE2D(_mask);            SAMPLER(sampler_mask);
@@ -217,7 +215,6 @@ Shader "ZDShader/LWRP/Character"
                 float4 positionCS: SV_POSITION;
 
                 float4 posWorld: TEXCOORD7;
-                float3 normalDir: TEXCOORD8;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             // Transforms normal from object to world space
@@ -294,7 +291,6 @@ Shader "ZDShader/LWRP/Character"
                 output.positionCS = vertexInput.positionCS;
 
                 output.posWorld = mul(unity_ObjectToWorld, input.positionOS);
-                output.normalDir = UnityObjectToWorldNormal(input.normalOS);
 
                 return output;
             }
@@ -353,13 +349,9 @@ Shader "ZDShader/LWRP/Character"
                     Light mainLight = GetMainLight();
                 #endif
                 
-                if (_InvertLightDirection == 1.0)
-                {
-                    mainLight.direction = -mainLight.direction;
-                }                
-                i.normalDir = normalize(i.normalDir);
+                //i.normalDir = normalize(i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
-                float3 normalDirection = i.normalDir;
+                float3 normalDirection = i.normalWS;
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 ////// Lighting:
@@ -369,7 +361,7 @@ Shader "ZDShader/LWRP/Character"
                 float4 _ESSGMask_var = _mask.Sample(sampler_mask, TRANSFORM_TEX(i.uv, _mask)); // R-Em  G-Shadow B-Specular A-Gloss
                 float glossMask = _ESSGMask_var.a;
                 float specStep = 2.0;
-                float specularArea = floor(pow(max(0, dot(i.normalDir, halfDirection)), exp2(lerp(1, 11, (_Gloss_var * glossMask)))) * specStep) / (specStep - 1);
+                float specularArea = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss_var * glossMask)))) * specStep) / (specStep - 1);
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
@@ -384,12 +376,11 @@ Shader "ZDShader/LWRP/Character"
                 pbr = saturate(pbr);
                 
                 //PBRShadowArea
-                float PBRShadowArea = saturate((dot(i.normalDir, mainLight.direction) + (shadowRefr - 0.5) * 2.0 * _ShadowRefraction) * (_ReceiveShadow == 1.0 ? pbr: 1.0)) ;
+                float PBRShadowArea = saturate((dot(i.normalWS, mainLight.direction) + (shadowRefr - 0.5) * 2.0 * _ShadowRefraction) * (_ReceiveShadow == 1.0 ? pbr: 1.0)) ;
                 //PBRShadowArea = saturate(step(1.0, 1.0 - PBRShadowArea));
                 PBRShadowArea = saturate(pow(1.0 - PBRShadowArea, Remap(_ShadowRamp, 0, 1, 30, 1000)));
                 PBRShadowArea = saturate((1.0 - PBRShadowArea)) ;
                 
-
                 float node_8468 = 2.0;
                 float shadowArea0 = saturate(((1.0 - shadowPow1) * shadowPow0 * node_8468)) ;
                 float4 _ShadowColor0_var = _ShadowColor0;
