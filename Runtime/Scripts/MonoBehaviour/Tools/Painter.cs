@@ -131,9 +131,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 //Debug.DrawLine(ray.origin, ray.origin + ray.direction * 1000f, Color.red);
             }
         }
-#if UNITY_EDITOR
-
         [HideInInspector] [SerializeField] private Vector3 currentPoint;
+#if UNITY_EDITOR
         public class Input
         {
             public static bool GetMouseLeftPress() { return GetAsyncKeyState(0x01) != 0; }
