@@ -91,6 +91,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty foamScale { get; set; }
         MaterialProperty reflection { get; set; }
         MaterialProperty specular { get; set; }
+        MaterialProperty specularColor { get; set; }
         MaterialProperty reflectMap { get; set; }
         MaterialProperty depth { get; set; }
         MaterialProperty depthArea { get; set; }
@@ -109,6 +110,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             refractionIntensity = FindProperty("_RefractionIntensity", props);
 
             reflection = FindProperty("_Reflection", props);
+            specularColor = FindProperty("_SpecularColor", props);
             specular = FindProperty("_Specular", props);
 
             foamColor = FindProperty("_FoamColor", props);
@@ -149,6 +151,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             {
                 materialEditor.TexturePropertyTwoLines("Map".ToGUIContent(), normalMap, refractionScale, "Intensity".ToGUIContent(), refractionIntensity);
                 materialEditor.ShaderProperty(reflection, reflection.displayName);
+                materialEditor.ShaderProperty(specularColor, specularColor.displayName);
                 materialEditor.ShaderProperty(specular, specular.displayName);
 
             });
