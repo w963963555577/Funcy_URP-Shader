@@ -349,10 +349,11 @@ Shader "ZDShader/LWRP/Character"
                 //Prepare Property....
                 //......................
 
-                
+                float3 positionWS = i.positionWSAndFogFactor.xyz;
                 //i.normalDir = normalize(i.normalDir);
-                float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
+                float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
                 float3 normalDirection = i.normalWS;
+                float fresnel = pow(1.0 - saturate(dot(viewDirection, normalDirection)), 8);
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 ////// Lighting:
@@ -412,9 +413,9 @@ Shader "ZDShader/LWRP/Character"
                 if (_DiscolorationOn == 1.0)
                 {
                     float discolorationArea = saturate(_diffuse_var.a);
-                    emissive = (1.0 - discolorationArea) * emissive + discolorationArea * emissive * _Discoloration;
+                    emissive = (1.0 - discolorationArea) * emissive + discolorationArea * emissive * _Discoloration ;
                 }
-                
+                emissive += fresnel * (1.0 - shadowTotal);
 
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w;
