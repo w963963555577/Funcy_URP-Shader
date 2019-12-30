@@ -43,9 +43,12 @@ Shader "ZDShader/LWRP/Character"
         [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
 
         [Toggle]_ReceiveShadow ("Receive Shadow", Float) = 1.0
-        
-        _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
 
+        [Toggle]_CustomLighting ("Custom Lighting", Float) = 0.0
+        [HDR]_CustomLightColor ("Custom Light Color", Color) = (1, 1, 1, 1)
+        _CustomLightDirection ("Custom Light Direction", Vector) = (0.5747975, 0.4099231, -0.7082168, 0.0)
+
+        _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
     }
 
     SubShader
@@ -179,6 +182,12 @@ Shader "ZDShader/LWRP/Character"
                 half4 _Discoloration;
                 half _ReceiveShadow;
                 half _ShadowRefraction;
+
+                half _CustomLighting;
+                half4 _CustomLightColor;
+                half4 _CustomLightDirection;
+                
+                
                 CBUFFER_END
 
                 TEXTURE2D(_mask);            SAMPLER(sampler_mask);
@@ -217,16 +226,7 @@ Shader "ZDShader/LWRP/Character"
                 float4 posWorld: TEXCOORD7;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-            // Transforms normal from object to world space
-            inline float3 UnityObjectToWorldNormal(in float3 norm)
-            {
-                #ifdef UNITY_ASSUME_UNIFORM_SCALING
-                    return UnityObjectToWorldDir(norm);
-                #else
-                    // mul(IT_M, norm) => mul(norm, I_M) => {dot(norm, I_M.col0), dot(norm, I_M.col1), dot(norm, I_M.col2)}
-                    return normalize(mul(norm, (float3x3)unity_WorldToObject));
-                #endif
-            }
+
             inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
             {
                 half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
@@ -238,9 +238,9 @@ Shader "ZDShader/LWRP/Character"
                 outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
 
                 outSurfaceData.smoothness = 0.0;
-                outSurfaceData.normalTS = float3(0, 0, 0);
-                outSurfaceData.occlusion = float3(0, 0, 0);
-                outSurfaceData.emission = float3(0, 0, 0);
+                outSurfaceData.normalTS = half3(0, 0, 0);
+                outSurfaceData.occlusion = half3(0, 0, 0);
+                outSurfaceData.emission = half3(0, 0, 0);
             }
 
             Varyings LitPassVertex(Attributes input)
@@ -295,7 +295,7 @@ Shader "ZDShader/LWRP/Character"
                 return output;
             }
 
-            float PBRShadow(Varyings i)
+            float PBRShadow(Varyings i, Light mainLight)
             {
                 SurfaceData surfaceData;
                 InitializeStandardLitSurfaceData(i.uv, surfaceData);
@@ -321,14 +321,6 @@ Shader "ZDShader/LWRP/Character"
                 BRDFData brdfData;
                 InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
 
-
-                #ifdef _MAIN_LIGHT_SHADOWS
-
-                    Light mainLight = GetMainLight(i.shadowCoord);
-                #else
-                    Light mainLight = GetMainLight();
-                #endif
-
                 return LightingPhysicallyBased(brdfData, mainLight, normalWS, viewDirectionWS).r;
             }
             float Remap(float value, float from1, float to1, float from2, float to2)
@@ -339,15 +331,24 @@ Shader "ZDShader/LWRP/Character"
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-                
-                float pbr = PBRShadow(i);
-                //Prepare Property....
-                //......................
                 #ifdef _MAIN_LIGHT_SHADOWS
                     Light mainLight = GetMainLight(i.shadowCoord);
                 #else
                     Light mainLight = GetMainLight();
                 #endif
+
+                if (_CustomLighting == 1.0)
+                {
+                    mainLight.color = _CustomLightColor;
+                    //mainLight.direction = _CustomLightDirection;
+                }
+
+                //mainLight.shadowAttenuation = 0.1;
+
+                float pbr = PBRShadow(i, mainLight);
+                //Prepare Property....
+                //......................
+
                 
                 //i.normalDir = normalize(i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);

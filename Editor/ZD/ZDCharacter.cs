@@ -25,6 +25,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty shadowColor1 { get; set; }
         MaterialProperty shadowColorElse { get; set; }
 
+        MaterialProperty customLighting { get; set; }
+        MaterialProperty customLightColor { get; set; }
+        MaterialProperty customLightDirection { get; set; }
+
         MaterialProperty receiveShadow { get; set; }
         MaterialProperty shadowRefrection { get; set; }
         //MaterialProperty invertLightDirection { get; set; }
@@ -54,10 +58,16 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             shadowColor1 = FindProperty("_ShadowColor1", props);
             shadowColorElse = FindProperty("_ShadowColorElse", props);
 
+            customLighting = FindProperty("_CustomLighting", props);
+            customLightColor = FindProperty("_CustomLightColor", props);
+            customLightDirection = FindProperty("_CustomLightDirection", props);
+
             receiveShadow = FindProperty("_ReceiveShadow", props);
             shadowRefrection= FindProperty("_ShadowRefraction", props);
-            //invertLightDirection = FindProperty("_InvertLightDirection", props);
+            
         }
+
+        [SerializeField]Transform lightTransform, lightTransfrom_Tmp; 
         public override void OnEnable()
         {            
             EditorApplication.update += materialEditor.Repaint;
@@ -165,6 +175,20 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
                 //materialEditor.ShaderProperty(invertLightDirection, invertLightDirection.displayName);
+            });
+
+            DrawArea("Custom Lighting", () => {
+                materialEditor.ShaderProperty(customLighting, "Enable " + customLighting.displayName);
+                materialEditor.ShaderProperty(customLightColor, "Color");
+                lightTransform = EditorGUILayout.ObjectField("Ctrl Transform",lightTransform, typeof(Transform), true) as Transform;
+                if (lightTransfrom_Tmp != lightTransform)
+                {
+                    lightTransfrom_Tmp = lightTransform;
+                    if (lightTransfrom_Tmp) lightTransform.forward = -customLightDirection.vectorValue;
+                }
+                if (lightTransform)
+                    customLightDirection.vectorValue = -lightTransform.forward;
+
             });
 
             //base.OnMaterialGUI();
