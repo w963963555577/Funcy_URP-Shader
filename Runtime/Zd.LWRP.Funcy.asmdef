@@ -1,6 +1,9 @@
 {
     "name": "ZD.ZDShader.Runtime",
-    "references": [],
+    "references": [
+        "GUID:d60799ab2a985554ea1a39cd38695018",
+        "GUID:f40b851808c81294bac71a52a2bc39de"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

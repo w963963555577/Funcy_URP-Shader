@@ -33,4 +33,4 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats: []
     m_Colors:
-    - _BrushColor: {r: 0.32156864, g: 0.26527888, b: 0, a: 0.15294118}
+    - _BrushColor: {r: 0.009433985, g: 0.008879364, b: 0.00618549, a: 1}

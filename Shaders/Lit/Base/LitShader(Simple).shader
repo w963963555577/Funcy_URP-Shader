@@ -67,10 +67,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
 
     SubShader
     {
-        // With SRP we introduce a new "RenderPipeline" tag in Subshader. This allows to create shaders
-        // that can match multiple render pipelines. If a RenderPipeline tag is not set it will match
-        // any render pipeline. In case you want your subshader to only run in LWRP set the tag to
-        // "LightweightPipeline"
+
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "LightweightPipeline" "IgnoreProjector" = "True" }
         LOD 300
 
@@ -96,7 +93,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
+            #pragma target 3.0
 
             // -------------------------------------
             // Material Keywords
@@ -143,127 +140,118 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
 
-            // Including the following two function is enought for shading with Lightweight Pipeline. Everything is included in them.
-            // Core.hlsl will include SRP shader library, all constant buffers not related to materials (perobject, percamera, perframe).
-            // It also includes matrix/space conversion functions and fog.
-            // Lighting.hlsl will include the light functions/data to abstract light constants. You should use GetMainLight and GetLight functions
-            // that initialize Light struct. Lighting.hlsl also include GI, Light BDRF functions. It also includes Shadows.
 
-            // Required by all Lightweight Render Pipeline shaders.
-            // It will include Unity built-in shader variables (except the lighting variables)
-            // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions.
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-
-            // Include this if you are doing a lit shader. This includes lighting shader variables,
-            // lighting and shadow functions
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
+            //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            half4 _BaseColor;
+            half4 _SpecColor;
+            half4 _EmissionColor;
+            half _Cutoff;
+            half _Smoothness;
+            half _Metallic;
+            half _BumpScale;
+            half _OcclusionStrength;
+            
+            
+            //WindAnimation
+            float4 _PositionMask_ST;
+            float _Speed;
+            float _Amount;
+            float _Distance;
+            float _ZMotion;
+            float _ZMotionSpeed;
+            float _OriginWeight;
 
-            // Material shader variables are not defined in SRP or LWRP shader library.
-            // This means _BaseColor, _BaseMap, _BaseMap_ST, and all variables in the Properties section of a shader
-            // must be defined by the shader itself. If you define all those properties in CBUFFER named
-            // UnityPerMaterial, SRP can cache the material properties between frames and reduce significantly the cost
-            // of each drawcall.
-            // In this case, for sinmplicity LitInput.hlsl is included. This contains the CBUFFER for the material
-            // properties defined above. As one can see this is not part of the ShaderLibrary, it specific to the
-            // LWRP Lit shader.
-            #ifndef LIGHTWEIGHT_LIT_INPUT_INCLUDED
-                #define LIGHTWEIGHT_LIT_INPUT_INCLUDED
+            half _DebugMask;
 
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-                #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
-                #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
-                //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
-                CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                half4 _BaseColor;
-                half4 _SpecColor;
-                half4 _EmissionColor;
-                half _Cutoff;
-                half _Smoothness;
-                half _Metallic;
-                half _BumpScale;
-                half _OcclusionStrength;
-                CBUFFER_END
+            CBUFFER_END
 
-                TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
-                TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
-                TEXTURE2D(_SpecGlossMap);       SAMPLER(sampler_SpecGlossMap);
+            TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
+            TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
+            TEXTURE2D(_SpecGlossMap);       SAMPLER(sampler_SpecGlossMap);
+            
+            //WindAnimation
+            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
+            
+            #ifdef _SPECULAR_SETUP
+                #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, uv)
+            #else
+                #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, uv)
+            #endif
 
-                #ifdef _SPECULAR_SETUP
-                    #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, uv)
-                #else
-                    #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, uv)
+            half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
+            {
+                half4 specGloss;
+
+                #ifdef _METALLICSPECGLOSSMAP
+                    specGloss = SAMPLE_METALLICSPECULAR(uv);
+                    #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+                        specGloss.a = albedoAlpha * _Smoothness;
+                    #else
+                        specGloss.a *= _Smoothness;
+                    #endif
+                #else // _METALLICSPECGLOSSMAP
+                    #if _SPECULAR_SETUP
+                        specGloss.rgb = _SpecColor.rgb;
+                    #else
+                        specGloss.rgb = _Metallic.rrr;
+                    #endif
+
+                    #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+                        specGloss.a = albedoAlpha * _Smoothness;
+                    #else
+                        specGloss.a = _Smoothness;
+                    #endif
                 #endif
 
-                half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
-                {
-                    half4 specGloss;
+                return specGloss;
+            }
 
-                    #ifdef _METALLICSPECGLOSSMAP
-                        specGloss = SAMPLE_METALLICSPECULAR(uv);
-                        #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-                            specGloss.a = albedoAlpha * _Smoothness;
-                        #else
-                            specGloss.a *= _Smoothness;
-                        #endif
-                    #else // _METALLICSPECGLOSSMAP
-                        #if _SPECULAR_SETUP
-                            specGloss.rgb = _SpecColor.rgb;
-                        #else
-                            specGloss.rgb = _Metallic.rrr;
-                        #endif
-
-                        #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-                            specGloss.a = albedoAlpha * _Smoothness;
-                        #else
-                            specGloss.a = _Smoothness;
-                        #endif
-                    #endif
-
-                    return specGloss;
-                }
-
-                half SampleOcclusion(float2 uv)
-                {
-                    #ifdef _OCCLUSIONMAP
-                        // TODO: Controls things like these by exposing SHADER_QUALITY levels (low, medium, high)
-                        #if defined(SHADER_API_GLES)
-                            return SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, uv).g;
-                        #else
-                            half occ = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, uv).g;
-                            return LerpWhiteTo(occ, _OcclusionStrength);
-                        #endif
+            half SampleOcclusion(float2 uv)
+            {
+                #ifdef _OCCLUSIONMAP
+                    // TODO: Controls things like these by exposing SHADER_QUALITY levels (low, medium, high)
+                    #if defined(SHADER_API_GLES)
+                        return SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, uv).g;
                     #else
-                        return 1.0;
+                        half occ = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, uv).g;
+                        return LerpWhiteTo(occ, _OcclusionStrength);
                     #endif
-                }
+                #else
+                    return 1.0;
+                #endif
+            }
 
-                inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
-                {
-                    half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
-                    outSurfaceData.alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
+            inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
+            {
+                half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
+                outSurfaceData.alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
 
-                    half4 specGloss = SampleMetallicSpecGloss(uv, albedoAlpha.a);
-                    outSurfaceData.albedo = albedoAlpha.rgb * _BaseColor.rgb;
+                half4 specGloss = SampleMetallicSpecGloss(uv, albedoAlpha.a);
+                outSurfaceData.albedo = albedoAlpha.rgb * _BaseColor.rgb;
 
-                    #if _SPECULAR_SETUP
-                        outSurfaceData.metallic = 1.0h;
-                        outSurfaceData.specular = specGloss.rgb;
-                    #else
-                        outSurfaceData.metallic = specGloss.r;
-                        outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
-                    #endif
+                #if _SPECULAR_SETUP
+                    outSurfaceData.metallic = 1.0h;
+                    outSurfaceData.specular = specGloss.rgb;
+                #else
+                    outSurfaceData.metallic = specGloss.r;
+                    outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
+                #endif
 
-                    outSurfaceData.smoothness = specGloss.a;
-                    outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
-                    outSurfaceData.occlusion = SampleOcclusion(uv);
-                    outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
-                }
+                outSurfaceData.smoothness = specGloss.a;
+                outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
+                outSurfaceData.occlusion = SampleOcclusion(uv);
+                outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
+            }
 
-            #endif // LIGHTWEIGHT_INPUT_SURFACE_PBR_INCLUDED
-            
+
 
             struct Attributes
             {
@@ -299,20 +287,20 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             Varyings LitPassVertex(Attributes input)
             {
                 Varyings output;
+
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                input.positionOS = WindAnimation(input.positionOS);
-                output.positionOS = input.positionOS;
-                // VertexPositionInputs contains position in multiple spaces (world, view, homogeneous clip space)
-                // Our compiler will strip all unused references (say you don't use view space).
-                // Therefore there is more flexibility at no additional cost with this struct.
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+                //WindAnimation
+                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(input.positionOS.xy, _PositionMask), 0);
+                input.positionOS = WindAnimation(input.positionOS, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
 
-                // Similar to VertexPositionInputs, VertexNormalInputs will contain normal, tangent and bitangent
-                // in world space. If not used it will be stripped.
+                output.positionOS = input.positionOS;
+
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
                 VertexNormalInputs vertexNormalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+
 
                 // Computes fog factor per-vertex.
                 float fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -351,10 +339,16 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                if (_DebugMask == 1.0)
+                {
+                    float4 objectOrigin = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
+                    float positionMask = _PositionMask.Sample(sampler_PositionMask, TRANSFORM_TEX(input.positionOS, _PositionMask)).r;
+                    
+                    return half4(positionMask.rrr, 1.0);
+                }
+                
 
-                // Surface data contains albedo, metallic, specular, smoothness, occlusion, emission and alpha
-                // InitializeStandarLitSurfaceData initializes based on the rules for standard shader.
-                // You can write your own function to initialize the surface data of your shader.
                 SurfaceData surfaceData;
                 InitializeStandardLitSurfaceData(input.uv, surfaceData);
 
@@ -431,20 +425,14 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 // Mix the pixel color with fogColor. You can optionaly use MixFogColor to override the fogColor
                 // with a custom one.
                 color = MixFog(color, fogFactor);
-
-                if (_DebugMask == 1.0)
-                {
-                    float4 objectOrigin = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
-                    float4 positionMask = _PositionMask.Sample(sampler_PositionMask, TRANSFORM_TEX(input.positionOS, _PositionMask));
-                    color = positionMask.rrrr * positionMask.aaar;
-                }
+                
                 
                 return half4(color, surfaceData.alpha);
             }
             ENDHLSL
             
         }
-
+        
         Pass
         {
             
@@ -478,11 +466,21 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
 
-            
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
-            CBUFFER_END
+            //WindAnimation
+            float4 _PositionMask_ST;
+            float _Speed;
+            float _Amount;
+            float _Distance;
+            float _ZMotion;
+            float _ZMotionSpeed;
+            float _OriginWeight;
 
+            half _DebugMask;
+            CBUFFER_END            
+            //WindAnimation
+            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
+            
 
             struct GraphVertexInput
             {
@@ -493,9 +491,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
-            CBUFFER_START(UnityPerMaterial)
-            CBUFFER_END
 
 
             struct VertexOutput
@@ -517,25 +512,17 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                //WindAnimation
+                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(v.vertex.xy, _PositionMask), 0);
+                v.vertex = WindAnimation(v.vertex, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
 
-                v.vertex = WindAnimation(v.vertex);
-
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    float3 defaultVertexValue = v.vertex.xyz;
-                #else
-                    float3 defaultVertexValue = float3(0, 0, 0);
-                #endif
-                float3 vertexValue = defaultVertexValue ;
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    v.vertex.xyz = vertexValue;
-                #else
-                    v.vertex.xyz += vertexValue;
-                #endif
 
                 v.ase_normal = v.ase_normal ;
-
+                
                 float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
                 float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
+                
 
                 float invNdotL = 1.0 - saturate(dot(_LightDirection, normalWS));
                 float scale = invNdotL * _ShadowBias.y;
@@ -620,11 +607,21 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
 
             
-
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
-            CBUFFER_END
+            //WindAnimation
+            float4 _PositionMask_ST;
+            float _Speed;
+            float _Amount;
+            float _Distance;
+            float _ZMotion;
+            float _ZMotionSpeed;
+            float _OriginWeight;
 
+            half _DebugMask;
+
+            CBUFFER_END            
+            //WindAnimation
+            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
 
             struct GraphVertexInput
             {
@@ -651,20 +648,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-                v.vertex = WindAnimation(v.vertex);
                 
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    float3 defaultVertexValue = v.vertex.xyz;
-                #else
-                    float3 defaultVertexValue = float3(0, 0, 0);
-                #endif
-                float3 vertexValue = defaultVertexValue ;
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    v.vertex.xyz = vertexValue;
-                #else
-                    v.vertex.xyz += vertexValue;
-                #endif
+                //WindAnimation
+                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(v.vertex.xy, _PositionMask), 0);
+                v.vertex = WindAnimation(v.vertex, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
+                
 
                 v.ase_normal = v.ase_normal ;
                 o.uv = v.uv;
@@ -690,119 +678,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
 
                 //clip(albedoAlpha.a);
                 return half4(0, 0, 0, 0);
-            }
-            ENDHLSL
-            
-        }
-
-        Pass
-        {
-            
-            Name "Meta"
-            Tags { "LightMode" = "Meta" }
-
-            Cull Off
-            
-            HLSLPROGRAM
-            
-            #pragma multi_compile _ LOD_FADE_CROSSFADE
-            #pragma multi_compile_fog
-
-            // Required to compile gles 2.0 with standard srp library
-            #pragma prefer_hlslcc gles
-            #pragma exclude_renderers d3d11_9x
-
-            #pragma vertex vert
-            #pragma fragment frag
-            
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/MetaInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-            
-
-            CBUFFER_START(UnityPerMaterial)
-            float4 _Color0;
-            CBUFFER_END
-
-
-            #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            
-            struct GraphVertexInput
-            {
-                float4 vertex: POSITION;
-                float3 ase_normal: NORMAL;
-                float4 texcoord1: TEXCOORD1;
-                float4 texcoord2: TEXCOORD2;
-                
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct VertexOutput
-            {
-                float4 clipPos: SV_POSITION;
-                float4 ase_texcoord: TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
-            };
-
-            
-            VertexOutput vert(GraphVertexInput v)
-            {
-                VertexOutput o = (VertexOutput)0;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-                float4 screenPos = ComputeScreenPos(ase_clipPos);
-                o.ase_texcoord = screenPos;
-                
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    float3 defaultVertexValue = v.vertex.xyz;
-                #else
-                    float3 defaultVertexValue = float3(0, 0, 0);
-                #endif
-                float3 vertexValue = defaultVertexValue ;
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    v.vertex.xyz = vertexValue;
-                #else
-                    v.vertex.xyz += vertexValue;
-                #endif
-
-                v.ase_normal = v.ase_normal ;
-                #if !defined(ASE_SRP_VERSION) || ASE_SRP_VERSION > 51300
-                    o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord1.xy, unity_LightmapST, unity_DynamicLightmapST);
-                #else
-                    o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord2.xy, unity_LightmapST);
-                #endif
-                return o;
-            }
-
-            half4 frag(VertexOutput IN): SV_TARGET
-            {
-                UNITY_SETUP_INSTANCE_ID(IN);
-
-                float4 screenPos = IN.ase_texcoord;
-                float4 ase_screenPosNorm = screenPos / screenPos.w;
-                ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float4 fetchOpaqueVal51 = float4(SHADERGRAPH_SAMPLE_SCENE_COLOR(ase_screenPosNorm.xy), 1.0);
-                
-                
-                float3 Albedo = _Color0.rgb;
-                float3 Emission = fetchOpaqueVal51.rgb;
-                float Alpha = 1;
-                float AlphaClipThreshold = 0;
-
-                #if _AlphaClip
-                    clip(Alpha - AlphaClipThreshold);
-                #endif
-
-                MetaInput metaInput = (MetaInput)0;
-                metaInput.Albedo = Albedo;
-                metaInput.Emission = Emission;
-                
-                return MetaFragment(metaInput);
             }
             ENDHLSL
             

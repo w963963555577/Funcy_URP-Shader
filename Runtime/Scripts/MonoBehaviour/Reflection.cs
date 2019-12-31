@@ -28,6 +28,8 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         public string materialPropertyName = "_ReflectionMap";
         [SerializeField] private RenderTexture m_ReflectionTexture = null;
 
+        public Material[] extensionMaterials = new Material[0];
+
 #if UNITY_5_3 || UNITY_5_4 || UNITY_5_5
     public bool disableInEditMode;
 #endif
@@ -117,12 +119,17 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             GL.invertCulling = false;        //should be used
                                              //GL.SetRevertBackfacing (false);   //obsolete
             Material[] materials = GetComponent<Renderer>().sharedMaterials;
+            
             foreach (Material mat in materials)
             {
                 if (mat.HasProperty(materialPropertyName))
                     mat.SetTexture(materialPropertyName, m_ReflectionTexture);
             }
-
+            foreach (Material mat in extensionMaterials)
+            {
+                if (mat.HasProperty(materialPropertyName))
+                    mat.SetTexture(materialPropertyName, m_ReflectionTexture);
+            }
             // Set matrix on the shader that transforms UVs from object space into screen
             // space. We want to just project reflection texture on screen.
             Matrix4x4 scaleOffset = Matrix4x4.TRS(

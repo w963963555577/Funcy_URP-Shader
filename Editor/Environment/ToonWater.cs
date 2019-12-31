@@ -172,12 +172,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             //base.OnMaterialGUI();
 
-            if (EditorGUI.EndChangeCheck())
-            {
-                foreach (var obj in materialEditor.targets)
-                    MaterialChanged((Material)obj);
-                
-            }
+            MaterialChangeCheck();
         }
 
         void RadiusSlider(MaterialProperty materialProperty)

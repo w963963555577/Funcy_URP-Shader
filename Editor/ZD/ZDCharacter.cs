@@ -173,8 +173,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             DrawArea("Settings",()=> {
                 materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName);
                 materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
-                materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
-                //materialEditor.ShaderProperty(invertLightDirection, invertLightDirection.displayName);
+                materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);                
             });
 
             DrawArea("Custom Lighting", () => {
@@ -191,14 +190,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             });
 
-            //base.OnMaterialGUI();
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                foreach (var obj in materialEditor.targets)
-                    MaterialChanged((Material)obj);
-                
-            }
+            MaterialChangeCheck();
         }
 
         public override void MaterialChanged(Material material)

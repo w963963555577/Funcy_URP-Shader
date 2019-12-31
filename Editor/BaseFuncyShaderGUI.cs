@@ -43,6 +43,22 @@ namespace UnityEditor
         {
             base.OnGUI(materialEditor, props);
         }
+        public void MaterialChangeCheck()
+        {
+            foreach (var obj in materialEditor.targets)
+            {
+                ((Material)obj).enableInstancing = true;             
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                foreach (var obj in materialEditor.targets)
+                {
+                    ((Material)obj).enableInstancing = true;
+                    MaterialChanged((Material)obj);
+                }
+
+            }
+        }
         [Serializable]
         public class AnimBoolNameId
         {

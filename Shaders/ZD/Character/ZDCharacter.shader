@@ -82,7 +82,7 @@ Shader "ZDShader/LWRP/Character"
             // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
+            #pragma target 3.0
 
             // -------------------------------------
             // Material Keywords
@@ -129,71 +129,45 @@ Shader "ZDShader/LWRP/Character"
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
 
-            // Including the following two function is enought for shading with Lightweight Pipeline. Everything is included in them.
-            // Core.hlsl will include SRP shader library, all constant buffers not related to materials (perobject, percamera, perframe).
-            // It also includes matrix/space conversion functions and fog.
-            // Lighting.hlsl will include the light functions/data to abstract light constants. You should use GetMainLight and GetLight functions
-            // that initialize Light struct. Lighting.hlsl also include GI, Light BDRF functions. It also includes Shadows.
 
-            // Required by all Lightweight Render Pipeline shaders.
-            // It will include Unity built-in shader variables (except the lighting variables)
-            // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions.
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-
-            // Include this if you are doing a lit shader. This includes lighting shader variables,
-            // lighting and shadow functions
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
 
+            CBUFFER_START(UnityPerMaterial)
+            float4 _diffuse_ST;
+            float4 _mask_ST;
+            half4 _Color;
+            half4 _EmissionColor;
+            half4 _SpecularColor;
+            half4 _Picker_0;
+            half4 _Picker_1;
+            half4 _ShadowColor0;
+            half4 _ShadowColor1;
+            half4 _ShadowColorElse;
+            half _Cutoff;
+            half _Gloss;
+            half _EmissionxBase;
+            half _EmissionOn;
+            half _Flash;
+            half _ShadowRamp;
+            half _DiscolorationOn;
+            half4 _Discoloration;
+            half _ReceiveShadow;
+            half _ShadowRefraction;
 
-            // Material shader variables are not defined in SRP or LWRP shader library.
-            // This means _BaseColor, _BaseMap, _BaseMap_ST, and all variables in the Properties section of a shader
-            // must be defined by the shader itself. If you define all those properties in CBUFFER named
-            // UnityPerMaterial, SRP can cache the material properties between frames and reduce significantly the cost
-            // of each drawcall.
-            // In this case, for sinmplicity LitInput.hlsl is included. This contains the CBUFFER for the material
-            // properties defined above. As one can see this is not part of the ShaderLibrary, it specific to the
-            // LWRP Lit shader.
-            #ifndef LIGHTWEIGHT_LIT_INPUT_INCLUDED
-                #define LIGHTWEIGHT_LIT_INPUT_INCLUDED
+            half _CustomLighting;
+            half4 _CustomLightColor;
+            half4 _CustomLightDirection;
+            
+            
+            CBUFFER_END
 
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-                #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
-
-                CBUFFER_START(UnityPerMaterial)
-                float4 _diffuse_ST;
-                float4 _mask_ST;
-                half4 _Color;
-                half4 _EmissionColor;
-                half4 _SpecularColor;
-                half4 _Picker_0;
-                half4 _Picker_1;
-                half4 _ShadowColor0;
-                half4 _ShadowColor1;
-                half4 _ShadowColorElse;
-                half _Cutoff;
-                half _Gloss;
-                half _EmissionxBase;
-                half _EmissionOn;
-                half _Flash;
-                half _ShadowRamp;
-                half _DiscolorationOn;
-                half4 _Discoloration;
-                half _ReceiveShadow;
-                half _ShadowRefraction;
-
-                half _CustomLighting;
-                half4 _CustomLightColor;
-                half4 _CustomLightDirection;
-                
-                
-                CBUFFER_END
-
-                TEXTURE2D(_mask);            SAMPLER(sampler_mask);
-                TEXTURE2D(_GrabTexture);            SAMPLER(sampler_GrabTexture);
-                TEXTURE2D(_diffuse);                SAMPLER(sampler_diffuse);
-            #endif // LIGHTWEIGHT_INPUT_SURFACE_PBR_INCLUDED
+            TEXTURE2D(_mask);            SAMPLER(sampler_mask);
+            TEXTURE2D(_GrabTexture);            SAMPLER(sampler_GrabTexture);
+            TEXTURE2D(_diffuse);                SAMPLER(sampler_diffuse);
             
 
             struct Attributes
@@ -225,6 +199,7 @@ Shader "ZDShader/LWRP/Character"
 
                 float4 posWorld: TEXCOORD7;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
@@ -238,9 +213,9 @@ Shader "ZDShader/LWRP/Character"
                 outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
 
                 outSurfaceData.smoothness = 0.0;
-                outSurfaceData.normalTS = half3(0, 0, 0);
-                outSurfaceData.occlusion = half3(0, 0, 0);
-                outSurfaceData.emission = half3(0, 0, 0);
+                outSurfaceData.normalTS = half3(0.0h, 0.0h, 0.0h);
+                outSurfaceData.occlusion = half3(0.0h, 0.0h, 0.0h);
+                outSurfaceData.emission = half3(0.0h, 0.0h, 0.0h);
             }
 
             Varyings LitPassVertex(Attributes input)
@@ -430,9 +405,8 @@ Shader "ZDShader/LWRP/Character"
             ENDHLSL
             
         }
-
-        UsePass "Lightweight Render Pipeline/Lit/ShadowCaster"
-        UsePass "Lightweight Render Pipeline/Lit/DepthOnly"
+        UsePass "Hidden/LWRP/General/ShadowCaster"
+        UsePass "Hidden/LWRP/General/DepthOnly"
     }
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
