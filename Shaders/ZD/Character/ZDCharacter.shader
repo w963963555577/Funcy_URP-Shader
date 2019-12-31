@@ -44,7 +44,7 @@ Shader "ZDShader/LWRP/Character"
 
         [Toggle]_ReceiveShadow ("Receive Shadow", Float) = 1.0
 
-        [Toggle]_CustomLighting ("Custom Lighting", Float) = 0.0
+        [Toggle]_CustomLighting ("Custom Lighting", Float) = 1.0
         [HDR]_CustomLightColor ("Custom Light Color", Color) = (1, 1, 1, 1)
         _CustomLightDirection ("Custom Light Direction", Vector) = (0.5747975, 0.4099231, -0.7082168, 0.0)
 
@@ -342,7 +342,7 @@ Shader "ZDShader/LWRP/Character"
                     mainLight.color = _CustomLightColor;
                     //mainLight.direction = _CustomLightDirection;
                 }
-
+                
                 //mainLight.shadowAttenuation = 0.1;
 
                 float pbr = PBRShadow(i, mainLight);
