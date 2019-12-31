@@ -52,7 +52,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
         // Editmode props
         [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
 
-
+        /*
         _Speed ("Speed", Range(0.1, 10)) = 0.1
         _Amount ("Amount", Range(0.1, 10)) = .01
         _Distance ("Distance", Range(0, 0.5)) = 0.0
@@ -63,6 +63,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
         _PositionMask ("Position Mask", 2D) = "white" { }
         
         [Toggle] _DebugMask ("Debug Mask", Int) = 0
+        */
     }
 
     SubShader
@@ -158,28 +159,12 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             half _Metallic;
             half _BumpScale;
             half _OcclusionStrength;
-            
-            
-            //WindAnimation
-            float4 _PositionMask_ST;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
-
-            half _DebugMask;
-
             CBUFFER_END
 
             TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
             TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
             TEXTURE2D(_SpecGlossMap);       SAMPLER(sampler_SpecGlossMap);
-            
-            //WindAnimation
-            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
-            
+
             #ifdef _SPECULAR_SETUP
                 #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, uv)
             #else
@@ -293,8 +278,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
                 //WindAnimation
-                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(input.positionOS.xy, _PositionMask), 0);
-                input.positionOS = WindAnimation(input.positionOS, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
+                input.positionOS = WindAnimation(input.positionOS);
 
                 output.positionOS = input.positionOS;
 
@@ -465,22 +449,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
-
-            CBUFFER_START(UnityPerMaterial)
-            //WindAnimation
-            float4 _PositionMask_ST;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
-
-            half _DebugMask;
-            CBUFFER_END            
-            //WindAnimation
-            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
-            
+            //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
 
             struct GraphVertexInput
             {
@@ -514,8 +483,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
                 //WindAnimation
-                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(v.vertex.xy, _PositionMask), 0);
-                v.vertex = WindAnimation(v.vertex, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
+                v.vertex = WindAnimation(v.vertex);
 
 
                 v.ase_normal = v.ase_normal ;
@@ -605,23 +573,8 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
-
+            //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)
-            //WindAnimation
-            float4 _PositionMask_ST;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
-
-            half _DebugMask;
-
-            CBUFFER_END            
-            //WindAnimation
-            TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
 
             struct GraphVertexInput
             {
@@ -649,9 +602,8 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                //WindAnimation
-                float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(v.vertex.xy, _PositionMask), 0);
-                v.vertex = WindAnimation(v.vertex, _PositionMask_ST, _Speed, _Amount, _Distance, _ZMotion, _ZMotionSpeed, _OriginWeight, _DebugMask, positionMask);
+                //WindAnimation                
+                v.vertex = WindAnimation(v.vertex);
                 
 
                 v.ase_normal = v.ase_normal ;
@@ -682,7 +634,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             ENDHLSL
             
         }
-        
     }
 
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
