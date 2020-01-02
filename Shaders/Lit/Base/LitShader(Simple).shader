@@ -52,7 +52,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
         // Editmode props
         [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
 
-        /*
+        
         _Speed ("Speed", Range(0.1, 10)) = 0.1
         _Amount ("Amount", Range(0.1, 10)) = .01
         _Distance ("Distance", Range(0, 0.5)) = 0.0
@@ -63,7 +63,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
         _PositionMask ("Position Mask", 2D) = "white" { }
         
         [Toggle] _DebugMask ("Debug Mask", Int) = 0
-        */
+        
     }
 
     SubShader
