@@ -10,7 +10,7 @@ Shader "ZDShader/LWRP/Projector/Shape"
         
         [Toggle(_CircleSector)] _CircleSector ("Circle And Sector Mode", float) = 0
         [Toggle(_Rectangle)] _Rectangle ("Rectangle Mode", float) = 0
- 
+        
         //Circle Projector
         _CircleAngle ("Circle Angle", range(0, 360)) = 30
         _Thickness ("Circle Thickness", range(0, 1)) = 1.0
@@ -21,21 +21,20 @@ Shader "ZDShader/LWRP/Projector/Shape"
         
         
         _Falloff ("Fall Off", Float) = 4
-
-                
+        
+        
         [HideInInspector][Toggle(_ProjectionAngleDiscardEnable)] _ProjectionAngleDiscardEnable ("_ProjectionAngleDiscardEnable (default = on)", float) = 1
         [HideInInspector]_ProjectionAngleDiscardThreshold ("_ProjectionAngleDiscardThreshold (default = 0)", range(-1, 1)) = 0
-       
+        
         //Hide Property
         [HideInInspector]_StencilRef ("_StencilRef", Float) = 0
         [HideInInspector]_StencilComp ("_StencilComp", Float) = 0 //0 = disable
         [HideInInspector]_ZTest ("_ZTest", Float) = 0 //0 = disable
-        
     }
     
     SubShader
     {
-        Tags { "RenderType" = "Overlay" "Queue" = "Transparent" "IgnoreProjector" = "True" }
+        Tags { "RenderType" = "Overlay" "RenderPipeline" = "LightweightPipeline" "Queue" = "Transparent" "IgnoreProjector" = "True" }
         
         Pass
         {
@@ -51,13 +50,13 @@ Shader "ZDShader/LWRP/Projector/Shape"
             ZWrite Off
             Blend SrcAlpha One
             
-            CGPROGRAM
+            HLSLPROGRAM
+            
+            #define REQUIRE_DEPTH_TEXTURE 1
             
             #pragma vertex vert
             #pragma fragment frag
             
-            // make fog work
-            #pragma multi_compile_fog
             
             #pragma target 3.0
             
@@ -66,13 +65,17 @@ Shader "ZDShader/LWRP/Projector/Shape"
             
             #pragma shader_feature_local _ProjectionAngleDiscardEnable
             
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            
             
             #define PI 3.1415926535897932384626433832795
             
             struct appdata
             {
                 float4 vertex: POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
             struct v2f
@@ -81,7 +84,11 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 float4 screenUV: TEXCOORD0;
                 float4 viewRayOS: TEXCOORD2;
                 float3 cameraPosOS: TEXCOORD3;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
+            
             
             CBUFFER_START(UnityPerMaterial)
             sampler2D _MainTex;float4 _MainTex_ST;
@@ -100,8 +107,11 @@ Shader "ZDShader/LWRP/Projector/Shape"
             float _Falloff;
             CBUFFER_END
             
-            sampler2D _CameraDepthTexture;
-            
+            // Tranforms position from object to camera space
+            inline float3 ObjectToViewPos(float3 pos)
+            {
+                return mul(UNITY_MATRIX_V, mul(GetObjectToWorldMatrix(), float4(pos, 1.0))).xyz;
+            }
             
             float Remap(float value, float from1, float to1, float from2, float to2)
             {
@@ -119,29 +129,34 @@ Shader "ZDShader/LWRP/Projector/Shape"
             {
                 v2f o;
                 
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                o.vertex = TransformObjectToHClip(v.vertex);
                 o.screenUV = ComputeScreenPos(o.vertex);
-                float3 viewRay = UnityObjectToViewPos(v.vertex);
+                
+                float3 viewRay = ObjectToViewPos(v.vertex);
                 
                 o.viewRayOS.w = viewRay.z;
                 
                 viewRay *= -1;
-                float4x4 ViewToObjectMatrix = mul(unity_WorldToObject, UNITY_MATRIX_I_V);
+                float4x4 ViewToObjectMatrix = mul(GetWorldToObjectMatrix(), UNITY_MATRIX_I_V);
                 
                 o.viewRayOS.xyz = mul((float3x3)ViewToObjectMatrix, viewRay);
-                o.cameraPosOS = mul(ViewToObjectMatrix, float4(0, 0, 0, 1)).xyz;
+                o.cameraPosOS = mul(ViewToObjectMatrix, float4(0.0h, 0.0h, 0.0h, 1.0h)).xyz;
+                
                 
                 return o;
             }
             
             
-            
-            
             float2 projectorUV(v2f i)
             {
                 i.viewRayOS /= i.viewRayOS.w;
+                i.screenUV = i.screenUV / i.screenUV.w;
                 
-                float sceneCameraSpaceDepth = LinearEyeDepth(tex2Dproj(_CameraDepthTexture, i.screenUV));
+                float sceneCameraSpaceDepth = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(i.screenUV), _ZBufferParams);
                 float3 decalSpaceScenePos = i.cameraPosOS + i.viewRayOS * sceneCameraSpaceDepth;
                 
                 float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
@@ -206,7 +221,11 @@ Shader "ZDShader/LWRP/Projector/Shape"
             
             half4 frag(v2f i): SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                
                 float2 uv = projectorUV(i);
+                
                 float4 col = float4(0, 0, 0, 1);
                 
                 _Falloff = _Falloff * _Falloff;
@@ -218,12 +237,12 @@ Shader "ZDShader/LWRP/Projector/Shape"
                     col = Rectangle(uv);
                 #endif
                 
-                
                 return col;
             }
-            ENDCG
+            ENDHLSL
             
         }
     }
-        CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ProjectorShape"
+    
+    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ProjectorShape"
 }

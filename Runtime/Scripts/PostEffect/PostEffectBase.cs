@@ -13,8 +13,7 @@ public sealed class GrayscaleRenderer : PostProcessEffectRenderer<Grayscale>
 {
     public override void Render(PostProcessRenderContext context)
     {
-        var sheet = context.propertySheets.Get(Shader.Find("Funcy/TestPostEffect"));
-        var buffer = RenderTexture.GetTemporary(context.width/10, context.height/10);
-        context.command.Blit(context.source, buffer);        
+        var sheet = context.propertySheets.Get(Shader.Find("Funcy/TestPostEffect"));        
+        //context.command.Blit(context.source, context.destination,sheet);        
     }
 }
