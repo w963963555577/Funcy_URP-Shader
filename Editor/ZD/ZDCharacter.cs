@@ -31,8 +31,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         MaterialProperty receiveShadow { get; set; }
         MaterialProperty shadowRefrection { get; set; }
+        MaterialProperty shadowCastRefrection { get; set; }
         //MaterialProperty invertLightDirection { get; set; }
-        
+
 
         bool drawBaseMap = false;
         void FindProperties()
@@ -64,7 +65,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             receiveShadow = FindProperty("_ReceiveShadow", props);
             shadowRefrection= FindProperty("_ShadowRefraction", props);
-            
+            shadowCastRefrection = FindProperty("_ShadowCastRefraction", props);
         }
 
         [SerializeField]Transform lightTransform, lightTransfrom_Tmp; 
@@ -172,8 +173,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Settings",()=> {
                 materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName);
+                if (receiveShadow.floatValue == 1.0f)
+                    materialEditor.ShaderProperty(shadowCastRefrection, shadowCastRefrection.displayName);
+
                 materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
-                materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);                
+                materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
             });
 
             DrawArea("Custom Lighting", () => {

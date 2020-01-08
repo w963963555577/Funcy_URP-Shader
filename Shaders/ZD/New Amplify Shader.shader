@@ -37,7 +37,9 @@ Shader "New Amplify Shader"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #define ASE_FOG 1
+            #define ASE_ABSOLUTE_VERTEX_POS 1
             #define ASE_SRP_VERSION 60902
+            #define _NORMALMAP 1
 
             // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
@@ -104,7 +106,26 @@ Shader "New Amplify Shader"
             	UNITY_VERTEX_OUTPUT_STEREO
             };
 
+			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
+			{
+				original -= center;
+				float C = cos( angle );
+				float S = sin( angle );
+				float t = 1 - C;
+				float m00 = t * u.x * u.x + C;
+				float m01 = t * u.x * u.y - S * u.z;
+				float m02 = t * u.x * u.z + S * u.y;
+				float m10 = t * u.x * u.y + S * u.z;
+				float m11 = t * u.y * u.y + C;
+				float m12 = t * u.y * u.z - S * u.x;
+				float m20 = t * u.x * u.z - S * u.y;
+				float m21 = t * u.y * u.z + S * u.x;
+				float m22 = t * u.z * u.z + C;
+				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
+				return mul( finalMatrix, original ) + center;
+			}
 			
+
             GraphVertexOutput vert (GraphVertexInput v  )
         	{
         		GraphVertexOutput o = (GraphVertexOutput)0;
@@ -112,6 +133,15 @@ Shader "New Amplify Shader"
             	UNITY_TRANSFER_INSTANCE_ID(v, o);
         		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float4 transform29 = mul(GetObjectToWorldMatrix(),float4( 0,1,0,0 ));
+				float mulTime31 = _Time.y * 3.0;
+				float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
+				float4 transform30 = mul(GetObjectToWorldMatrix(),float4( 0,0,0,1 ));
+				float3 rotatedValue28 = RotateAroundAxis( float3( 0,0,0 ), ( float4( ase_worldPos , 0.0 ) - transform30 ).xyz, transform29.xyz, mulTime31 );
+				
+				float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+				float3 rotatedValue34 = RotateAroundAxis( float3( 0,0,0 ), ase_worldNormal, transform29.xyz, mulTime31 );
+				
 				o.ase_texcoord7.xy = v.ase_texcoord.xy;
 				
 				//setting value to unused interpolator channels and avoid initialization warnings
@@ -121,13 +151,13 @@ Shader "New Amplify Shader"
 				#else
 				float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
-				float3 vertexValue =  defaultVertexValue ;
+				float3 vertexValue = rotatedValue28;
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				v.vertex.xyz = vertexValue;
 				#else
 				v.vertex.xyz += vertexValue;
 				#endif
-				v.ase_normal =  v.ase_normal ;
+				v.ase_normal = rotatedValue34;
 
         		// Vertex shader outputs defined by graph
                 float3 lwWNormal = TransformObjectToWorldNormal(v.ase_normal);
@@ -258,7 +288,9 @@ Shader "New Amplify Shader"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #define ASE_FOG 1
+            #define ASE_ABSOLUTE_VERTEX_POS 1
             #define ASE_SRP_VERSION 60902
+            #define _NORMALMAP 1
 
             // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
@@ -301,7 +333,26 @@ Shader "New Amplify Shader"
 				UNITY_VERTEX_OUTPUT_STEREO
         	};
 
+			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
+			{
+				original -= center;
+				float C = cos( angle );
+				float S = sin( angle );
+				float t = 1 - C;
+				float m00 = t * u.x * u.x + C;
+				float m01 = t * u.x * u.y - S * u.z;
+				float m02 = t * u.x * u.z + S * u.y;
+				float m10 = t * u.x * u.y + S * u.z;
+				float m11 = t * u.y * u.y + C;
+				float m12 = t * u.y * u.z - S * u.x;
+				float m20 = t * u.x * u.z - S * u.y;
+				float m21 = t * u.y * u.z + S * u.x;
+				float m22 = t * u.z * u.z + C;
+				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
+				return mul( finalMatrix, original ) + center;
+			}
 			
+
             // x: global clip space bias, y: normal world space bias
             float3 _LightDirection;
 
@@ -312,20 +363,28 @@ Shader "New Amplify Shader"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO (o);
 
+				float4 transform29 = mul(GetObjectToWorldMatrix(),float4( 0,1,0,0 ));
+				float mulTime31 = _Time.y * 3.0;
+				float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
+				float4 transform30 = mul(GetObjectToWorldMatrix(),float4( 0,0,0,1 ));
+				float3 rotatedValue28 = RotateAroundAxis( float3( 0,0,0 ), ( float4( ase_worldPos , 0.0 ) - transform30 ).xyz, transform29.xyz, mulTime31 );
+				
+				float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+				float3 rotatedValue34 = RotateAroundAxis( float3( 0,0,0 ), ase_worldNormal, transform29.xyz, mulTime31 );
 				
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				float3 defaultVertexValue = v.vertex.xyz;
 				#else
 				float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
-				float3 vertexValue =  defaultVertexValue ;
+				float3 vertexValue = rotatedValue28;
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				v.vertex.xyz = vertexValue;
 				#else
 				v.vertex.xyz += vertexValue;
 				#endif
 
-				v.ase_normal =  v.ase_normal ;
+				v.ase_normal = rotatedValue34;
 
         	    float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
                 float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
@@ -388,7 +447,9 @@ Shader "New Amplify Shader"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #define ASE_FOG 1
+            #define ASE_ABSOLUTE_VERTEX_POS 1
             #define ASE_SRP_VERSION 60902
+            #define _NORMALMAP 1
 
             // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
@@ -430,7 +491,26 @@ Shader "New Amplify Shader"
                 UNITY_VERTEX_OUTPUT_STEREO
         	};
 
-			           
+			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
+			{
+				original -= center;
+				float C = cos( angle );
+				float S = sin( angle );
+				float t = 1 - C;
+				float m00 = t * u.x * u.x + C;
+				float m01 = t * u.x * u.y - S * u.z;
+				float m02 = t * u.x * u.z + S * u.y;
+				float m10 = t * u.x * u.y + S * u.z;
+				float m11 = t * u.y * u.y + C;
+				float m12 = t * u.y * u.z - S * u.x;
+				float m20 = t * u.x * u.z - S * u.y;
+				float m21 = t * u.y * u.z + S * u.x;
+				float m22 = t * u.z * u.z + C;
+				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
+				return mul( finalMatrix, original ) + center;
+			}
+			
+           
 
             VertexOutput vert(GraphVertexInput v  )
             {
@@ -439,20 +519,28 @@ Shader "New Amplify Shader"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+				float4 transform29 = mul(GetObjectToWorldMatrix(),float4( 0,1,0,0 ));
+				float mulTime31 = _Time.y * 3.0;
+				float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
+				float4 transform30 = mul(GetObjectToWorldMatrix(),float4( 0,0,0,1 ));
+				float3 rotatedValue28 = RotateAroundAxis( float3( 0,0,0 ), ( float4( ase_worldPos , 0.0 ) - transform30 ).xyz, transform29.xyz, mulTime31 );
+				
+				float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+				float3 rotatedValue34 = RotateAroundAxis( float3( 0,0,0 ), ase_worldNormal, transform29.xyz, mulTime31 );
 				
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				float3 defaultVertexValue = v.vertex.xyz;
 				#else
 				float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
-				float3 vertexValue =  defaultVertexValue ;
+				float3 vertexValue = rotatedValue28;
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				v.vertex.xyz = vertexValue;
 				#else
 				v.vertex.xyz += vertexValue;
 				#endif
 
-				v.ase_normal =  v.ase_normal ;
+				v.ase_normal = rotatedValue34;
 
         	    o.clipPos = TransformObjectToHClip(v.vertex.xyz);
         	    return o;
@@ -492,7 +580,9 @@ Shader "New Amplify Shader"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #define ASE_FOG 1
+            #define ASE_ABSOLUTE_VERTEX_POS 1
             #define ASE_SRP_VERSION 60902
+            #define _NORMALMAP 1
 
             // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
@@ -535,13 +625,41 @@ Shader "New Amplify Shader"
                 UNITY_VERTEX_OUTPUT_STEREO
         	};
 
+			float3 RotateAroundAxis( float3 center, float3 original, float3 u, float angle )
+			{
+				original -= center;
+				float C = cos( angle );
+				float S = sin( angle );
+				float t = 1 - C;
+				float m00 = t * u.x * u.x + C;
+				float m01 = t * u.x * u.y - S * u.z;
+				float m02 = t * u.x * u.z + S * u.y;
+				float m10 = t * u.x * u.y + S * u.z;
+				float m11 = t * u.y * u.y + C;
+				float m12 = t * u.y * u.z - S * u.x;
+				float m20 = t * u.x * u.z - S * u.y;
+				float m21 = t * u.y * u.z + S * u.x;
+				float m22 = t * u.z * u.z + C;
+				float3x3 finalMatrix = float3x3( m00, m01, m02, m10, m11, m12, m20, m21, m22 );
+				return mul( finalMatrix, original ) + center;
+			}
 			
+
             VertexOutput vert(GraphVertexInput v  )
             {
                 VertexOutput o = (VertexOutput)0;
         	    UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+				float4 transform29 = mul(GetObjectToWorldMatrix(),float4( 0,1,0,0 ));
+				float mulTime31 = _Time.y * 3.0;
+				float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
+				float4 transform30 = mul(GetObjectToWorldMatrix(),float4( 0,0,0,1 ));
+				float3 rotatedValue28 = RotateAroundAxis( float3( 0,0,0 ), ( float4( ase_worldPos , 0.0 ) - transform30 ).xyz, transform29.xyz, mulTime31 );
+				
+				float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+				float3 rotatedValue34 = RotateAroundAxis( float3( 0,0,0 ), ase_worldNormal, transform29.xyz, mulTime31 );
+				
 				o.ase_texcoord.xy = v.ase_texcoord.xy;
 				
 				//setting value to unused interpolator channels and avoid initialization warnings
@@ -551,14 +669,14 @@ Shader "New Amplify Shader"
 				#else
 				float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
-				float3 vertexValue =  defaultVertexValue ;
+				float3 vertexValue = rotatedValue28;
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 				v.vertex.xyz = vertexValue;
 				#else
 				v.vertex.xyz += vertexValue;
 				#endif
 
-				v.ase_normal =  v.ase_normal ;
+				v.ase_normal = rotatedValue34;
 #if !defined( ASE_SRP_VERSION ) || ASE_SRP_VERSION  > 51300				
                 o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord1.xy, unity_LightmapST, unity_DynamicLightmapST);
 #else
@@ -599,12 +717,30 @@ Shader "New Amplify Shader"
 }
 /*ASEBEGIN
 Version=17500
--75;580;1426;826;1076.52;312.6131;1.245105;True;False
-Node;AmplifyShaderEditor.SamplerNode;8;-344.3986,138.1149;Inherit;True;Property;_TextureSample0;Texture Sample 0;0;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;5;0,0;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;ShadowCaster;0;1;ShadowCaster;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;False;False;True;1;False;-1;True;3;False;-1;False;True;1;LightMode=ShadowCaster;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;6;0,0;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;DepthOnly;0;2;DepthOnly;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;True;False;False;False;False;0;False;-1;False;True;1;False;-1;False;False;True;1;LightMode=DepthOnly;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;7;0,0;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;Meta;0;3;Meta;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;True;2;False;-1;False;False;False;False;False;True;1;LightMode=Meta;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;4;0,0;Float;False;True;-1;2;ASEMaterialInspector;0;2;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;Base;0;0;Base;11;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;True;1;1;False;-1;0;False;-1;1;1;False;-1;0;False;-1;False;False;False;True;True;True;True;True;0;False;-1;True;False;255;False;-1;255;False;-1;255;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;True;1;False;-1;True;3;False;-1;True;True;0;False;-1;0;False;-1;True;1;LightMode=LightweightForward;False;0;Hidden/InternalErrorShader;0;0;Standard;10;Workflow;1;Surface;0;  Blend;0;Two Sided;1;Cast Shadows;1;Receive Shadows;1;LOD CrossFade;1;Built-in Fog;1;Meta Pass;1;Vertex Position,InvertActionOnDeselection;1;0;4;True;True;True;True;False;;0
-WireConnection;4;0;8;0
+1672;73;929;758;1019.723;238.5167;1.596731;True;False
+Node;AmplifyShaderEditor.ObjectToWorldTransfNode;30;-1085.521,481.2394;Inherit;False;1;0;FLOAT4;0,0,0,1;False;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.WorldPosInputsNode;32;-1089.351,324.9576;Inherit;False;0;4;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3
+Node;AmplifyShaderEditor.WorldNormalVector;35;-1072,656;Inherit;False;False;1;0;FLOAT3;0,0,1;False;4;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3
+Node;AmplifyShaderEditor.ObjectToWorldTransfNode;29;-1072,144;Inherit;False;1;0;FLOAT4;0,1,0,0;False;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;33;-879.0377,349.4421;Inherit;False;2;0;FLOAT3;0,0,0;False;1;FLOAT4;0,0,0,0;False;1;FLOAT4;0
+Node;AmplifyShaderEditor.SimpleTimeNode;31;-784.606,456.7285;Inherit;False;1;0;FLOAT;3;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SamplerNode;8;-514.9229,-65.59756;Inherit;True;Property;_TextureSample0;Texture Sample 0;0;0;Create;True;0;0;False;0;-1;None;84508b93f15f2b64386ec07486afc7a3;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RotateAboutAxisNode;28;-532.988,243.773;Inherit;False;False;4;0;FLOAT3;0,0,0;False;1;FLOAT;0;False;2;FLOAT3;0,0,0;False;3;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.RotateAboutAxisNode;34;-532.6183,446.1331;Inherit;False;False;4;0;FLOAT3;0,0,0;False;1;FLOAT;0;False;2;FLOAT3;0,0,0;False;3;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;25;-65.31431,277.5695;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;ShadowCaster;0;1;ShadowCaster;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;False;False;True;1;False;-1;True;3;False;-1;False;True;1;LightMode=ShadowCaster;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;26;-65.31431,277.5695;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;DepthOnly;0;2;DepthOnly;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;True;False;False;False;False;0;False;-1;False;True;1;False;-1;False;False;True;1;LightMode=DepthOnly;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;27;-65.31431,277.5695;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;Meta;0;3;Meta;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;True;2;False;-1;False;False;False;False;False;True;1;LightMode=Meta;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;24;-46.77545,56.26866;Float;False;True;-1;2;ASEMaterialInspector;0;2;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;Base;0;0;Base;11;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;True;1;1;False;-1;0;False;-1;1;1;False;-1;0;False;-1;False;False;False;True;True;True;True;True;0;False;-1;True;False;255;False;-1;255;False;-1;255;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;True;1;False;-1;True;3;False;-1;True;True;0;False;-1;0;False;-1;True;1;LightMode=LightweightForward;False;0;Hidden/InternalErrorShader;0;0;Standard;10;Workflow;1;Surface;0;  Blend;0;Two Sided;1;Cast Shadows;1;Receive Shadows;1;LOD CrossFade;1;Built-in Fog;1;Meta Pass;1;Vertex Position,InvertActionOnDeselection;0;0;4;True;True;True;True;False;;0
+WireConnection;33;0;32;0
+WireConnection;33;1;30;0
+WireConnection;28;0;29;0
+WireConnection;28;1;31;0
+WireConnection;28;3;33;0
+WireConnection;34;0;29;0
+WireConnection;34;1;31;0
+WireConnection;34;3;35;0
+WireConnection;24;0;8;0
+WireConnection;24;8;28;0
+WireConnection;24;10;34;0
 ASEEND*/
-//CHKSM=C637A5FF4C446213094E673191D42FADE90C8082
+//CHKSM=84F9C7DAC25E1AF7C7AE32D5C35B9524ECA6F728

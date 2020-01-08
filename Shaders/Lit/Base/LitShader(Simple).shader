@@ -142,7 +142,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             
             
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"            
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
@@ -326,7 +326,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 {
                     discard;
                 }
-
+                
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 

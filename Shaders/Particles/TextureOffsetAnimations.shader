@@ -164,7 +164,7 @@ Shader "ZDShader/LWRP/Particles/TextureOffsetAnimations"
 }
 /*ASEBEGIN
 Version=17500
-22;166;1426;820;1116.79;442.8528;1.483078;True;False
+232;73;814;758;662.9681;396.8774;1.483078;True;False
 Node;AmplifyShaderEditor.ObjectToWorldTransfNode;30;-1301.748,172.052;Inherit;False;1;0;FLOAT4;0,0,0,1;False;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
 Node;AmplifyShaderEditor.SimpleTimeNode;19;-1198.649,36.00642;Inherit;False;1;0;FLOAT;0.9;False;1;FLOAT;0
 Node;AmplifyShaderEditor.SimpleAddOpNode;31;-1000.221,66.57471;Inherit;False;3;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;1;FLOAT;0
@@ -190,4 +190,4 @@ WireConnection;33;1;8;0
 WireConnection;1;0;33;0
 WireConnection;1;1;8;1
 ASEEND*/
-//CHKSM=89FCC8204A1ECFCBE3BA9373A0182E976BC5786B
+//CHKSM=248DBD321CD3118E62E82E61EFCE6E1A870848EE

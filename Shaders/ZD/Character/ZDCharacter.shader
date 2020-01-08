@@ -49,6 +49,7 @@ Shader "ZDShader/LWRP/Character"
         _CustomLightDirection ("Custom Light Direction", Vector) = (0.5747975, 0.4099231, -0.7082168, 0.0)
 
         _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
+        _ShadowCastRefraction ("Cast Refraction", Range(0, 1)) = 0.01
     }
 
     SubShader
@@ -157,6 +158,7 @@ Shader "ZDShader/LWRP/Character"
             half4 _Discoloration;
             half _ReceiveShadow;
             half _ShadowRefraction;
+            half _ShadowCastRefraction;
 
             half _CustomLighting;
             half4 _CustomLightColor;
@@ -350,12 +352,12 @@ Shader "ZDShader/LWRP/Character"
                 float shadowPow0 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_0_var.rgb))), shadowStrength);
                 float shadowRefr = _ESSGMask_var.g ;
 
-                pbr = saturate(pbr);
+                pbr = saturate(lerp(pbr, pbr + (shadowRefr - 0.5h), pow(_ShadowCastRefraction, 5.0h)));
                 
                 //PBRShadowArea
-                float PBRShadowArea = saturate((dot(i.normalWS, mainLight.direction) + (shadowRefr - 0.5) * 2.0 * _ShadowRefraction) * (_ReceiveShadow == 1.0 ? pbr: 1.0)) ;
+                float PBRShadowArea = saturate((dot(i.normalWS, mainLight.direction) + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction) * (_ReceiveShadow == 1.0 ? pbr: 1.0)) ;
                 //PBRShadowArea = saturate(step(1.0, 1.0 - PBRShadowArea));
-                PBRShadowArea = saturate(pow(1.0 - PBRShadowArea, Remap(_ShadowRamp, 0, 1, 30, 1000)));
+                PBRShadowArea = saturate(pow(1.0 - PBRShadowArea, Remap(_ShadowRamp, 0.0h, 1.0h, 30.0h, 1000.0h)));
                 PBRShadowArea = saturate((1.0 - PBRShadowArea)) ;
                 
                 float node_8468 = 2.0;
