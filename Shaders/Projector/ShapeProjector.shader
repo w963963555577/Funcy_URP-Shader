@@ -18,9 +18,10 @@ Shader "ZDShader/LWRP/Projector/Shape"
         //Rectangle Projector
         _RectangleWidth ("Rectangle Width", range(0, 1)) = 1
         _RectangleHeight ("Rectangle Height", range(0, 1)) = 1
-        
+        _RectanglePivot ("Pivot", Vector) = (0.0, 0.0, 0, 0)
         
         _Falloff ("Fall Off", Float) = 4
+        
         
         
         [HideInInspector][Toggle(_ProjectionAngleDiscardEnable)] _ProjectionAngleDiscardEnable ("_ProjectionAngleDiscardEnable (default = on)", float) = 1
@@ -57,6 +58,8 @@ Shader "ZDShader/LWRP/Projector/Shape"
             #pragma vertex vert
             #pragma fragment frag
             
+            // GPU Instancing
+            #pragma multi_compile_instancing
             
             #pragma target 3.0
             
@@ -102,7 +105,7 @@ Shader "ZDShader/LWRP/Projector/Shape"
             //Rectangle Projector
             float _RectangleWidth;
             float _RectangleHeight;
-            
+            float2 _RectanglePivot;
             
             float _Falloff;
             CBUFFER_END
@@ -210,12 +213,25 @@ Shader "ZDShader/LWRP/Projector/Shape"
             
             half4 Rectangle(float2 uv)
             {
-                half4 result = half4(0, 0, 0, 1);
+                half4 result = half4(0.0h, 0.0h, 0.0h, 1.0h);
+                float2 scaleRect = float2(_RectangleWidth, _RectangleHeight);
+                _RectanglePivot += float2(0.5h, 0.5h);
+                float2 uvS = (uv - _RectanglePivot) / scaleRect + _RectanglePivot;
+                if (uvS.x > 1.0h || uvS.x < 0.0h || uvS.y > 1.0h || uvS.y < 0.0h)
+                {
+                    uvS = 0.0h.rr;
+                }
+                else
+                {
+                    uvS = RotateUV(uvS, float2(0.5h, 0.5h), PI / 4.0h);
+                }
                 
-                float2 absUV = abs((RotateUV((uv - 0.5.rr) * 1.41414 / float2(_RectangleWidth, _RectangleHeight) + 0.5.rr, 0.5.rr, PI / 4.0) - 0.5.rr));
-                float area = pow((saturate(absUV.r + absUV.g)), pow(_Falloff, 0.5));
+                float2 absUV = abs(uvS - 0.5h) * 1.4141414h ;
+                
+                float area = pow((saturate(absUV.r + absUV.g)), pow(_Falloff, 0.5h));
                 result.rgb = area.rrr * _Color;
-                result.a = (1.0 - step(1.0, area)) * area ;
+                result.a = (1.0h - step(1.0h, area)) * area;
+                
                 return result;
             }
             
@@ -226,11 +242,11 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 
                 float2 uv = projectorUV(i);
                 
-                float4 col = float4(0, 0, 0, 1);
+                float4 col = float4(0.0h, 0.0h, 0.0h, 1.0h);
                 
                 _Falloff = _Falloff * _Falloff;
                 #if _CircleSector
-                    float2 centerUV = (0.5.rr - uv) * 2.0;
+                    float2 centerUV = (0.5h.rr - uv) * 2.0h;
                     col = CircleSector(centerUV);
                 #endif
                 #if _Rectangle

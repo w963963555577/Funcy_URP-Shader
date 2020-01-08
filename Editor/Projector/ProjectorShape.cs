@@ -15,6 +15,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty thickness { get; set; }
         MaterialProperty rectangleWidth { get; set; }
         MaterialProperty rectangleHeight { get; set; }
+        MaterialProperty rectanglePivot { get; set; }
         MaterialProperty falloff { get; set; }
 
         MaterialProperty projectionAngleDiscardThreshold { get; set; }
@@ -34,6 +35,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             thickness = FindProperty("_Thickness", props);
             rectangleWidth = FindProperty("_RectangleWidth", props);
             rectangleHeight = FindProperty("_RectangleHeight", props);
+            rectanglePivot = FindProperty("_RectanglePivot", props);
             falloff = FindProperty("_Falloff", props);
             projectionAngleDiscardThreshold = FindProperty("_ProjectionAngleDiscardThreshold", props);
             projectionAngleDiscardEnable = FindProperty("_ProjectionAngleDiscardEnable", props);            
@@ -89,6 +91,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {
             FindProperties();
             Material mat = (Material)materialEditor.target;
+            mat.enableInstancing = true;
             EditorGUI.BeginChangeCheck();
             shapeType = SetShapeType(mat);
             shapeType = (ShapeType)EditorGUILayout.EnumPopup("Shape Type", shapeType);
@@ -100,6 +103,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             DrawArea("Base", () => {
                 materialEditor.ShaderProperty(color, color.displayName);
                 materialEditor.ShaderProperty(falloff, falloff.displayName);
+                materialEditor.EnableInstancingField();
             });
 
             if (circleSectorOn)
@@ -115,9 +119,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 {                                        
                     materialEditor.ShaderProperty(rectangleWidth, "Width");
                     materialEditor.ShaderProperty(rectangleHeight, "Height");
-                    
+                    materialEditor.ShaderProperty(rectanglePivot, "Pivot");
                 });
 
+            
             MaterialChangeCheck();
         }
 
