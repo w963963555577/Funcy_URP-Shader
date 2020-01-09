@@ -8,6 +8,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     {
         MaterialProperty baseMap { get; set; }
         MaterialProperty baseColor { get; set; }
+        MaterialProperty normalMap { get; set; }
+        MaterialProperty normalScale { get; set; }
         MaterialProperty maskMap { get; set; }
         MaterialProperty flash { get; set; }
         MaterialProperty emissionColor { get; set; }
@@ -31,7 +33,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         MaterialProperty receiveShadow { get; set; }
         MaterialProperty shadowRefrection { get; set; }
-        MaterialProperty shadowCastRefrection { get; set; }
+        MaterialProperty shadowOffset { get; set; }
+        
         //MaterialProperty invertLightDirection { get; set; }
 
 
@@ -40,6 +43,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {
             baseMap = FindProperty("_diffuse", props);
             baseColor = FindProperty("_Color", props);
+            normalMap = FindProperty("_NormalMap", props);
+            normalScale = FindProperty("_NormalScale", props);
+
             maskMap = FindProperty("_mask", props);
 
             flash = FindProperty("_Flash", props);
@@ -65,7 +71,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             receiveShadow = FindProperty("_ReceiveShadow", props);
             shadowRefrection= FindProperty("_ShadowRefraction", props);
-            shadowCastRefrection = FindProperty("_ShadowCastRefraction", props);
+            shadowOffset = FindProperty("_ShadowOffset", props);
         }
 
         [SerializeField]Transform lightTransform, lightTransfrom_Tmp; 
@@ -81,13 +87,19 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public override void OnMaterialGUI()
         {
             FindProperties();
-
+            Material mat = materialEditor.target as Material;
             EditorGUI.BeginChangeCheck();
             
             DrawArea("Base", () => {
                 materialEditor.TexturePropertySingleLine(baseMap.displayName.ToGUIContent(), baseMap, baseColor);
                 materialEditor.TexturePropertySingleLine(maskMap.displayName.ToGUIContent(), maskMap);
+                materialEditor.TexturePropertySingleLine(normalMap.displayName.ToGUIContent(), normalMap, normalScale);                
             });
+            if (normalMap.textureValue != null)
+            { mat.EnableKeyword("_NORMALMAP"); }
+            else
+            { mat.DisableKeyword("_NORMALMAP"); }
+
 
             DrawArea("Effective", () =>
             {
@@ -172,11 +184,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawArea("Settings",()=> {
-                materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName);
-                if (receiveShadow.floatValue == 1.0f)
-                    materialEditor.ShaderProperty(shadowCastRefrection, shadowCastRefrection.displayName);
+                materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName);                
 
                 materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
+                materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
             });
 

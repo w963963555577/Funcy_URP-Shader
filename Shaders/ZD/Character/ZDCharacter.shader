@@ -8,6 +8,9 @@ Shader "ZDShader/LWRP/Character"
     {
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (0.72, 0.72, 0.72, 1)
+        
+        _NormalMap ("Normal Map", 2D) = "bump" { }
+        _NormalScale ("Scale", Float) = 1.0
 
         _Flash ("Flash", Float) = 0
         _mask ("ESSGMask", 2D) = "white" { }
@@ -49,7 +52,7 @@ Shader "ZDShader/LWRP/Character"
         _CustomLightDirection ("Custom Light Direction", Vector) = (0.5747975, 0.4099231, -0.7082168, 0.0)
 
         _ShadowRefraction ("Shadow Refraction", Range(0, 10)) = 1
-        _ShadowCastRefraction ("Cast Refraction", Range(0, 1)) = 0.01
+        _ShadowOffset ("Shadow Offset", Range(0, 1)) = 0.5
     }
 
     SubShader
@@ -130,7 +133,6 @@ Shader "ZDShader/LWRP/Character"
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
 
-
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
@@ -139,6 +141,7 @@ Shader "ZDShader/LWRP/Character"
 
             CBUFFER_START(UnityPerMaterial)
             float4 _diffuse_ST;
+            float4 _NormalMap_ST;
             float4 _mask_ST;
             half4 _Color;
             half4 _EmissionColor;
@@ -153,12 +156,13 @@ Shader "ZDShader/LWRP/Character"
             half _EmissionxBase;
             half _EmissionOn;
             half _Flash;
+            half _NormalScale;
             half _ShadowRamp;
             half _DiscolorationOn;
             half4 _Discoloration;
             half _ReceiveShadow;
             half _ShadowRefraction;
-            half _ShadowCastRefraction;
+            half _ShadowOffset;
 
             half _CustomLighting;
             half4 _CustomLightColor;
@@ -167,8 +171,8 @@ Shader "ZDShader/LWRP/Character"
             
             CBUFFER_END
 
-            TEXTURE2D(_mask);            SAMPLER(sampler_mask);
-            TEXTURE2D(_GrabTexture);            SAMPLER(sampler_GrabTexture);
+            TEXTURE2D(_mask);                   SAMPLER(sampler_mask);
+            TEXTURE2D(_NormalMap);                   SAMPLER(sampler_NormalMap);
             TEXTURE2D(_diffuse);                SAMPLER(sampler_diffuse);
             
 
@@ -215,7 +219,7 @@ Shader "ZDShader/LWRP/Character"
                 outSurfaceData.specular = half3(0.0h, 0.0h, 0.0h);
 
                 outSurfaceData.smoothness = 0.0;
-                outSurfaceData.normalTS = half3(0.0h, 0.0h, 0.0h);
+                outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_NormalMap, sampler_NormalMap), _NormalScale);
                 outSurfaceData.occlusion = half3(0.0h, 0.0h, 0.0h);
                 outSurfaceData.emission = half3(0.0h, 0.0h, 0.0h);
             }
@@ -279,7 +283,7 @@ Shader "ZDShader/LWRP/Character"
 
                 #if _NORMALMAP
                     half3 normalWS = TransformTangentToWorld(surfaceData.normalTS,
-                    half3x3(input.tangentWS, input.bitangentWS, input.normalWS));
+                    half3x3(i.tangentWS, i.bitangentWS, i.normalWS));
                 #else
                     half3 normalWS = i.normalWS;
                 #endif
@@ -350,9 +354,9 @@ Shader "ZDShader/LWRP/Character"
                 float shadowPow1 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_1_var.rgb))), shadowStrength);
                 float4 _Picker_0_var = _Picker_0;
                 float shadowPow0 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_0_var.rgb))), shadowStrength);
-                float shadowRefr = _ESSGMask_var.g ;
+                float shadowRefr = _ESSGMask_var.g + (_ShadowOffset - 0.5h) * 2.0h;
 
-                pbr = saturate(lerp(pbr, pbr + (shadowRefr - 0.5h), pow(_ShadowCastRefraction, 5.0h)));
+                pbr = saturate(pbr);
                 
                 //PBRShadowArea
                 float PBRShadowArea = saturate((dot(i.normalWS, mainLight.direction) + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction) * (_ReceiveShadow == 1.0 ? pbr: 1.0)) ;
