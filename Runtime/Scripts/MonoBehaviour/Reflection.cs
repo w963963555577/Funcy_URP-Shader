@@ -224,6 +224,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 m_ReflectionTexture = new RenderTexture(m_TextureSize, m_TextureSize, 16);
                 m_ReflectionTexture.name = "__MirrorReflection" + GetInstanceID();
                 m_ReflectionTexture.isPowerOfTwo = true;
+                m_ReflectionTexture.antiAliasing = 2;
                 m_ReflectionTexture.hideFlags = HideFlags.DontSave;
                 m_OldReflectionTextureSize = m_TextureSize;
             }
@@ -236,8 +237,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 reflectionCamera = go.GetComponent<Camera>();
                 reflectionCamera.enabled = false;
                 reflectionCamera.transform.position = transform.position;
-                reflectionCamera.transform.rotation = transform.rotation;
-                reflectionCamera.gameObject.AddComponent<FlareLayer>();
+                reflectionCamera.transform.rotation = transform.rotation;                
                 go.hideFlags = HideFlags.HideAndDontSave;
                 m_ReflectionCameras[currentCamera] = reflectionCamera;
             }
