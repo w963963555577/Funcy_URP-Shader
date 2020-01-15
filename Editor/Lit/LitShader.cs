@@ -14,6 +14,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
+
         }
 
         // material changed check
@@ -122,6 +123,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             }
 
             MaterialChanged(material);
+        }
+        public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
+        {
+            base.OnGUI(materialEditorIn, properties);
+
         }
     }
 }

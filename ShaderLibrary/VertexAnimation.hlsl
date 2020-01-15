@@ -33,11 +33,11 @@ TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
 
 float4 WindAnimation(float4 nv1)
 {
-    float4 nv = mul(GetObjectToWorldMatrix(), nv1);
+    float3 nv = nv1;
     float4 positionMask = _PositionMask.SampleLevel(sampler_PositionMask, TRANSFORM_TEX(nv1.xy, _PositionMask), 0);
     
-    float4 objectOrigin = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
-    float4 positionWS = mul(GetObjectToWorldMatrix(), nv1);
+    float3 objectOrigin = TransformObjectToWorld(float4(0, 0, 0, 1));
+    
     float chanelMask = positionMask.r * positionMask.a;
     
     float _DistanceFromOrigin = distance(objectOrigin.y, nv.y);
@@ -47,6 +47,6 @@ float4 WindAnimation(float4 nv1)
     nv.x += lerp(_unanchored, _anchored, _OriginWeight) * (1 - _nxz) * chanelMask;
     nv.z += lerp(_unanchored, _anchored, _OriginWeight) * (_nxz) * chanelMask;
     
-    nv1 = mul(GetWorldToObjectMatrix(), nv);
+    nv1 = float4(nv, nv1.w);
     return nv1;
 }

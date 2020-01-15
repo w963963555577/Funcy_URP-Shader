@@ -55,21 +55,12 @@ Shader "ZDShader/LWRP/PBR Base"
 
     SubShader
     {
-        // With SRP we introduce a new "RenderPipeline" tag in Subshader. This allows to create shaders
-        // that can match multiple render pipelines. If a RenderPipeline tag is not set it will match
-        // any render pipeline. In case you want your subshader to only run in LWRP set the tag to
-        // "LightweightPipeline"
+
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "LightweightPipeline" "IgnoreProjector" = "True" }
         LOD 300
 
-        // ------------------------------------------------------------------
-        // Forward pass. Shades GI, emission, fog and all lights in a single pass.
-        // Compared to Builtin pipeline forward renderer, LWRP forward renderer will
-        // render a scene with multiple lights with less drawcalls and less overdraw.
         Pass
         {
-            // "Lightmode" tag must be "LightweightForward" or not be defined in order for
-            // to render objects.
             Name "StandardLit"
             Tags { "LightMode" = "LightweightForward" }
 
@@ -80,8 +71,6 @@ Shader "ZDShader/LWRP/PBR Base"
             
             HLSLPROGRAM
             
-            // Required to compile gles 2.0 with standard SRP library
-            // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
             #pragma target 2.0
@@ -102,15 +91,6 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma shader_feature _SPECULAR_SETUP
             #pragma shader_feature _RECEIVE_SHADOWS_OFF
 
-            // -------------------------------------
-            // Lightweight Render Pipeline keywords
-            // When doing custom shaders you most often want to copy and past these #pragmas
-            // These multi_compile variants are stripped from the build depending on:
-            // 1) Settings in the LWRP Asset assigned in the GraphicsSettings at build time
-            // e.g If you disable AdditionalLights in the asset then all _ADDITIONA_LIGHTS variants
-            // will be stripped from build
-            // 2) Invalid combinations are stripped. e.g variants with _MAIN_LIGHT_SHADOWS_CASCADE
-            // but not _MAIN_LIGHT_SHADOWS are invalid and therefore stripped.
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -131,30 +111,11 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
 
-            // Including the following two function is enought for shading with Lightweight Pipeline. Everything is included in them.
-            // Core.hlsl will include SRP shader library, all constant buffers not related to materials (perobject, percamera, perframe).
-            // It also includes matrix/space conversion functions and fog.
-            // Lighting.hlsl will include the light functions/data to abstract light constants. You should use GetMainLight and GetLight functions
-            // that initialize Light struct. Lighting.hlsl also include GI, Light BDRF functions. It also includes Shadows.
 
-            // Required by all Lightweight Render Pipeline shaders.
-            // It will include Unity built-in shader variables (except the lighting variables)
-            // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions.
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-
-            // Include this if you are doing a lit shader. This includes lighting shader variables,
-            // lighting and shadow functions
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
 
-            // Material shader variables are not defined in SRP or LWRP shader library.
-            // This means _BaseColor, _BaseMap, _BaseMap_ST, and all variables in the Properties section of a shader
-            // must be defined by the shader itself. If you define all those properties in CBUFFER named
-            // UnityPerMaterial, SRP can cache the material properties between frames and reduce significantly the cost
-            // of each drawcall.
-            // In this case, for sinmplicity LitInput.hlsl is included. This contains the CBUFFER for the material
-            // properties defined above. As one can see this is not part of the ShaderLibrary, it specific to the
-            // LWRP Lit shader.
+
             #ifndef LIGHTWEIGHT_LIT_INPUT_INCLUDED
                 #define LIGHTWEIGHT_LIT_INPUT_INCLUDED
 

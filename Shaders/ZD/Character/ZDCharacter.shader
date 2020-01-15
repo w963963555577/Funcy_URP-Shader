@@ -172,7 +172,7 @@ Shader "ZDShader/LWRP/Character"
             CBUFFER_END
 
             TEXTURE2D(_mask);                   SAMPLER(sampler_mask);
-            TEXTURE2D(_NormalMap);                   SAMPLER(sampler_NormalMap);
+            TEXTURE2D(_NormalMap);               SAMPLER(sampler_NormalMap);
             TEXTURE2D(_diffuse);                SAMPLER(sampler_diffuse);
             
 

@@ -111,15 +111,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #pragma shader_feature _SPECULAR_SETUP
             #pragma shader_feature _RECEIVE_SHADOWS_OFF
             
-            // -------------------------------------
-            // Lightweight Render Pipeline keywords
-            // When doing custom shaders you most often want to copy and past these #pragmas
-            // These multi_compile variants are stripped from the build depending on:
-            // 1) Settings in the LWRP Asset assigned in the GraphicsSettings at build time
-            // e.g If you disable AdditionalLights in the asset then all _ADDITIONA_LIGHTS variants
-            // will be stripped from build
-            // 2) Invalid combinations are stripped. e.g variants with _MAIN_LIGHT_SHADOWS_CASCADE
-            // but not _MAIN_LIGHT_SHADOWS are invalid and therefore stripped.
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -270,13 +261,13 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             Varyings LitPassVertex(Attributes input)
             {
                 Varyings output;
-                //WindAnimation
-                input.positionOS = WindAnimation(input.positionOS);
+                
                 
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                
+                //WindAnimation
+                input.positionOS = WindAnimation(input.positionOS);
                 
                 output.positionOS = input.positionOS;
                 
@@ -322,15 +313,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 half4 albedoAlpha = _BaseMap.Sample(sampler_BaseMap, input.uv);
                 float alpha = albedoAlpha.a;
                 
-                if (alpha < 0.5)
-                {
-                    discard;
-                }
                 
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 
-                if(_DebugMask == 1.0)
+                if (_DebugMask == 1.0)
                 {
                     float4 objectOrigin = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
                     float positionMask = _PositionMask.Sample(sampler_PositionMask, TRANSFORM_TEX(input.positionOS, _PositionMask)).r;
@@ -484,14 +471,14 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             VertexOutput ShadowPassVertex(GraphVertexInput v)
             {
                 VertexOutput o;
-                //WindAnimation
-                v.vertex = WindAnimation(v.vertex);
+                
                 
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                
+                //WindAnimation
+                v.vertex = WindAnimation(v.vertex);
                 
                 v.ase_normal = v.ase_normal ;
                 
@@ -608,14 +595,12 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             {
                 VertexOutput o = (VertexOutput)0;
                 
-                //WindAnimation
-                v.vertex = WindAnimation(v.vertex);
-                
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                
+                //WindAnimation
+                v.vertex = WindAnimation(v.vertex);
                 
                 v.ase_normal = v.ase_normal ;
                 o.uv = v.uv;
