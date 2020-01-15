@@ -11,7 +11,7 @@ void SSRRayConvert(float3 worldPos, out float4 clipPos, out float3 screenPos)
     
     screenPos.xy = ComputeScreenPos(clipPos).xy * k;
     screenPos.z = k;
-    
+     
     #if defined(UNITY_SINGLE_PASS_STEREO)
         screenPos.xy = UnityStereoTransformScreenSpaceTex(screenPos.xy);
     #endif
