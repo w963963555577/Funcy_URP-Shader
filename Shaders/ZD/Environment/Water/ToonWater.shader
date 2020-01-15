@@ -79,7 +79,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/Shaders/UnlitInput.hlsl"
-            #include "Assets/Funcy_LWRP/ShaderLibrary/SSR.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/SSR.hlsl"
 
             sampler2D _NormalMap;
             uniform float4 _CameraDepthTexture_TexelSize;            

@@ -495,7 +495,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float4 clipPos = TransformWorldToHClip(positionWS);
                 
                 // _ShadowBias.x sign depens on if platform has reversed z buffer
-                //clipPos.z += _ShadowBias.x;
+                clipPos.z += _ShadowBias.x;
                 
                 #if UNITY_REVERSED_Z
                     clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
@@ -625,7 +625,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float Alpha = 1;
                 float AlphaClipThreshold = AlphaClipThreshold;
                 
-                //clip(albedoAlpha.a);
+                clip(albedoAlpha.a);
                 return half4(0, 0, 0, 0);
             }
             ENDHLSL
