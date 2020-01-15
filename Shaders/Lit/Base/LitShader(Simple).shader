@@ -495,7 +495,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float4 clipPos = TransformWorldToHClip(positionWS);
                 
                 // _ShadowBias.x sign depens on if platform has reversed z buffer
-                clipPos.z += _ShadowBias.x;
+                //clipPos.z += _ShadowBias.x;
                 
                 #if UNITY_REVERSED_Z
                     clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
@@ -513,7 +513,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 half4 albedoAlpha = _BaseMap.Sample(sampler_BaseMap, IN.uv);
                 float alpha = albedoAlpha.a;
                 
-                if (alpha < 0.5)
+                if (alpha < 0.15)
                 {
                     discard;
                 }
@@ -534,103 +534,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             
         }
         
+        // Used for rendering shadowmaps
+        UsePass "Lightweight Render Pipeline/Lit/ShadowCaster"
+        UsePass "Lightweight Render Pipeline/Lit/DepthOnly"
+        UsePass "Lightweight Render Pipeline/Lit/Meta"
         
-        Pass
-        {
-            
-            Name "DepthOnly"
-            Tags { "LightMode" = "DepthOnly" }
-            
-            ZWrite On
-            ZTest LEqual
-            
-            ColorMask 0
-            
-            HLSLPROGRAM
-            
-            #pragma multi_compile _ LOD_FADE_CROSSFADE
-            #pragma multi_compile_fog
-            
-            // Required to compile gles 2.0 with standard srp library
-            #pragma prefer_hlslcc gles
-            #pragma exclude_renderers d3d11_9x
-            
-            //--------------------------------------
-            // GPU Instancing
-            #pragma multi_compile_instancing
-            
-            #pragma vertex vert
-            #pragma fragment frag
-            
-            
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/VertexAnimation.hlsl"
-            //#include "Assets/Funcy_LWRP/ShaderLibrary/VertexAnimation.hlsl"
-            
-            
-            struct GraphVertexInput
-            {
-                float4 vertex: POSITION;
-                float2 uv: TEXCOORD;
-                float3 ase_normal: NORMAL;
-                
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-            
-            struct VertexOutput
-            {
-                float4 clipPos: SV_POSITION;
-                float2 uv: TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
-            };
-            
-            
-            
-            VertexOutput vert(GraphVertexInput v)
-            {
-                VertexOutput o = (VertexOutput)0;
-                
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                
-                //WindAnimation
-                v.vertex = WindAnimation(v.vertex);
-                
-                v.ase_normal = v.ase_normal ;
-                o.uv = v.uv;
-                o.clipPos = TransformObjectToHClip(v.vertex.xyz);
-                return o;
-            }
-            
-            half4 frag(VertexOutput IN): SV_TARGET
-            {
-                half4 albedoAlpha = _BaseMap.Sample(sampler_BaseMap, IN.uv);
-                float alpha = albedoAlpha.a;
-                
-                if (alpha < 0.5)
-                {
-                    discard;
-                }
-                
-                UNITY_SETUP_INSTANCE_ID(IN);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-                
-                
-                float Alpha = 1;
-                float AlphaClipThreshold = AlphaClipThreshold;
-                
-                clip(albedoAlpha.a);
-                return half4(0, 0, 0, 0);
-            }
-            ENDHLSL
-            
-        }
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
