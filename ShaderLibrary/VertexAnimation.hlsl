@@ -28,7 +28,7 @@ float _ZMotionSpeed;
 float _OriginWeight;
 
 half _DebugMask;
-
+ 
 TEXTURE2D(_PositionMask);       SAMPLER(sampler_PositionMask);
 
 float4 WindAnimation(float4 nv1)
