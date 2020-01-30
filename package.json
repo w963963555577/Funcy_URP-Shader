@@ -13,5 +13,18 @@
     "type": "git",
     "url": "git@github.com:Unity-Technologies/ScriptableRenderPipeline.git",
     "revision": "c674503aa3fdb4e9460c7dbf4bcf3696eced19da"
-  }
+  },
+  "samples": [
+
+    {
+ 
+      "displayName": "Funcy LWRP Demo",
+ 
+      "description": "Demo Package",
+ 
+      "path": "Funcy_LWRP_Demo/ZD/Character/Demo.unity"
+ 
+    }
+  ]
 }
+
