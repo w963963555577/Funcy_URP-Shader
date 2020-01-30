@@ -158,7 +158,9 @@ Shader "ZDShader/LWRP/Projector/Shape"
             {
                 i.viewRayOS /= i.viewRayOS.w;
                 i.screenUV = i.screenUV / i.screenUV.w;
-                
+                #if defined(UNITY_SINGLE_PASS_STEREO)
+                    i.screenUV.xy = UnityStereoTransformScreenSpaceTex(i.screenUV.xy);
+                #endif
                 float sceneCameraSpaceDepth = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(i.screenUV), _ZBufferParams);
                 float3 decalSpaceScenePos = i.cameraPosOS + i.viewRayOS * sceneCameraSpaceDepth;
                 
