@@ -3,7 +3,7 @@
   "description": "這是 Funcy 的 Shader Package\n裡面有各種 Tutorial.",
   "version": "1.0.0",
   "unity": "2019.3",
-  "unityRelease": "f6",
+  "unityRelease": "0f6",
   "displayName": "_Funcy URP",
   "dependencies": {        
     "com.unity.render-pipelines.universal": "7.2.1"
