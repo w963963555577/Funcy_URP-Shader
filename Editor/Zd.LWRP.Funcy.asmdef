@@ -1,0 +1,22 @@
+{
+    "name": "ZD.ZDShader.Editor",
+    "references": [
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Core.Editor",
+        "Unity.ShaderGraph.Editor",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "ZD.ZDShader.Runtime",
+        ""
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

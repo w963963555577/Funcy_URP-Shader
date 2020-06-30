@@ -1,114 +1,67 @@
+// Made with Amplify Shader Editor
+// Available at the Unity Asset Store - http://u3d.as/y3X 
 Shader "ZDShader/LWRP/Environment/Real Water"
 {
     Properties
     {
-        
-        [NoScaleOffset]_NormalTexture ("Normal Texture", 2D) = "white" { }
-        _NormalTiling ("Normal Tiling", Float) = 1
-        _DeepWaterColor ("Deep Water Color", Color) = (0.07843138, 0.3921569, 0.7843137, 1)
-        _ShallowWaterColor ("Shallow Water Color", Color) = (0.4411765, 0.9537525, 1, 1)
-        _DepthTransparency ("Depth Transparency", Float) = 1.5
-        _ShoreFade ("Shore Fade", Float) = 0.3
-        _ShoreTransparency ("Shore Transparency", Float) = 0.04
-        _ShallowDeepBlend ("Shallow-Deep-Blend", Float) = 3.6
-        _Fade ("Shallow-Deep-Fade", Float) = 3
-        [HideInInspector]_ReflectionTex ("Reflection Tex", 2D) = "white" { }
-        [MaterialToggle] _UseReflections ("Enable Reflections", Float) = 0.08586914
-        _Reflectionintensity ("Reflection intensity", Range(0, 1)) = 0.5
-        _Distortion ("Distortion", Range(0, 2)) = 0.3
-        _Specular ("Specular", Float) = 1
-        _SpecularColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
-        _Gloss ("Gloss", Float) = 0.8
-        _LightWrapping ("Light Wrapping", Float) = 1.5
-        _Refraction ("Refraction", Range(0, 1)) = 0.5
-        _WaveSpeed ("Wave Speed", Float) = 40
-        [NoScaleOffset]_FoamTexture ("Foam Texture", 2D) = "white" { }
-        _FoamTiling ("Foam Tiling", Float) = 3
-        _FoamBlend ("Foam Blend", Float) = 0.15
-        _FoamVisibility ("Foam Visibility", Range(0, 1)) = 0.3
-        _FoamIntensity ("Foam Intensity", Float) = 5
-        _FoamContrast ("Foam Contrast", Range(0, 0.5)) = 0.25
-        _FoamColor ("Foam Color", Color) = (0.5, 0.5, 0.5, 1)
-        _FoamSpeed ("Foam Speed", Float) = 120
-        [HideInInspector]_Cutoff ("Alpha cutoff", Range(0, 1)) = 0.5
-        
+		[HideInInspector]_ReflectionTex("ReflectionTex", 2D) = "white" {}
+		[NoScaleOffset]_NormalMap("NormalMap", 2D) = "white" {}
+		[NoScaleOffset]_FoamMap("FoamMap", 2D) = "white" {}
+		_WaveScale("WaveScale (1=1 meter)", Float) = 1
+		_RefractionIntensity("Refraction Intensity", Range( 0 , 1)) = 1
+		_FoamIntensity("Foam Intensity", Range( 0 , 1)) = 0
+		_WaveSpeed("WaveSpeed", Range( 0.01 , 2.5)) = 0.5
+		_WaterDepth("WaterDepth", Range( 0 , 10)) = 1
 
-        // Blending state
-        [Enum(Off, 0, Front, 1, Back, 2)] _Cull ("Cull Mode", Float) = 2.0
-
-        [HideInInspector] _Blend ("__blend", Float) = 0.0
-        [HideInInspector] _AlphaClip ("__clip", Float) = 0.0
-        [HideInInspector] _SrcBlend ("__src", Float) = 1.0
-        [HideInInspector] _DstBlend ("__dst", Float) = 0.0
-        [Enum(Off, 0, On, 1)]  _ZWrite ("ZWrite", Float) = 1.0
-        [Enum(UnityEngine.Rendering.CompareFunction)]  _ZTest ("ZTest", Float) = 4
     }
+
+
     SubShader
     {
-        // With SRP we introduce a new "RenderPipeline" tag in Subshader. This allows to create shaders
-        // that can match multiple render pipelines. If a RenderPipeline tag is not set it will match
-        // any render pipeline. In case you want your subshader to only run in LWRP set the tag to
-        // "LightweightPipeline"
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "LightweightPipeline" "IgnoreProjector" = "True" }
-        LOD 300
+		LOD 0
 
-        // ------------------------------------------------------------------
-        // Forward pass. Shades GI, emission, fog and all lights in a single pass.
-        // Compared to Builtin pipeline forward renderer, LWRP forward renderer will
-        // render a scene with multiple lights with less drawcalls and less overdraw.
+		
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+
+		Cull Back
+		HLSLINCLUDE
+		#pragma target 3.0
+		ENDHLSL
+		
         Pass
         {
-            // "Lightmode" tag must be "LightweightForward" or not be defined in order for
-            // to render objects.
-            Name "StandardLit"
-            Tags { "LightMode" = "LightweightForward" }
+        	Tags { "LightMode"="UniversalForward" }
 
-            Blend[_SrcBlend][_DstBlend]
-            ZWrite[_ZWrite]
-            ZTest [_ZTest]
-            Cull[_Cull]
+        	Name "Base"
+			Blend One Zero , One Zero
+			ZWrite On
+			ZTest LEqual
+			Offset 0 , 0
+			ColorMask RGBA
             
-            HLSLPROGRAM
-            
-            // Required to compile gles 2.0 with standard SRP library
-            // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
+        	HLSLPROGRAM
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 60902
+            #define REQUIRE_DEPTH_TEXTURE 1
+            #define REQUIRE_OPAQUE_TEXTURE 1
+
+            // Required to compile gles 2.0 with standard srp library
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
+            
 
-            // -------------------------------------
-            // Material Keywords
-            // unused shader_feature variants are stripped from build automatically
-            #pragma shader_feature _NORMALMAP
-            #pragma shader_feature _ALPHATEST_ON
-            #pragma shader_feature _ALPHAPREMULTIPLY_ON
-            #pragma shader_feature _EMISSION
-            #pragma shader_feature _METALLICSPECGLOSSMAP
-            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature _OCCLUSIONMAP
-
-            #pragma shader_feature _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature _GLOSSYREFLECTIONS_OFF
-            #pragma shader_feature _SPECULAR_SETUP
-            #pragma shader_feature _RECEIVE_SHADOWS_OFF
-
-            // -------------------------------------
-            // Lightweight Render Pipeline keywords
-            // When doing custom shaders you most often want to copy and past these #pragmas
-            // These multi_compile variants are stripped from the build depending on:
-            // 1) Settings in the LWRP Asset assigned in the GraphicsSettings at build time
-            // e.g If you disable AdditionalLights in the asset then all _ADDITIONA_LIGHTS variants
-            // will be stripped from build
-            // 2) Invalid combinations are stripped. e.g variants with _MAIN_LIGHT_SHADOWS_CASCADE
-            // but not _MAIN_LIGHT_SHADOWS are invalid and therefore stripped.
+        	// -------------------------------------
+            // Lightweight Pipeline keywords
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile _ _SHADOWS_SOFT
             #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
-
-            // -------------------------------------
+            
+        	// -------------------------------------
             // Unity defined keywords
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile _ LIGHTMAP_ON
@@ -118,234 +71,734 @@ Shader "ZDShader/LWRP/Environment/Real Water"
             // GPU Instancing
             #pragma multi_compile_instancing
 
-            #pragma vertex LitPassVertex
-            #pragma fragment LitPassFragment
+            #pragma vertex vert
+        	#pragma fragment frag
 
-            // Including the following two function is enought for shading with Lightweight Pipeline. Everything is included in them.
-            // Core.hlsl will include SRP shader library, all constant buffers not related to materials (perobject, percamera, perframe).
-            // It also includes matrix/space conversion functions and fog.
-            // Lighting.hlsl will include the light functions/data to abstract light constants. You should use GetMainLight and GetLight functions
-            // that initialize Light struct. Lighting.hlsl also include GI, Light BDRF functions. It also includes Shadows.
+        	#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        	#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+        	#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+        	#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+        	#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+		
+			
 
-            // Required by all Lightweight Render Pipeline shaders.
-            // It will include Unity built-in shader variables (except the lighting variables)
-            // (https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            // It will also include many utilitary functions.
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
+			sampler2D _ReflectionTex;
+			sampler2D _NormalMap;
+			sampler2D _FoamMap;
+			uniform float4 _CameraDepthTexture_TexelSize;
+			CBUFFER_START( UnityPerMaterial )
+			float _WaveSpeed;
+			float _WaveScale;
+			float _RefractionIntensity;
+			float _FoamIntensity;
+			float _WaterDepth;
+			CBUFFER_END
 
-            // Include this if you are doing a lit shader. This includes lighting shader variables,
-            // lighting and shadow functions
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Lighting.hlsl"
 
-
-            // Material shader variables are not defined in SRP or LWRP shader library.
-            // This means _BaseColor, _BaseMap, _BaseMap_ST, and all variables in the Properties section of a shader
-            // must be defined by the shader itself. If you define all those properties in CBUFFER named
-            // UnityPerMaterial, SRP can cache the material properties between frames and reduce significantly the cost
-            // of each drawcall.
-            // In this case, for sinmplicity LitInput.hlsl is included. This contains the CBUFFER for the material
-            // properties defined above. As one can see this is not part of the ShaderLibrary, it specific to the
-            // LWRP Lit shader.
-            #ifndef LIGHTWEIGHT_LIT_INPUT_INCLUDED
-                #define LIGHTWEIGHT_LIT_INPUT_INCLUDED
-
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
-                #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-                #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/SurfaceInput.hlsl"
-
-                CBUFFER_START(UnityPerMaterial)
-                float4 _ReflectionTex_ST;
-
-                float _NormalTiling;
-                float4 _DeepWaterColor;
-                float4 _ShallowWaterColor;
-                float _DepthTransparency;
-                float _ShoreFade;
-                float _ShoreTransparency;
-                float _ShallowDeepBlend;
-                float _Fade;
-                
-                float _UseReflections;
-                float _Reflectionintensity;
-                float _Distortion;
-                float _Specular;
-                float4 _SpecularColor;
-                float _Gloss;
-                float _LightWrapping;
-                float _Refraction;
-                float _WaveSpeed;
-                float _FoamTiling;
-                float _FoamBlend;
-                float _FoamVisibility;
-                float _FoamIntensity;
-                float _FoamContrast;
-                float4 _FoamColor;
-                float _FoamSpeed;
-                CBUFFER_END
-
-                TEXTURE2D(_NormalTexture);          SAMPLER(sampler_NormalTexture);
-                TEXTURE2D(_ReflectionTex);          SAMPLER(sampler_ReflectionTex);
-                TEXTURE2D(_FoamTexture);            SAMPLER(sampler_FoamTexture);
-                TEXTURE2D(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
-            #endif // LIGHTWEIGHT_INPUT_SURFACE_PBR_INCLUDED
-            
-
-            struct Attributes
+            struct GraphVertexInput
             {
-                float4 positionOS: POSITION;
-                float3 normalOS: NORMAL;
-                float4 tangentOS: TANGENT;
-                float2 uv: TEXCOORD0;
-                float2 uvLM: TEXCOORD1;
+                float4 vertex : POSITION;
+                float3 ase_normal : NORMAL;
+                float4 ase_tangent : TANGENT;
+                float4 texcoord1 : TEXCOORD1;
+				
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            struct Varyings
+        	struct GraphVertexOutput
             {
-                float2 uv: TEXCOORD0;
-                float2 uvLM: TEXCOORD1;
-                float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
-                half3 normalWS: TEXCOORD3;
-                half3 tangentWS: TEXCOORD4;
-                half3 bitangentWS: TEXCOORD5;
-                float4 shadowCoord: TEXCOORD6; // compute shadow coord per-vertex for the main light
-                float4 projPos: TEXCOORD7;
-
-                float4 positionCS: SV_POSITION;
+                float4 clipPos                : SV_POSITION;
+                float4 lightmapUVOrVertexSH	  : TEXCOORD0;
+        		half4 fogFactorAndVertexLight : TEXCOORD1; // x: fogFactor, yzw: vertex light
+            	float4 shadowCoord            : TEXCOORD2;
+				float4 tSpace0					: TEXCOORD3;
+				float4 tSpace1					: TEXCOORD4;
+				float4 tSpace2					: TEXCOORD5;
+				float4 ase_texcoord7 : TEXCOORD7;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            	UNITY_VERTEX_OUTPUT_STEREO
             };
 
+			inline float4 ASE_ComputeGrabScreenPos( float4 pos )
+			{
+				#if UNITY_UV_STARTS_AT_TOP
+				float scale = -1.0;
+				#else
+				float scale = 1.0;
+				#endif
+				float4 o = pos;
+				o.y = pos.w * 0.5f;
+				o.y = ( pos.y - o.y ) * _ProjectionParams.x * scale + o.y;
+				return o;
+			}
+			
 
-            Varyings LitPassVertex(Attributes input)
+            GraphVertexOutput vert (GraphVertexInput v  )
+        	{
+        		GraphVertexOutput o = (GraphVertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+            	UNITY_TRANSFER_INSTANCE_ID(v, o);
+        		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
+				float4 screenPos = ComputeScreenPos(ase_clipPos);
+				o.ase_texcoord7 = screenPos;
+				
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				float3 defaultVertexValue = v.vertex.xyz;
+				#else
+				float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+				float3 vertexValue =  defaultVertexValue ;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				v.vertex.xyz = vertexValue;
+				#else
+				v.vertex.xyz += vertexValue;
+				#endif
+				v.ase_normal =  v.ase_normal ;
+
+        		// Vertex shader outputs defined by graph
+                float3 lwWNormal = TransformObjectToWorldNormal(v.ase_normal);
+				float3 lwWorldPos = TransformObjectToWorld(v.vertex.xyz);
+				float3 lwWTangent = TransformObjectToWorldDir(v.ase_tangent.xyz);
+				float3 lwWBinormal = normalize(cross(lwWNormal, lwWTangent) * v.ase_tangent.w);
+				o.tSpace0 = float4(lwWTangent.x, lwWBinormal.x, lwWNormal.x, lwWorldPos.x);
+				o.tSpace1 = float4(lwWTangent.y, lwWBinormal.y, lwWNormal.y, lwWorldPos.y);
+				o.tSpace2 = float4(lwWTangent.z, lwWBinormal.z, lwWNormal.z, lwWorldPos.z);
+
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
+                
+         		// We either sample GI from lightmap or SH.
+        	    // Lightmap UV and vertex SH coefficients use the same interpolator ("float2 lightmapUV" for lightmap or "half3 vertexSH" for SH)
+                // see DECLARE_LIGHTMAP_OR_SH macro.
+        	    // The following funcions initialize the correct variable with correct data
+        	    OUTPUT_LIGHTMAP_UV(v.texcoord1, unity_LightmapST, o.lightmapUVOrVertexSH.xy);
+        	    OUTPUT_SH(lwWNormal, o.lightmapUVOrVertexSH.xyz);
+
+        	    half3 vertexLight = VertexLighting(vertexInput.positionWS, lwWNormal);
+			#ifdef ASE_FOG
+        	    half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
+			#else
+				half fogFactor = 0;
+			#endif
+        	    o.fogFactorAndVertexLight = half4(fogFactor, vertexLight);
+        	    o.clipPos = vertexInput.positionCS;
+
+        	#ifdef _MAIN_LIGHT_SHADOWS
+        		o.shadowCoord = GetShadowCoord(vertexInput);
+        	#endif
+        		return o;
+        	}
+
+        	half4 frag (GraphVertexOutput IN  ) : SV_Target
             {
-                Varyings output;
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                VertexNormalInputs vertexNormalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
-                float fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
-                output.uv = input.uv;
-                output.uvLM = input.uvLM.xy * unity_LightmapST.xy + unity_LightmapST.zw;
-                output.positionWSAndFogFactor = float4(vertexInput.positionWS, fogFactor);
-                output.normalWS = vertexNormalInput.normalWS;
-                output.tangentWS = vertexNormalInput.tangentWS;
-                output.bitangentWS = vertexNormalInput.bitangentWS;
-                output.shadowCoord = GetShadowCoord(vertexInput);
-                output.positionCS = vertexInput.positionCS;
-                output.projPos = ComputeScreenPos(output.positionCS);
-                output.projPos.z = -TransformWorldToView(vertexInput.positionWS).z;
-                return output;
+            	UNITY_SETUP_INSTANCE_ID(IN);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+
+        		float3 WorldSpaceNormal = normalize(float3(IN.tSpace0.z,IN.tSpace1.z,IN.tSpace2.z));
+				float3 WorldSpaceTangent = float3(IN.tSpace0.x,IN.tSpace1.x,IN.tSpace2.x);
+				float3 WorldSpaceBiTangent = float3(IN.tSpace0.y,IN.tSpace1.y,IN.tSpace2.y);
+				float3 WorldSpacePosition = float3(IN.tSpace0.w,IN.tSpace1.w,IN.tSpace2.w);
+				float3 WorldSpaceViewDirection = SafeNormalize( _WorldSpaceCameraPos.xyz  - WorldSpacePosition );
+    
+				float4 screenPos = IN.ase_texcoord7;
+				float4 ase_screenPosNorm = screenPos / screenPos.w;
+				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
+				float2 appendResult31 = (float2(ase_screenPosNorm.x , ase_screenPosNorm.y));
+				float2 temp_output_70_0 = ( float2( 0.707,0.707 ) * _WaveSpeed );
+				float2 temp_output_29_0 = ( (( WorldSpacePosition - (mul( GetObjectToWorldMatrix(), float4(0,0,0,1) )).xyz )).xz / _WaveScale );
+				float2 panner11 = ( 0.8146843 * _Time.y * temp_output_70_0 + temp_output_29_0);
+				float2 panner23 = ( 0.513432 * _Time.y * float2( 1,0 ) + temp_output_29_0);
+				float screenDepth52 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH( ase_screenPosNorm.xy ),_ZBufferParams);
+				float distanceDepth52 = abs( ( screenDepth52 - LinearEyeDepth( ase_screenPosNorm.z,_ZBufferParams ) ) / ( _WaterDepth ) );
+				float temp_output_55_0 = pow( saturate( ( 1.0 - distanceDepth52 ) ) , 2.0 );
+				float4 ase_grabScreenPos = ASE_ComputeGrabScreenPos( screenPos );
+				float4 ase_grabScreenPosNorm = ase_grabScreenPos / ase_grabScreenPos.w;
+				float4 fetchOpaqueVal59 = float4( SHADERGRAPH_SAMPLE_SCENE_COLOR( ase_grabScreenPosNorm ), 1.0 );
+				
+				
+		        float3 Albedo = ( ( saturate( ( tex2D( _ReflectionTex, ( appendResult31 + ( ( (tex2D( _NormalMap, panner11 )).rg - (tex2D( _NormalMap, panner23 )).rg ) * _RefractionIntensity ) ) ) + float4( ( ( ( (tex2D( _FoamMap, panner11 )).rgb - (tex2D( _FoamMap, panner23 )).rgb ) + float3( 0.2,0.2,0.2 ) ) * _FoamIntensity ) , 0.0 ) ) ) * ( 1.0 - temp_output_55_0 ) ) + ( temp_output_55_0 * fetchOpaqueVal59 ) ).rgb;
+				float3 Normal = float3(0, 0, 1);
+				float3 Emission = 0;
+				float3 Specular = float3(0.5, 0.5, 0.5);
+				float Metallic = 0;
+				float Smoothness = 0.5;
+				float Occlusion = 1;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0;
+
+        		InputData inputData;
+        		inputData.positionWS = WorldSpacePosition;
+
+        #ifdef _NORMALMAP
+        	    inputData.normalWS = normalize(TransformTangentToWorld(Normal, half3x3(WorldSpaceTangent, WorldSpaceBiTangent, WorldSpaceNormal)));
+        #else
+            #if !SHADER_HINT_NICE_QUALITY
+                inputData.normalWS = WorldSpaceNormal;
+            #else
+        	    inputData.normalWS = normalize(WorldSpaceNormal);
+            #endif
+        #endif
+
+			#if !SHADER_HINT_NICE_QUALITY
+        	    // viewDirection should be normalized here, but we avoid doing it as it's close enough and we save some ALU.
+        	    inputData.viewDirectionWS = WorldSpaceViewDirection;
+			#else
+        	    inputData.viewDirectionWS = normalize(WorldSpaceViewDirection);
+			#endif
+
+        	    inputData.shadowCoord = IN.shadowCoord;
+			#ifdef ASE_FOG
+        	    inputData.fogCoord = IN.fogFactorAndVertexLight.x;
+			#endif
+        	    inputData.vertexLighting = IN.fogFactorAndVertexLight.yzw;
+        	    inputData.bakedGI = SAMPLE_GI(IN.lightmapUVOrVertexSH.xy, IN.lightmapUVOrVertexSH.xyz, inputData.normalWS);
+
+        		half4 color = LightweightFragmentPBR(
+        			inputData, 
+        			Albedo, 
+        			Metallic, 
+        			Specular, 
+        			Smoothness, 
+        			Occlusion, 
+        			Emission, 
+        			Alpha);
+
+		#ifdef ASE_FOG
+			#ifdef TERRAIN_SPLAT_ADDPASS
+				color.rgb = MixFogColor(color.rgb, half3( 0, 0, 0 ), IN.fogFactorAndVertexLight.x );
+			#else
+				color.rgb = MixFog(color.rgb, IN.fogFactorAndVertexLight.x);
+			#endif
+		#endif
+
+        #if _AlphaClip
+        		clip(Alpha - AlphaClipThreshold);
+        #endif
+		
+		#ifdef LOD_FADE_CROSSFADE
+				LODDitheringTransition (IN.clipPos.xyz, unity_LODFade.x);
+		#endif
+        		return color;
             }
 
-            half4 LitPassFragment(Varyings i): SV_Target
+        	ENDHLSL
+        }
+
+		
+        Pass
+        {
+			
+        	Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+
+			ZWrite On
+			ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 60902
+
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+
+            
+
+            struct GraphVertexInput
             {
-                #ifdef _MAIN_LIGHT_SHADOWS
-                    Light mainLight = GetMainLight(i.shadowCoord);
-                #else
-                    Light mainLight = GetMainLight();
-                #endif
+                float4 vertex : POSITION;
+                float3 ase_normal : NORMAL;
+				
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+			CBUFFER_START( UnityPerMaterial )
+			float _WaveSpeed;
+			float _WaveScale;
+			float _RefractionIntensity;
+			float _FoamIntensity;
+			float _WaterDepth;
+			CBUFFER_END
+
+
+        	struct VertexOutput
+        	{
+        	    float4 clipPos      : SV_POSITION;
                 
-                float3 recipObjScale = float3(length(unity_WorldToObject[0].xyz), length(unity_WorldToObject[1].xyz), length(unity_WorldToObject[2].xyz));
-                float3 objScale = 1.0 / recipObjScale;
-                i.normalWS = normalize(i.normalWS);
-                float3x3 tangentTransform = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
-                float3 viewDirection = normalize(GetCameraPositionWS() - i.positionWSAndFogFactor.xyz);
-                float _rotator1_ang = 1.5708;
-                float _rotator1_spd = 1.0;
-                float _rotator1_cos = cos(_rotator1_spd * _rotator1_ang);
-                float _rotator1_sin = sin(_rotator1_spd * _rotator1_ang);
-                float2 _rotator1_piv = float2(0.5, 0.5);
-                float2 _rotator1 = (mul(i.uv - _rotator1_piv, float2x2(_rotator1_cos, -_rotator1_sin, _rotator1_sin, _rotator1_cos)) + _rotator1_piv);
-                float _WaveSpeed_var = (_WaveSpeed);
-                float _NormalTiling_var = (_NormalTiling);
-                float2 _division1 = ((objScale.rb * _NormalTiling_var) / 1000.0);
-                float4 _timer1 = _Time;
-                float3 _multiplier3 = (float3((_WaveSpeed_var / _division1), 0.0) * (_timer1.r / 100.0));
-                float2 _multiplier1 = ((_rotator1 + _multiplier3) * _division1);
-                float4 _texture1 = _NormalTexture.Sample(sampler_NormalTexture, _multiplier1);
-                float2 _multiplier2 = ((i.uv + _multiplier3) * _division1);
-                float4 _texture2 = _NormalTexture.Sample(sampler_NormalTexture, _multiplier2);
-                float3 _subtractor1 = (_texture1.rgb - _texture2.rgb);
-                float _Refraction_var = (_Refraction);
-                float3 normalLocal = lerp(float3(0, 0, 1), _subtractor1, _Refraction_var);
-                float3 normalDirection = normalize(mul(normalLocal, tangentTransform)); // Perturbed normals
-                float2 sceneUVs = (i.projPos.xy / i.projPos.w);
-                float sceneZ = max(0, LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, sceneUVs), _ZBufferParams));
-                float partZ = max(0, i.projPos.z - _ProjectionParams.g);
-                float3 lightDirection = normalize(mainLight.direction.xyz);
-                float3 lightColor = mainLight.color.rgb;
-                float3 halfDirection = normalize(viewDirection + lightDirection);
-                ////// Lighting:
-                float attenuation = 1;
-                float3 attenColor = attenuation * mainLight.color.xyz;
-                ///////// Gloss:
-                float _Gloss_var = (_Gloss);
-                float gloss = _Gloss_var;
-                float specPow = exp2(gloss * 10.0 + 1.0);
-                ////// Specular:
-                float NdotL = saturate(dot(normalDirection, lightDirection));
-                float _Specular_var = (_Specular);
-                float4 _SpecularColor_var = (_SpecularColor);
-                float3 specularColor = (_Specular_var * _SpecularColor_var.rgb);
-                float3 directSpecular = attenColor * pow(max(0, dot(halfDirection, normalDirection)), specPow) * specularColor;
-                float3 specular = directSpecular;
-                /////// Diffuse:
-                NdotL = dot(normalDirection, lightDirection);
-                float _LightWrapping_var = (_LightWrapping);
-                float3 w = float3(_LightWrapping_var, _LightWrapping_var, _LightWrapping_var) * 0.5; // Light wrapping
-                float3 NdotLWrap = NdotL * (1.0 - w);
-                float3 forwardLight = max(float3(0.0, 0.0, 0.0), NdotLWrap + w);
-                NdotL = max(0.0, dot(normalDirection, lightDirection));
-                float3 directDiffuse = forwardLight * attenColor;
-                float3 indirectDiffuse = float3(0, 0, 0);
-                indirectDiffuse += UNITY_LIGHTMODEL_AMBIENT.rgb; // Ambient Light
-                float4 _DeepWaterColor_var = (_DeepWaterColor);
-                float4 _ShallowWaterColor_var = (_ShallowWaterColor);
-                float _ShallowDeepBlend_var = (_ShallowDeepBlend);
-                float _Fade_var = (_Fade);
-                float3 _power = pow(saturate(max(_DeepWaterColor_var.rgb, (_ShallowWaterColor_var.rgb * (saturate((sceneZ - partZ) / _ShallowDeepBlend_var) * - 1.0 + 1.0)))), _Fade_var);
-                float2 _componentMask = _subtractor1.rg;
-                float _Distortion_var = (_Distortion);
-                float2 _remap = (((sceneUVs * 2 - 1).rg + (float2(_componentMask.r, _componentMask.g) * _Distortion_var)) * 0.5 + 0.5);
-                float4 _ReflectionTex_var = _ReflectionTex.Sample(sampler_ReflectionTex, TRANSFORM_TEX(_remap, _ReflectionTex));
-                float _Reflectionintensity_var = (_Reflectionintensity);
-                float3 _UseReflections_var = lerp(_power, lerp(_ReflectionTex_var.rgb, _power, (1.0 - _Reflectionintensity_var)), (_UseReflections));
-                float _rotator2_ang = 1.5708;
-                float _rotator2_spd = 1.0;
-                float _rotator2_cos = cos(_rotator2_spd * _rotator2_ang);
-                float _rotator2_sin = sin(_rotator2_spd * _rotator2_ang);
-                float2 _rotator2_piv = float2(0.5, 0.5);
-                float2 _rotator2 = (mul(i.uv - _rotator2_piv, float2x2(_rotator2_cos, -_rotator2_sin, _rotator2_sin, _rotator2_cos)) + _rotator2_piv);
-                float _FoamSpeed_var = (_FoamSpeed);
-                float _FoamTiling_var = (_FoamTiling);
-                float2 _division2 = ((objScale.rb * _FoamTiling_var) / 1000.0);
-                float4 _multiplier8 = _Time;
-                float3 _multiplier7 = (float3((_FoamSpeed_var / _division2), 0.0) * (_multiplier8.r / 100.0));
-                float2 _multiplier5 = ((_rotator2 + _multiplier7) * _division2);
-                float4 _texture3 = _FoamTexture.Sample(sampler_FoamTexture, _multiplier5);
-                float2 _multiplier6 = ((i.uv + _multiplier7) * _division2);
-                float4 _texture4 = _FoamTexture.Sample(sampler_FoamTexture, _multiplier6);
-                float _FoamContrast_var = (_FoamContrast);
-                float _value = 0.0;
-                float4 _FoamColor_var = (_FoamColor);
-                float _FoamIntensity_var = (_FoamIntensity);
-                float _FoamBlend_var = (_FoamBlend);
-                float3 _multiplier4 = ((((_value + ((dot((_texture3.rgb - _texture4.rgb), float3(0.3, 0.59, 0.11)) - _FoamContrast_var) * (1.0 - _value)) / ((1.0 - _FoamContrast_var) - _FoamContrast_var)) * _FoamColor_var.rgb) * (_FoamIntensity_var * (-1.0))) * (saturate((sceneZ - partZ) / _FoamBlend_var) * - 1.0 + 1.0));
-                float _FoamVisibility_var = (_FoamVisibility);
-                float3 diffuseColor = lerp(_UseReflections_var, (_multiplier4 * _multiplier4), _FoamVisibility_var);
-                float3 diffuse = (directDiffuse + indirectDiffuse) * diffuseColor;
-                /// Final Color:
-                float3 finalColor = diffuse + specular;
-                finalColor = MixFog(finalColor, i.positionWSAndFogFactor.w);
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
+        	};
+
+			
+            // x: global clip space bias, y: normal world space bias
+            float3 _LightDirection;
+
+            VertexOutput ShadowPassVertex(GraphVertexInput v )
+        	{
+        	    VertexOutput o;
+        	    UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO (o);
+
+				
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				float3 defaultVertexValue = v.vertex.xyz;
+				#else
+				float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+				float3 vertexValue =  defaultVertexValue ;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				v.vertex.xyz = vertexValue;
+				#else
+				v.vertex.xyz += vertexValue;
+				#endif
+
+				v.ase_normal =  v.ase_normal ;
+
+        	    float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
+                float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
+
+                float invNdotL = 1.0 - saturate(dot(_LightDirection, normalWS));
+                float scale = invNdotL * _ShadowBias.y;
+
+                // normal bias is negative since we want to apply an inset normal offset
+                positionWS = _LightDirection * _ShadowBias.xxx + positionWS;
+				positionWS = normalWS * scale.xxx + positionWS;
+                float4 clipPos = TransformWorldToHClip(positionWS);
+
+                // _ShadowBias.x sign depens on if platform has reversed z buffer
+                //clipPos.z += _ShadowBias.x;
+
+        	#if UNITY_REVERSED_Z
+        	    clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+        	#else
+        	    clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+        	#endif
+                o.clipPos = clipPos;
+
+        	    return o;
+        	}
+
+            half4 ShadowPassFragment(VertexOutput IN  ) : SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+
+               
+
+				float Alpha = 1;
+				float AlphaClipThreshold = AlphaClipThreshold;
+
+         #if _AlphaClip
+        		clip(Alpha - AlphaClipThreshold);
+        #endif
+
+		#ifdef LOD_FADE_CROSSFADE
+				LODDitheringTransition (IN.clipPos.xyz, unity_LODFade.x);
+		#endif
+				return 0;
+            }
+
+            ENDHLSL
+        }
+
+		
+        Pass
+        {
+			
+        	Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+
+            ZWrite On
+			ColorMask 0
+
+            HLSLPROGRAM
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 60902
+
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #pragma vertex vert
+            #pragma fragment frag
 
 
-                float _ShoreTransparency_var = (_ShoreTransparency);
-                float _DepthTransparency_var = (_DepthTransparency);
-                float _ShoreFade_var = (_ShoreFade);
-                half4 finalRGBA = half4(_ReflectionTex_var.rgb, (saturate((sceneZ - partZ) / _ShoreTransparency_var) * pow(saturate((sceneZ - partZ) / _DepthTransparency_var), _ShoreFade_var)));
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
-                return finalRGBA;
+            
+
+			CBUFFER_START( UnityPerMaterial )
+			float _WaveSpeed;
+			float _WaveScale;
+			float _RefractionIntensity;
+			float _FoamIntensity;
+			float _WaterDepth;
+			CBUFFER_END
+
+
+            struct GraphVertexInput
+            {
+                float4 vertex : POSITION;
+				float3 ase_normal : NORMAL;
+				
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+        	struct VertexOutput
+        	{
+        	    float4 clipPos      : SV_POSITION;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+        	};
+
+			           
+
+            VertexOutput vert(GraphVertexInput v  )
+            {
+                VertexOutput o = (VertexOutput)0;
+        	    UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+				
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				float3 defaultVertexValue = v.vertex.xyz;
+				#else
+				float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+				float3 vertexValue =  defaultVertexValue ;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				v.vertex.xyz = vertexValue;
+				#else
+				v.vertex.xyz += vertexValue;
+				#endif
+
+				v.ase_normal =  v.ase_normal ;
+
+        	    o.clipPos = TransformObjectToHClip(v.vertex.xyz);
+        	    return o;
+            }
+
+            half4 frag(VertexOutput IN  ) : SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+				
+
+				float Alpha = 1;
+				float AlphaClipThreshold = AlphaClipThreshold;
+
+         #if _AlphaClip
+        		clip(Alpha - AlphaClipThreshold);
+        #endif
+		#ifdef LOD_FADE_CROSSFADE
+				LODDitheringTransition (IN.clipPos.xyz, unity_LODFade.x);
+		#endif
+				return 0;
             }
             ENDHLSL
-            
         }
+
+        // This pass it not used during regular rendering, only for lightmap baking.
+		
+        Pass
+        {
+			
+        	Name "Meta"
+            Tags { "LightMode"="Meta" }
+
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 60902
+            #define REQUIRE_DEPTH_TEXTURE 1
+            #define REQUIRE_OPAQUE_TEXTURE 1
+
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+
+            #pragma vertex vert
+            #pragma fragment frag
+
+			
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+
+            
+
+			sampler2D _ReflectionTex;
+			sampler2D _NormalMap;
+			sampler2D _FoamMap;
+			uniform float4 _CameraDepthTexture_TexelSize;
+			CBUFFER_START( UnityPerMaterial )
+			float _WaveSpeed;
+			float _WaveScale;
+			float _RefractionIntensity;
+			float _FoamIntensity;
+			float _WaterDepth;
+			CBUFFER_END
+
+
+            #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            struct GraphVertexInput
+            {
+                float4 vertex : POSITION;
+				float3 ase_normal : NORMAL;
+				float4 texcoord1 : TEXCOORD1;
+				float4 texcoord2 : TEXCOORD2;
+				
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+        	struct VertexOutput
+        	{
+        	    float4 clipPos      : SV_POSITION;
+                float4 ase_texcoord : TEXCOORD0;
+                float4 ase_texcoord1 : TEXCOORD1;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+        	};
+
+			inline float4 ASE_ComputeGrabScreenPos( float4 pos )
+			{
+				#if UNITY_UV_STARTS_AT_TOP
+				float scale = -1.0;
+				#else
+				float scale = 1.0;
+				#endif
+				float4 o = pos;
+				o.y = pos.w * 0.5f;
+				o.y = ( pos.y - o.y ) * _ProjectionParams.x * scale + o.y;
+				return o;
+			}
+			
+
+            VertexOutput vert(GraphVertexInput v  )
+            {
+                VertexOutput o = (VertexOutput)0;
+        	    UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
+				float4 screenPos = ComputeScreenPos(ase_clipPos);
+				o.ase_texcoord = screenPos;
+				float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
+				o.ase_texcoord1.xyz = ase_worldPos;
+				
+				
+				//setting value to unused interpolator channels and avoid initialization warnings
+				o.ase_texcoord1.w = 0;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				float3 defaultVertexValue = v.vertex.xyz;
+				#else
+				float3 defaultVertexValue = float3(0, 0, 0);
+				#endif
+				float3 vertexValue =  defaultVertexValue ;
+				#ifdef ASE_ABSOLUTE_VERTEX_POS
+				v.vertex.xyz = vertexValue;
+				#else
+				v.vertex.xyz += vertexValue;
+				#endif
+
+				v.ase_normal =  v.ase_normal ;
+#if !defined( ASE_SRP_VERSION ) || ASE_SRP_VERSION  > 51300				
+                o.clipPos = MetaVertexPosition(v.vertex, v.texcoord1.xy, v.texcoord1.xy, unity_LightmapST, unity_DynamicLightmapST);
+#else
+				o.clipPos = MetaVertexPosition (v.vertex, v.texcoord1.xy, v.texcoord2.xy, unity_LightmapST);
+#endif
+        	    return o;
+            }
+
+            half4 frag(VertexOutput IN  ) : SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+           		float4 screenPos = IN.ase_texcoord;
+           		float4 ase_screenPosNorm = screenPos / screenPos.w;
+           		ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
+           		float2 appendResult31 = (float2(ase_screenPosNorm.x , ase_screenPosNorm.y));
+           		float2 temp_output_70_0 = ( float2( 0.707,0.707 ) * _WaveSpeed );
+           		float3 ase_worldPos = IN.ase_texcoord1.xyz;
+           		float2 temp_output_29_0 = ( (( ase_worldPos - (mul( GetObjectToWorldMatrix(), float4(0,0,0,1) )).xyz )).xz / _WaveScale );
+           		float2 panner11 = ( 0.8146843 * _Time.y * temp_output_70_0 + temp_output_29_0);
+           		float2 panner23 = ( 0.513432 * _Time.y * float2( 1,0 ) + temp_output_29_0);
+           		float screenDepth52 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH( ase_screenPosNorm.xy ),_ZBufferParams);
+           		float distanceDepth52 = abs( ( screenDepth52 - LinearEyeDepth( ase_screenPosNorm.z,_ZBufferParams ) ) / ( _WaterDepth ) );
+           		float temp_output_55_0 = pow( saturate( ( 1.0 - distanceDepth52 ) ) , 2.0 );
+           		float4 ase_grabScreenPos = ASE_ComputeGrabScreenPos( screenPos );
+           		float4 ase_grabScreenPosNorm = ase_grabScreenPos / ase_grabScreenPos.w;
+           		float4 fetchOpaqueVal59 = float4( SHADERGRAPH_SAMPLE_SCENE_COLOR( ase_grabScreenPosNorm ), 1.0 );
+           		
+				
+		        float3 Albedo = ( ( saturate( ( tex2D( _ReflectionTex, ( appendResult31 + ( ( (tex2D( _NormalMap, panner11 )).rg - (tex2D( _NormalMap, panner23 )).rg ) * _RefractionIntensity ) ) ) + float4( ( ( ( (tex2D( _FoamMap, panner11 )).rgb - (tex2D( _FoamMap, panner23 )).rgb ) + float3( 0.2,0.2,0.2 ) ) * _FoamIntensity ) , 0.0 ) ) ) * ( 1.0 - temp_output_55_0 ) ) + ( temp_output_55_0 * fetchOpaqueVal59 ) ).rgb;
+				float3 Emission = 0;
+				float Alpha = 1;
+				float AlphaClipThreshold = 0;
+
+         #if _AlphaClip
+        		clip(Alpha - AlphaClipThreshold);
+        #endif
+
+                MetaInput metaInput = (MetaInput)0;
+                metaInput.Albedo = Albedo;
+                metaInput.Emission = Emission;
+                
+                return MetaFragment(metaInput);
+            }
+            ENDHLSL
+        }
+		
     }
-    CustomEditor "ShaderForgeMaterialInspector"
+    Fallback "Hidden/InternalErrorShader"
+	CustomEditor "ASEMaterialInspector"
+	
 }
+/*ASEBEGIN
+Version=17500
+11;8;1426;832;296.584;344.6234;1.667779;True;False
+Node;AmplifyShaderEditor.ObjectToWorldMatrixNode;16;-2464,144;Inherit;False;0;1;FLOAT4x4;0
+Node;AmplifyShaderEditor.Vector4Node;18;-2432,208;Inherit;False;Constant;_Vector0;Vector 0;2;0;Create;True;0;0;False;0;0,0,0,1;0,0,0,0;0;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;17;-2256,144;Inherit;False;2;2;0;FLOAT4x4;0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1;False;1;FLOAT4;0,0,0,0;False;1;FLOAT4;0
+Node;AmplifyShaderEditor.WorldPosInputsNode;13;-2081.218,8.677368;Inherit;False;0;4;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3
+Node;AmplifyShaderEditor.ComponentMaskNode;19;-2112,144;Inherit;False;True;True;True;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;15;-1904,16;Inherit;False;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.RangedFloatNode;27;-1776,96;Inherit;False;Property;_WaveScale;WaveScale (1=1 meter);3;0;Create;False;0;0;False;0;1;2.46;0;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;71;-2050.351,492.3657;Inherit;False;Property;_WaveSpeed;WaveSpeed;6;0;Create;False;0;0;False;0;0.5;2.5;0.01;2.5;0;1;FLOAT;0
+Node;AmplifyShaderEditor.Vector2Node;68;-1958,253;Inherit;False;Constant;_Vector1;Vector 1;7;0;Create;True;0;0;False;0;0.707,0.707;0,0;0;3;FLOAT2;0;FLOAT;1;FLOAT;2
+Node;AmplifyShaderEditor.ComponentMaskNode;20;-1728,16;Inherit;False;True;False;True;True;1;0;FLOAT3;0,0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;70;-1775.351,379.3657;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleDivideOpNode;29;-1488,16;Inherit;False;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.PannerNode;23;-1296,192;Inherit;False;3;0;FLOAT2;0,0;False;2;FLOAT2;1,0;False;1;FLOAT;0.513432;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.PannerNode;11;-1296,48;Inherit;False;3;0;FLOAT2;0,0;False;2;FLOAT2;0.707,0.707;False;1;FLOAT;0.8146843;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.TexturePropertyNode;10;-1296,-160;Inherit;True;Property;_NormalMap;NormalMap;1;1;[NoScaleOffset];Create;True;0;0;False;0;1b785ba7e757439478e6db434e0d3dd2;1b785ba7e757439478e6db434e0d3dd2;False;white;Auto;Texture2D;-1;0;1;SAMPLER2D;0
+Node;AmplifyShaderEditor.TexturePropertyNode;41;-1296,464;Inherit;True;Property;_FoamMap;FoamMap;2;1;[NoScaleOffset];Create;True;0;0;False;0;199d83fd2aca7214481411272c61f368;199d83fd2aca7214481411272c61f368;False;white;Auto;Texture2D;-1;0;1;SAMPLER2D;0
+Node;AmplifyShaderEditor.SamplerNode;21;-864,240;Inherit;True;Property;_TextureSample2;Texture Sample 2;1;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SamplerNode;2;-864,48;Inherit;True;Property;_TextureSample0;Texture Sample 0;1;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.ComponentMaskNode;22;-576,240;Inherit;True;True;True;False;False;1;0;COLOR;0,0,0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SamplerNode;37;-864,656;Inherit;True;Property;_Sample;Sample;2;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.ComponentMaskNode;9;-576,48;Inherit;True;True;True;False;False;1;0;COLOR;0,0,0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SamplerNode;38;-864,848;Inherit;True;Property;_TextureSample3;Texture Sample 3;3;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.ComponentMaskNode;39;-576,656;Inherit;True;True;True;True;False;1;0;COLOR;0,0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.RangedFloatNode;34;-592,-32;Inherit;False;Property;_RefractionIntensity;Refraction Intensity;4;0;Create;False;0;0;False;0;1;0.143;0;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.ScreenPosInputsNode;32;-592,-240;Float;False;0;False;0;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.RangedFloatNode;66;-38.16115,485.2551;Inherit;False;Property;_WaterDepth;WaterDepth;7;0;Create;False;0;0;False;0;1;1.06;0;10;0;1;FLOAT;0
+Node;AmplifyShaderEditor.ComponentMaskNode;40;-576,848;Inherit;True;True;True;True;False;1;0;COLOR;0,0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;35;-320,48;Inherit;False;2;0;FLOAT2;0,0;False;1;FLOAT2;0,0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.DepthFade;52;400,512;Inherit;False;True;False;True;2;1;FLOAT3;0,0,0;False;0;FLOAT;0.5;False;1;FLOAT;0
+Node;AmplifyShaderEditor.DynamicAppendNode;31;-368,-240;Inherit;False;FLOAT2;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleSubtractOpNode;42;-320,656;Inherit;False;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;36;-176,48;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT;0;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;49;-179.8199,663.3676;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0.2,0.2,0.2;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.TexturePropertyNode;3;0,-304;Inherit;True;Property;_ReflectionTex;ReflectionTex;0;1;[HideInInspector];Create;True;0;0;False;0;None;;False;white;Auto;Texture2D;-1;0;1;SAMPLER2D;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;25;112,48;Inherit;False;2;2;0;FLOAT2;0,0;False;1;FLOAT2;0.3,0.3;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.OneMinusNode;54;656,512;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.RangedFloatNode;46;-320,800;Inherit;False;Property;_FoamIntensity;Foam Intensity;5;0;Create;False;0;0;False;0;0;0;0;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SaturateNode;56;816,512;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;48;25.35661,652.8711;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SamplerNode;4;293.3,32.40001;Inherit;True;Property;_TextureSample1;Texture Sample 1;1;0;Create;True;0;0;False;0;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;6;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleAddOpNode;43;669.8774,212.4076;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;FLOAT3;0,0,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.PowerNode;55;951,516;Inherit;False;2;0;FLOAT;0;False;1;FLOAT;2;False;1;FLOAT;0
+Node;AmplifyShaderEditor.OneMinusNode;64;944,368;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SaturateNode;45;816,224;Inherit;False;1;0;COLOR;0,0,0,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.ScreenColorNode;59;947,644;Inherit;False;Global;_GrabScreen0;Grab Screen 0;6;0;Create;True;0;0;False;0;Object;-1;False;False;1;0;FLOAT2;0,0;False;5;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;60;1120,528;Inherit;False;2;2;0;FLOAT;0;False;1;COLOR;0,0,0,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;63;1050.261,223.8271;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;FLOAT;0;False;1;COLOR;0
+Node;AmplifyShaderEditor.LengthOpNode;69;-1600,272;Inherit;False;1;0;FLOAT2;0,0;False;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;65;1243.261,261.8271;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;COLOR;0,0,0,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;72;1443.224,253.8147;Float;False;True;-1;2;ASEMaterialInspector;0;2;ZDShader/LWRP/Environment/Real Water;1976390536c6c564abb90fe41f6ee334;True;Base;0;0;Base;11;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;True;1;1;False;-1;0;False;-1;1;1;False;-1;0;False;-1;False;False;False;True;True;True;True;True;0;False;-1;True;False;255;False;-1;255;False;-1;255;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;7;False;-1;1;False;-1;1;False;-1;1;False;-1;True;1;False;-1;True;3;False;-1;True;True;0;False;-1;0;False;-1;True;1;LightMode=LightweightForward;False;0;Hidden/InternalErrorShader;0;0;Standard;10;Workflow;1;Surface;0;  Blend;0;Two Sided;1;Cast Shadows;1;Receive Shadows;1;LOD CrossFade;1;Built-in Fog;1;Meta Pass;1;Vertex Position,InvertActionOnDeselection;1;0;4;True;True;True;True;False;;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;73;1443.224,253.8147;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;ShadowCaster;0;1;ShadowCaster;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;False;False;True;1;False;-1;True;3;False;-1;False;True;1;LightMode=ShadowCaster;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;74;1443.224,253.8147;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;DepthOnly;0;2;DepthOnly;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;False;True;False;False;False;False;0;False;-1;False;True;1;False;-1;False;False;True;1;LightMode=DepthOnly;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;75;1443.224,253.8147;Float;False;False;-1;2;ASEMaterialInspector;0;1;New Amplify Shader;1976390536c6c564abb90fe41f6ee334;True;Meta;0;3;Meta;0;False;False;False;True;0;False;-1;False;False;False;False;False;True;3;RenderPipeline=LightweightPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;True;2;0;False;False;False;True;2;False;-1;False;False;False;False;False;True;1;LightMode=Meta;False;0;Hidden/InternalErrorShader;0;0;Standard;0;0
+WireConnection;17;0;16;0
+WireConnection;17;1;18;0
+WireConnection;19;0;17;0
+WireConnection;15;0;13;0
+WireConnection;15;1;19;0
+WireConnection;20;0;15;0
+WireConnection;70;0;68;0
+WireConnection;70;1;71;0
+WireConnection;29;0;20;0
+WireConnection;29;1;27;0
+WireConnection;23;0;29;0
+WireConnection;11;0;29;0
+WireConnection;11;2;70;0
+WireConnection;21;0;10;0
+WireConnection;21;1;23;0
+WireConnection;2;0;10;0
+WireConnection;2;1;11;0
+WireConnection;22;0;21;0
+WireConnection;37;0;41;0
+WireConnection;37;1;11;0
+WireConnection;9;0;2;0
+WireConnection;38;0;41;0
+WireConnection;38;1;23;0
+WireConnection;39;0;37;0
+WireConnection;40;0;38;0
+WireConnection;35;0;9;0
+WireConnection;35;1;22;0
+WireConnection;52;0;66;0
+WireConnection;31;0;32;1
+WireConnection;31;1;32;2
+WireConnection;42;0;39;0
+WireConnection;42;1;40;0
+WireConnection;36;0;35;0
+WireConnection;36;1;34;0
+WireConnection;49;0;42;0
+WireConnection;25;0;31;0
+WireConnection;25;1;36;0
+WireConnection;54;0;52;0
+WireConnection;56;0;54;0
+WireConnection;48;0;49;0
+WireConnection;48;1;46;0
+WireConnection;4;0;3;0
+WireConnection;4;1;25;0
+WireConnection;43;0;4;0
+WireConnection;43;1;48;0
+WireConnection;55;0;56;0
+WireConnection;64;0;55;0
+WireConnection;45;0;43;0
+WireConnection;60;0;55;0
+WireConnection;60;1;59;0
+WireConnection;63;0;45;0
+WireConnection;63;1;64;0
+WireConnection;69;0;70;0
+WireConnection;65;0;63;0
+WireConnection;65;1;60;0
+WireConnection;72;0;65;0
+ASEEND*/
+//CHKSM=8E1035798C4F26D0A0C5920B48BA02E3BA5642EE

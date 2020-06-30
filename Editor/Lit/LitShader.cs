@@ -1,10 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Rendering;
-using UnityEditor.Rendering;
 
-namespace Funcy_LWRP_ShaderGUI
+namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
     internal class LitShader : BaseShaderGUI
     {
@@ -16,6 +14,7 @@ namespace Funcy_LWRP_ShaderGUI
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
+
         }
 
         // material changed check
@@ -124,6 +123,11 @@ namespace Funcy_LWRP_ShaderGUI
             }
 
             MaterialChanged(material);
+        }
+        public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
+        {
+            base.OnGUI(materialEditorIn, properties);
+
         }
     }
 }

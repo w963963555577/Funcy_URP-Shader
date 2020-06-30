@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using UnityEditor.AnimatedValues;
 using System.Linq;
 
-namespace Funcy_LWRP_ShaderGUI
+namespace UnityEditor
 {
     public abstract class BaseFuncyShaderGUI : ShaderGUI
     {
@@ -21,7 +21,18 @@ namespace Funcy_LWRP_ShaderGUI
 
         public virtual void OnEnable()
         {
-
+            EditorApplication.CallbackFunction disable = null;
+            disable = () => {
+                if(materialEditor == null)
+                {
+                    OnDisable();
+                    EditorApplication.update -= disable;
+                }
+            };
+            EditorApplication.update += disable;
+        }
+        public virtual void OnDisable()
+        {
         }
         public abstract void MaterialChanged(Material material);
 
@@ -42,6 +53,22 @@ namespace Funcy_LWRP_ShaderGUI
         public virtual void OnMaterialGUI()
         {
             base.OnGUI(materialEditor, props);
+        }
+        public void MaterialChangeCheck()
+        {
+            foreach (var obj in materialEditor.targets)
+            {
+                ((Material)obj).enableInstancing = true;             
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                foreach (var obj in materialEditor.targets)
+                {
+                    ((Material)obj).enableInstancing = true;
+                    MaterialChanged((Material)obj);
+                }
+
+            }
         }
         [Serializable]
         public class AnimBoolNameId
@@ -111,9 +138,9 @@ namespace Funcy_LWRP_ShaderGUI
     }
     public static class Extension
     {
-        public static GUIContent ToGUIContent(this string name)
+        public static GUIContent ToGUIContent(this string name,string tooltipText="")
         {
-            return new GUIContent(name);
+            return new GUIContent(name, tooltipText);
         }
     }
 }
