@@ -41,7 +41,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
 
         public MaterialProperty outlineEnable { get; set; }
-
+        public MaterialProperty outlineMask { get; set; }
 
         public MaterialProperty pciker0 { get; set; }
         public MaterialProperty shadowColor0 { get; set; }
@@ -100,7 +100,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             specularColor = FindProperty("_SpecularColor", props);
             shadowRemap = FindProperty("_ShadowRamp", props);
             selfShadowRemap = FindProperty("_SelfShadowRamp", props);
+
             outlineEnable = FindProperty("_OutlineEnable", props);
+            outlineMask = FindProperty("_OutlineWidthControl", props);
 
             pciker0 = FindProperty("_Picker_0", props);
             shadowColor0 = FindProperty("_ShadowColor0", props);
@@ -194,7 +196,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             DrawArea("Outline", () =>
             {
                 materialEditor.ShaderProperty(outlineEnable, "Enable");
-                GUILayout.Space(10);                
+                GUILayout.Space(10);
+                materialEditor.TexturePropertySingleLine("Width Mask".ToGUIContent(), outlineMask);
                 
                 Vector4 outCtrlProperties = outliineCtrlProperties.vectorValue;
                 outCtrlProperties.x = EditorGUILayout.FloatField("Min Width",outCtrlProperties.x);
