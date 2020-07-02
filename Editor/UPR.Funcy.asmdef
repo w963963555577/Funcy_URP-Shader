@@ -5,8 +5,7 @@
         "Unity.RenderPipelines.Core.Editor",
         "Unity.ShaderGraph.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
-        "ZD.ZDShader.Runtime",
-        ""
+        "ZD.ZDShader.Runtime"
     ],
     "includePlatforms": [
         "Editor"
