@@ -44,39 +44,6 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         }
         #endregion KeyEvent
 
-        public class EditorMouseEvent
-        {
-            public static Vector2 mouseDetla;
-            static Vector2 mouseDownPoint;
-
-            public static bool isMousePress = false;
-            static bool mousePressTmp = false;
-            public static void GetMousePress(Event e, out Vector2 downPoint)
-            {
-                downPoint = Vector2.zero;
-                if (e.type == EventType.MouseDown && e.button == 0)
-                {
-                    isMousePress = true;
-                }
-                if (e.type == EventType.MouseUp && e.button == 0)
-                {
-                    isMousePress = false;
-                    mouseDetla = Vector2.zero;
-                }
-
-                if (mousePressTmp != isMousePress)
-                {
-                    mousePressTmp = isMousePress;
-                    mouseDownPoint = e.mousePosition;
-                    downPoint = mouseDownPoint;
-                }
-
-                if (isMousePress)
-                {
-                    mouseDetla = e.mousePosition - mouseDownPoint;
-                }
-            }
-        }
 
 
         MaterialProperty color { get; set; }
@@ -92,7 +59,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty reflection { get; set; }
         MaterialProperty specular { get; set; }
         MaterialProperty specularColor { get; set; }
-        MaterialProperty reflectMap { get; set; }
+        MaterialProperty reflectRampMap { get; set; }
         MaterialProperty depth { get; set; }
         MaterialProperty depthArea { get; set; }
         MaterialProperty depthHard { get; set; }
@@ -110,6 +77,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             refractionIntensity = FindProperty("_RefractionIntensity", props);
 
             reflection = FindProperty("_Reflection", props);
+            reflectRampMap = FindProperty("_RampMap", props);
             specularColor = FindProperty("_SpecularColor", props);
             specular = FindProperty("_Specular", props);
 
@@ -151,6 +119,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             {
                 materialEditor.TexturePropertyTwoLines("Map".ToGUIContent(), normalMap, refractionScale, "Intensity".ToGUIContent(), refractionIntensity);
                 materialEditor.ShaderProperty(reflection, reflection.displayName);
+                materialEditor.TexturePropertySingleLine(reflectRampMap.displayName.ToGUIContent(), reflectRampMap);
                 materialEditor.ShaderProperty(specularColor, specularColor.displayName);
                 materialEditor.ShaderProperty(specular, specular.displayName);
 
@@ -158,8 +127,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Foam & Wave", () => {
                 materialEditor.TexturePropertyTwoLines("Map".ToGUIContent(), foamMap, foamScale, "Color".ToGUIContent(), foamColor);
-                materialEditor.ShaderProperty(waveSpeed, waveSpeed.displayName);
-                RadiusSlider(waveDirection);
+                materialEditor.ShaderProperty(waveSpeed, waveSpeed.displayName);                
+                materialEditor.ShaderProperty(waveDirection, waveDirection.displayName);
 
             });
 
@@ -175,48 +144,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             MaterialChangeCheck();
         }
 
-        void RadiusSlider(MaterialProperty materialProperty)
-        {
-            KeyEvent();
-            var e = Event.current;
-            var clearStyle = new GUIStyle();
-            float angle = materialProperty.floatValue;
-
-            Vector2 mouseDownPoint;
-            EditorMouseEvent.GetMousePress(e, out mouseDownPoint);
-
-            Vector2 forward = new Vector2(Mathf.Cos(angle * π / 180f), Mathf.Sin(angle * π / 180f));
-
-            GUILayout.Box(new GUIContent(RadiusSliderBK), clearStyle, GUILayout.Width(100), GUILayout.Height(100));
-
-            var laseRect = GUILayoutUtility.GetLastRect();
-
-            Vector2 center = new Vector2(laseRect.x + laseRect.size.x / 2f, laseRect.y + laseRect.size.y / 2f);
-            GUI.Label(new Rect(center - new Vector2(35, 45), new Vector2(100, 100)), "    Press\n【LeftCtrl】\n   to Step");
-
-            Vector2 current = center - new Vector2(6, 6) - forward * 49f;
-
-            if (PointInRect(e.mousePosition, laseRect) && EditorMouseEvent.isMousePress)
-            {
-
-                Vector2 vector = (e.mousePosition - center).normalized;
-                angle = Vector2.SignedAngle(new Vector2(1, 0), vector) + 180;
-                if (Key.LeftControl)
-                {
-                    angle = Mathf.Floor(angle);
-                    float addVal = 45f - (angle % 45f);
-                    angle += addVal;
-                }
-                materialProperty.floatValue = angle;
-            }
-
-
-            GUI.Button(new Rect(current, new Vector2(20, 20)), EditorGUIUtility.IconContent("d_winbtn_mac_inact"), clearStyle);
-
-            GUILayout.Space(10);
-
-            HandleUtility.Repaint();
-        }
+        
         bool PointInRect(Vector2 point, Rect rect)
         {
             Vector2 min = rect.position;

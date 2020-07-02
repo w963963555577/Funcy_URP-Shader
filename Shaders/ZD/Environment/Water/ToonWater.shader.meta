@@ -5,6 +5,7 @@ ShaderImporter:
   defaultTextures:
   - _NormalMap: {fileID: 2800000, guid: 1b785ba7e757439478e6db434e0d3dd2, type: 3}
   - _FoamMap: {fileID: 2800000, guid: 199d83fd2aca7214481411272c61f368, type: 3}
+  - _RampMap: {fileID: 2800000, guid: 3361f6c526a5a3444b2ec765acadf995, type: 3}
   nonModifiableTextures: []
   userData: 
   assetBundleName: 

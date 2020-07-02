@@ -20,6 +20,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
         _DepthArea ("DepthArea", Float) = 0
         _DepthHard ("DepthHard", Float) = 0
         [HDR]_SpecularColor ("SpecularColor", Color) = (1, 1, 1, 0)
+        _RampMap ("Ramp Map", 2D) = "white" { }        
     }
     
     SubShader
