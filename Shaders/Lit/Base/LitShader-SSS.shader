@@ -37,9 +37,10 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
         _EmissionMap ("Emission", 2D) = "white" { }
         
         _SubsurfaceScattering ("Scatter", Range(0, 1)) = 0.0
-        _SubsurfaceRadius ("Radius", Float) = 0.0
-        [HDR]_SubsurfaceColor ("Color", Color) = (0, 0, 0)
+        _SubsurfaceRadius ("Radius", Float) = 2.0
+        [HDR]_SubsurfaceColor ("Color", Color) = (1, 1, 1)
         _SubsurfaceMap ("SSS Map", 2D) = "White" { }
+        
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
         [HideInInspector] _Blend ("__blend", Float) = 0.0
@@ -394,7 +395,11 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                         for (uint lightIndex = 0u; lightIndex < pixelLightCount; ++ lightIndex)
                         {
                             Light light = GetAdditionalLight(lightIndex, inputData.positionWS);
-                            color += LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS);
+                            
+                            mainLightContribution = LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS);
+                            subsurfaceContribution = LightingSubsurface(light, inputData.normalWS, sssColor, _SubsurfaceRadius);
+                            
+                            color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering);
                         }
                     #endif
                     
