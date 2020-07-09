@@ -2,7 +2,7 @@
 // However, if you want to author shaders in shading language you can use this teamplate as a base.
 // Please note, this shader does not match perfomance of the built-in LWRP Lit shader.
 // This shader works with LWRP 5.7.2 version and above
-Shader "ZDShader/LWRP/PBR Base"
+Shader "ZDShader/LWRP/PBR Base(SSS)"
 {
     Properties
     {
@@ -36,6 +36,10 @@ Shader "ZDShader/LWRP/PBR Base"
         _EmissionColor ("Color", Color) = (0, 0, 0)
         _EmissionMap ("Emission", 2D) = "white" { }
         
+        _SubsurfaceScattering ("Scatter", Range(0, 1)) = 0.0
+        _SubsurfaceRadius ("Radius", Float) = 0.0
+        [HDR]_SubsurfaceColor ("Color", Color) = (0, 0, 0)
+        _SubsurfaceMap ("SSS Map", 2D) = "White" { }
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
         [HideInInspector] _Blend ("__blend", Float) = 0.0
@@ -130,11 +134,15 @@ Shader "ZDShader/LWRP/PBR Base"
                 half _Metallic;
                 half _BumpScale;
                 half _OcclusionStrength;
+                half4 _SubsurfaceColor;
+                half _SubsurfaceScattering;
+                half _SubsurfaceRadius;
                 CBUFFER_END
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
                 TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
                 TEXTURE2D(_SpecGlossMap);       SAMPLER(sampler_SpecGlossMap);
+                TEXTURE2D(_SubsurfaceMap);       SAMPLER(sampler_SubsurfaceMap);
                 
                 #ifdef _SPECULAR_SETUP
                     #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, uv)
@@ -335,6 +343,68 @@ Shader "ZDShader/LWRP/PBR Base"
                     return output;
                 }
                 
+                
+                // Calculates the subsurface light radiating out from the current fragment. This is a simple approximation using wrapped lighting.
+                // Note: This does not use distance attenuation, as it is intented to be used with a sun light.
+                // Note: This does not subtract out cast shadows (light.shadowAttenuation), as it is intended to be used on non-shadowed objects. (for now)
+                half3 LightingSubsurface(Light light, half3 normalWS, half3 subsurfaceColor, half subsurfaceRadius)
+                {
+                    // Calculate normalized wrapped lighting. This spreads the light without adding energy.
+                    // This is a normal lambertian lighting calculation (using N dot L), but warping NdotL
+                    // to wrap the light further around an object.
+                    //
+                    // A normalization term is applied to make sure we do not add energy.
+                    // http://www.cim.mcgill.ca/~derek/files/jgt_wrap.pdf
+                    
+                    half NdotL = dot(normalWS, light.direction);
+                    half alpha = subsurfaceRadius;
+                    half theta_m = acos(-alpha); // boundary of the lighting function
+                    
+                    half theta = max(0, NdotL + alpha) - alpha;
+                    half normalization_jgt = (2 + alpha) / (2 * (1 + alpha));
+                    half wrapped_jgt = (pow(((theta + alpha) / (1 + alpha)), 1 + alpha)) * normalization_jgt;
+                    
+                    half wrapped_valve = 0.25 * (NdotL + 1) * (NdotL + 1);
+                    half wrapped_simple = (NdotL + alpha) / (1 + alpha);
+                    
+                    half3 subsurface_radiance = light.color * subsurfaceColor * wrapped_jgt;
+                    
+                    return subsurface_radiance;
+                }
+                
+                half4 UniversalFragmentPBR_SSS(InputData inputData, half3 albedo, half metallic, half3 specular,
+                half smoothness, half occlusion, half3 emission, half3 sssColor, half alpha)
+                {
+                    BRDFData brdfData;
+                    InitializeBRDFData(albedo, metallic, specular, smoothness, alpha, brdfData);
+                    
+                    Light mainLight = GetMainLight(inputData.shadowCoord);
+                    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, half4(0, 0, 0, 0));
+                    
+                    half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
+                    
+                    half3 mainLightContribution = LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
+                    half3 subsurfaceContribution = LightingSubsurface(mainLight, inputData.normalWS, sssColor, _SubsurfaceRadius);
+                    
+                    color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering);
+                    
+                    
+                    #ifdef _ADDITIONAL_LIGHTS
+                        uint pixelLightCount = GetAdditionalLightsCount();
+                        for (uint lightIndex = 0u; lightIndex < pixelLightCount; ++ lightIndex)
+                        {
+                            Light light = GetAdditionalLight(lightIndex, inputData.positionWS);
+                            color += LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS);
+                        }
+                    #endif
+                    
+                    #ifdef _ADDITIONAL_LIGHTS_VERTEX
+                        color += inputData.vertexLighting * brdfData.diffuse;
+                    #endif
+                    
+                    color += emission;
+                    return half4(color, alpha);
+                }
                 // Used in Standard (Physically Based) shader
                 half4 LitPassFragment(Varyings input): SV_Target
                 {
@@ -347,7 +417,8 @@ Shader "ZDShader/LWRP/PBR Base"
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     
-                    half4 color = UniversalFragmentPBR(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, surfaceData.alpha);
+                    half3 sssColor = SAMPLE_TEXTURE2D(_SubsurfaceMap, sampler_SubsurfaceMap, input.uv).rgb * _SubsurfaceColor.rgb;
+                    half4 color = UniversalFragmentPBR_SSS(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, sssColor, surfaceData.alpha);
                     
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
                     return color;
@@ -367,5 +438,5 @@ Shader "ZDShader/LWRP/PBR Base"
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.LitShader"
+    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.LitShader_SSS"
 }
