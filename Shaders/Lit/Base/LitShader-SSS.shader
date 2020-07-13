@@ -41,6 +41,10 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
         [HDR]_SubsurfaceColor ("Color", Color) = (1, 1, 1)
         _SubsurfaceMap ("SSS Map", 2D) = "White" { }
         
+        [HDR]_RimLightColor ("Color", Color) = (.7, .85, 1.0)
+        
+        _MaxHDR ("Max HDR", Range(0.0, 10.0)) = 10.0
+        
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
         [HideInInspector] _Blend ("__blend", Float) = 0.0
@@ -138,6 +142,8 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 half4 _SubsurfaceColor;
                 half _SubsurfaceScattering;
                 half _SubsurfaceRadius;
+                half4 _RimLightColor;
+                half _MaxHDR;
                 CBUFFER_END
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -348,7 +354,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 // Calculates the subsurface light radiating out from the current fragment. This is a simple approximation using wrapped lighting.
                 // Note: This does not use distance attenuation, as it is intented to be used with a sun light.
                 // Note: This does not subtract out cast shadows (light.shadowAttenuation), as it is intended to be used on non-shadowed objects. (for now)
-                half3 LightingSubsurface(Light light, half3 normalWS, half3 subsurfaceColor, half subsurfaceRadius)
+                half3 LightingSubsurface(Light light, half3 normalWS, half3 subsurfaceColor, half subsurfaceRadius, out half NdotL)
                 {
                     // Calculate normalized wrapped lighting. This spreads the light without adding energy.
                     // This is a normal lambertian lighting calculation (using N dot L), but warping NdotL
@@ -357,16 +363,16 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     // A normalization term is applied to make sure we do not add energy.
                     // http://www.cim.mcgill.ca/~derek/files/jgt_wrap.pdf
                     
-                    half NdotL = dot(normalWS, light.direction);
+                    NdotL = dot(normalWS, light.direction);
                     half alpha = subsurfaceRadius;
-                    half theta_m = acos(-alpha); // boundary of the lighting function
+                    //half theta_m = acos(-alpha); // boundary of the lighting function
                     
                     half theta = max(0, NdotL + alpha) - alpha;
                     half normalization_jgt = (2 + alpha) / (2 * (1 + alpha));
-                    half wrapped_jgt = (pow(((theta + alpha) / (1 + alpha)), 1 + alpha)) * normalization_jgt;
+                    half wrapped_jgt = (pow(((theta + alpha) / (1 + alpha)), 1.0 + alpha)) * normalization_jgt;
                     
-                    half wrapped_valve = 0.25 * (NdotL + 1) * (NdotL + 1);
-                    half wrapped_simple = (NdotL + alpha) / (1 + alpha);
+                    //half wrapped_valve = 0.25 * (NdotL + 1) * (NdotL + 1);
+                    //half wrapped_simple = (NdotL + alpha) / (1 + alpha);
                     
                     half3 subsurface_radiance = light.color * subsurfaceColor * wrapped_jgt;
                     
@@ -382,12 +388,15 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     Light mainLight = GetMainLight(inputData.shadowCoord);
                     MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, half4(0, 0, 0, 0));
                     
-                    half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
-                    
+                    half3 GI = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
+                    half3 color = GI;
+                    half NdotLTutorial = 0.0;
+                    half Ndot = 0.0;
                     half3 mainLightContribution = LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
-                    half3 subsurfaceContribution = LightingSubsurface(mainLight, inputData.normalWS, sssColor, _SubsurfaceRadius);
+                    half3 subsurfaceContribution = LightingSubsurface(mainLight, inputData.normalWS, sssColor, _SubsurfaceRadius, Ndot);
+                    NdotLTutorial += Ndot;
                     
-                    color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering);
+                    color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering * (1.0 - metallic));
                     
                     
                     #ifdef _ADDITIONAL_LIGHTS
@@ -397,9 +406,10 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                             Light light = GetAdditionalLight(lightIndex, inputData.positionWS);
                             
                             mainLightContribution = LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS);
-                            subsurfaceContribution = LightingSubsurface(light, inputData.normalWS, sssColor, _SubsurfaceRadius);
+                            subsurfaceContribution = LightingSubsurface(light, inputData.normalWS, sssColor, _SubsurfaceRadius, Ndot);
+                            NdotLTutorial = max(Ndot, NdotLTutorial);
                             
-                            color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering);
+                            color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering * (1.0 - metallic));
                         }
                     #endif
                     
@@ -408,6 +418,13 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     #endif
                     
                     color += emission;
+                    
+                    half fresnel = smoothstep(0.6, 1.0, 1.0 - saturate(dot(inputData.normalWS, inputData.viewDirectionWS)));
+                    half3 rimLighting = albedo * NdotLTutorial * fresnel * 1.0 * _RimLightColor;
+                    
+                    color += rimLighting;
+                    
+                    color.rgb = clamp(color, 0.0.xxxx, (max(albedo, GI)) * _MaxHDR);
                     return half4(color, alpha);
                 }
                 // Used in Standard (Physically Based) shader
@@ -422,9 +439,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     
+                    
                     half3 sssColor = SAMPLE_TEXTURE2D(_SubsurfaceMap, sampler_SubsurfaceMap, input.uv).rgb * _SubsurfaceColor.rgb;
                     half4 color = UniversalFragmentPBR_SSS(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, sssColor, surfaceData.alpha);
-                    
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
                     return color;
                 }
@@ -436,9 +453,201 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
         }
         
         // Used for rendering shadowmaps
-        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
-        UsePass "Universal Render Pipeline/Lit/DepthOnly"
-        UsePass "Universal Render Pipeline/Lit/Meta"
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            
+            ZWrite On
+            ZTest LEqual
+            Cull[_Cull]
+            
+            HLSLPROGRAM
+            
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            
+            
+            //#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            half4 _BaseColor;
+            half4 _SpecColor;
+            half4 _EmissionColor;
+            half _Cutoff;
+            half _Smoothness;
+            half _Metallic;
+            half _BumpScale;
+            half _OcclusionStrength;
+            half4 _SubsurfaceColor;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
+            half4 _RimLightColor;
+            half _MaxHDR;
+            CBUFFER_END
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            
+            float3 _LightDirection;
+            
+            struct Attributes
+            {
+                float4 positionOS: POSITION;
+                float3 normalOS: NORMAL;
+                float2 texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct Varyings
+            {
+                float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+            };
+            
+            float4 GetShadowPositionHClip(Attributes input)
+            {
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
+                
+                #if UNITY_REVERSED_Z
+                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE *10);
+                #else
+                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE*10);
+                #endif
+                
+                return positionCS;
+            }
+            
+            Varyings ShadowPassVertex(Attributes input)
+            {
+                Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                output.positionCS = GetShadowPositionHClip(input);
+                return output;
+            }
+            
+            half4 ShadowPassFragment(Varyings input): SV_TARGET
+            {
+                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                return 0;
+            }
+            
+            
+            ENDHLSL
+            
+        }
+        
+        
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+            
+            ZWrite On
+            ColorMask 0
+            Cull[_Cull]
+            
+            HLSLPROGRAM
+            
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+            
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            
+            
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            half4 _BaseColor;
+            half4 _SpecColor;
+            half4 _EmissionColor;
+            half _Cutoff;
+            half _Smoothness;
+            half _Metallic;
+            half _BumpScale;
+            half _OcclusionStrength;
+            half4 _SubsurfaceColor;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
+            half4 _RimLightColor;
+            half _MaxHDR;
+            CBUFFER_END
+            
+            struct Attributes
+            {
+                float4 position: POSITION;
+                float2 texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct Varyings
+            {
+                float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                
+                output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                output.positionCS = TransformObjectToHClip(input.position.xyz);
+                return output;
+            }
+            
+            half4 DepthOnlyFragment(Varyings input): SV_TARGET
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                return 0;
+            }
+            
+            
+            ENDHLSL
+            
+        }
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
