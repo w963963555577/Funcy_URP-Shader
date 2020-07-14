@@ -13,6 +13,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty sssRadius { get; set; }
         MaterialProperty sss { get; set; }
 
+        MaterialProperty rimLightColor { get; set; }
+        MaterialProperty maxHDR { get; set; }        
+
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
@@ -22,7 +25,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             sss = FindProperty("_SubsurfaceScattering", properties);
             sssRadius = FindProperty("_SubsurfaceRadius", properties);
             sssColor = FindProperty("_SubsurfaceColor", properties);
-            sssMap = FindProperty("_SubsurfaceMap", properties); 
+            sssMap = FindProperty("_SubsurfaceMap", properties);
+
+            rimLightColor = FindProperty("_RimLightColor", properties);
+            maxHDR = FindProperty("_MaxHDR", properties);
         }
 
         // material changed check
@@ -138,6 +144,13 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             DrawArea("Subsurface Scattering", () => {
                 materialEditor.ShaderProperty(sss, sss.displayName);
                 materialEditor.TexturePropertySingleLine(sssMap.displayName.ToGUIContent(), sssMap, sssColor, sssRadius);
+            });
+
+            DrawArea("Rim Lighting", () => {
+                materialEditor.ShaderProperty(rimLightColor, rimLightColor.displayName);                
+                materialEditor.ShaderProperty(maxHDR, maxHDR.displayName);                 
+
+                //materialEditor.TexturePropertySingleLine(sssMap.displayName.ToGUIContent(), sssMap, sssColor, sssRadius);
             });
         }
     }

@@ -74,6 +74,13 @@ Shader "ZDShader/LWRP/Character"
         _OutlineColor ("Color", Color) = (0.0075, 0.0006, 0.0006, 1)
         _DiffuseBlend ("Diffuse Blend", Range(0, 1)) = 0.2
         _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur ("Outline Ctrl Properties", Vector) = (0.0, 0.5, 0.5, 0.0)
+        
+        
+        //Expression
+        [NoScaleOffset]_ExpressionMap ("Map", 2D) = "white" { }
+        [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
+        [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
+        [IntRange]_SelectMouth ("Select Mouth ", Range(1, 8)) = 1
     }
     
     SubShader
@@ -127,6 +134,7 @@ Shader "ZDShader/LWRP/Character"
             };
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
+            sampler2D _ExpressionMap;
             
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
@@ -175,6 +183,10 @@ Shader "ZDShader/LWRP/Character"
             float _DiffuseBlend;
             
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+            
+            half _SelectBrow;
+            half _SelectFace;
+            half _SelectMouth;
             CBUFFER_END
             
             
@@ -198,7 +210,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.8) * _OutlineWidthControl_var.r;
                 
-                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)));
+                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
                 
                 RTD_OL *= (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z));
@@ -237,7 +249,7 @@ Shader "ZDShader/LWRP/Character"
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
             ZTest [_ZTest]
-            Cull[_Cull]
+            Cull Back
             
             Stencil
             {
@@ -328,12 +340,17 @@ Shader "ZDShader/LWRP/Character"
             float _DiffuseBlend;
             
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+            
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
             CBUFFER_END
             
             
             TEXTURE2D(_mask);                       SAMPLER(sampler_mask);
             TEXTURE2D(_NormalMap);                  SAMPLER(sampler_NormalMap);
             TEXTURE2D(_SelfMask);                   SAMPLER(sampler_SelfMask);
+            TEXTURE2D(_ExpressionMap);                   SAMPLER(sampler_ExpressionMap);
             
             struct Attributes
             {
@@ -524,6 +541,23 @@ Shader "ZDShader/LWRP/Character"
                 }
             #endif
             
+            float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth)
+            {
+                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
+                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                return float2(pX, pY);
+            }
+            
+            float2 GetEyesArea(float2 uv, float eyesCount, float selectFace)
+            {
+                return float2(uv.x * 0.5, (uv.y / eyesCount) + ((eyesCount - (selectFace)) / eyesCount));
+            }
+            
+            float2 GetBrowArea(float2 uv, float browCount, float selectBrow)
+            {
+                return float2(uv.x * 0.5 + 0.5, 0.5 + (uv.y / (browCount * 2.0)) + ((browCount - selectBrow) / (browCount * 2.0)));
+            }
+            
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
@@ -544,6 +578,45 @@ Shader "ZDShader/LWRP/Character"
                 half pbr = mainLight.shadowAttenuation;
                 pbr *= min(2, mainLight.distanceAttenuation); //max intensity = 2, prevent over bright if light too close, can expose this float to editor if you wish to
                 
+
+
+                //Expression
+                half2 mouthArea = GetMouthArea(i.uv01.zw, 8.0, _SelectMouth);
+                half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth);
+                half4 _MouthTRS = half4(2, 4, 0, 0.079);
+                half2 mouthUV = ((((mouthArea - mouthPivot) * _MouthTRS.xy) + mouthPivot) + _MouthTRS.zw);
+                half4 Mouth = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, mouthUV);
+                half2 mouseMaskRect = abs(((i.uv01.zw - half2(0.5, 0.34)) * half2(1, 2)));
+                mouseMaskRect.x = smoothstep(0.2, 0.3, mouseMaskRect.x);
+                mouseMaskRect.y = smoothstep(0.23, 0.27, mouseMaskRect.y);
+                half mouthMask = (1.0 - mouseMaskRect.x) * (1.0 - mouseMaskRect.y);
+                
+                half2 eyesArea = GetEyesArea(i.uv01.zw, 8.0, _SelectFace);
+                half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 8.0, _SelectFace);
+                half4 _EyesTRS = half4(1.2, 3, 0, 0.01);
+                half2 eyesUV = ((((eyesArea - eyesPivot) * _EyesTRS.xy) + eyesPivot) + _EyesTRS.zw);
+                half3 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV).rgb;
+                half2 eyesMaskRect = abs(((i.uv01.zw - half2(0.5, 0.5)) * half2(2, 2)));
+                eyesMaskRect.x = smoothstep(0.99, 0.99, eyesMaskRect.x);
+                eyesMaskRect.y = smoothstep(0.24, 0.26, eyesMaskRect.y);
+                half eyesMask = (1.0 - eyesMaskRect.x) * (1.0 - eyesMaskRect.y);
+                
+                half2 browArea = GetBrowArea(i.uv01.zw, 4.0, _SelectBrow);
+                half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0, _SelectBrow);
+                half4 _BrowTRS = half4(1, 4, 0, -0.07);
+                half2 browUV = ((((browArea - browPivot) * _BrowTRS.xy) + browPivot) + _BrowTRS.zw);
+                half3 Brow = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, browUV).rgb;
+                half2 browMaskRect = abs(((i.uv01.zw - half2(0.65, 0.6)) * half2(2, 3)));
+                browMaskRect.x = smoothstep(0.99, 0.99, browMaskRect.x);
+                browMaskRect.y = smoothstep(0.15, 0.19, browMaskRect.y);
+                half browMask = (1.0 - browMaskRect.x) * (1.0 - browMaskRect.y);
+
+                _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes, eyesMask);
+                _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow, browMask);
+                
+
+
+
                 //Prepare Property....
                 //......................
                 
@@ -573,7 +646,8 @@ Shader "ZDShader/LWRP/Character"
                 float shadowPow0 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_0_var.rgb))), shadowStrength);
                 float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
                 
-                
+            
+                                                
                 #if _DiscolorationSystem
                     //Discoloration
                     half4 step_var ;
@@ -869,7 +943,6 @@ Shader "ZDShader/LWRP/Character"
             ENDHLSL
             
         }
-        
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
