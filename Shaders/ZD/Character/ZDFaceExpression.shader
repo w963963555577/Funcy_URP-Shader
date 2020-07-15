@@ -1,499 +1,499 @@
 // Made with Amplify Shader Editor
-// Available at the Unity Asset Store - http://u3d.as/y3X 
+// Available at the Unity Asset Store - http://u3d.as/y3X
 Shader "Hidden/ZDShader/LWRP/Face Expression"
 {
-	Properties
-	{
-		[HideInInspector] _AlphaCutoff("Alpha Cutoff ", Range(0, 1)) = 0.5
-		[HideInInspector] _EmissionColor("Emission Color", Color) = (1,1,1,1)
-		[NoScaleOffset]_MainTex("MainTex", 2D) = "white" {}
-		_Color("Color", Color) = (1,1,1,1)
-		[NoScaleOffset]_ExpressionMap("Expression Map", 2D) = "white" {}
-		[NoScaleOffset]_SelfMask("SelfMask", 2D) = "white" {}
-		_ShadowDistruction("ShadowDistruction", Color) = (0.9716981,0.5819566,0.5179334,1)
-		[IntRange]_SelectBrow("Select Brow", Range( 1 , 4)) = 1
-		[IntRange]_SelectFace("Select Face", Range( 1 , 8)) = 1
-		[IntRange]_SelectMouth("Select Mouth ", Range( 1 , 8)) = 1
-		[Toggle]_AntiAliasing1("Anti Aliasing", Float) = 1
-		[Toggle]_ReceiveShadow("Receive Shadow", Float) = 0
-		[Toggle(_OutlineEnable) ]_OutlineEnable1("Enable Outline", Float) = 1
-		_ShadowRamp("ShadowRamp", Range( 0 , 1)) = 1
-		[HideInInspector] _texcoord( "", 2D ) = "white" {}
-
-	}
-
-	SubShader
-	{
-		LOD 0
-
-		
-		Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
-		
-		Cull Back
-		HLSLINCLUDE
-		#pragma target 3.0
-		ENDHLSL
-
-		UsePass "Hidden/LWRP/General/ShadowCaster"
-	UsePass "Hidden/LWRP/General/DepthOnly"
-	UsePass "Hidden/LWRP/General/Outline"
-	UsePass "Hidden/LWRP/General/ShadowCaster"
-	UsePass "Hidden/LWRP/General/DepthOnly"
-	UsePass "Hidden/LWRP/General/Outline"
-
-		Pass
-		{
-			
-			Name "Forward"
-			Tags { "LightMode"="UniversalForward" }
-			
-			Blend One Zero , One Zero
-			ZWrite On
-			ZTest LEqual
-			Offset 0 , 0
-			ColorMask RGBA
-			
-
-			HLSLPROGRAM
-			#pragma multi_compile_instancing
-			#pragma multi_compile_fog
-			#define ASE_FOG 1
-			#define ASE_SRP_VERSION 70201
-
-			#pragma prefer_hlslcc gles
-			#pragma exclude_renderers d3d11_9x
-
-			#pragma vertex vert
-			#pragma fragment frag
-
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-
-			#if ASE_SRP_VERSION <= 70108
-			#define REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR
-			#endif
-
-			#define ASE_NEEDS_FRAG_WORLD_POSITION
-			#define ASE_NEEDS_FRAG_SHADOWCOORDS
-			#define ASE_NEEDS_VERT_NORMAL
-			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
-			#pragma multi_compile _ _SHADOWS_SOFT
-
-
-			struct VertexInput
-			{
-				float4 vertex : POSITION;
-				float3 ase_normal : NORMAL;
-				float4 ase_texcoord : TEXCOORD0;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct VertexOutput
-			{
-				float4 clipPos : SV_POSITION;
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				float3 worldPos : TEXCOORD0;
-				#endif
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-				float4 shadowCoord : TEXCOORD1;
-				#endif
-				#ifdef ASE_FOG
-				float fogFactor : TEXCOORD2;
-				#endif
-				float4 ase_texcoord3 : TEXCOORD3;
-				float4 ase_texcoord4 : TEXCOORD4;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			sampler2D _MainTex;
-			sampler2D _ExpressionMap;
-			sampler2D _SelfMask;
-			CBUFFER_START( UnityPerMaterial )
-			float4 _ShadowDistruction;
-			float4 _Color;
-			float _SelectMouth;
-			float _SelectFace;
-			float _SelectBrow;
-			float _ReceiveShadow;
-			float _ShadowRamp;
-			float _AntiAliasing1;
-			float _OutlineEnable1;
-			CBUFFER_END
-
-
-			float2 GetMouthArea414( float2 uv , float mouthCount , float selectMouth )
-			{
-				                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
-				                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
-				                return float2(pX, pY);
-			}
-			
-			float2 GetMouthArea415( float2 uv , float mouthCount , float selectMouth )
-			{
-				                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
-				                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
-				                return float2(pX, pY);
-			}
-			
-			float2 GetEyeArea279( float2 uv , float eyesCount , float selectFace )
-			{
-				return float2(uv.x * 0.5, (uv.y / eyesCount) + ((eyesCount - (selectFace)) / eyesCount));
-			}
-			
-			float2 GetEyeArea275( float2 uv , float eyesCount , float selectFace )
-			{
-				return float2(uv.x * 0.5, (uv.y / eyesCount) + ((eyesCount - (selectFace)) / eyesCount));
-			}
-			
-			float2 GetBrowArea444( float2 uv , float browCount , float selectBrow )
-			{
-				return float2(uv.x * 0.5+0.5,0.5
-				 + (uv.y / (browCount*2.0)) + ((browCount - selectBrow) / (browCount*2.0)));
-			}
-			
-			float2 GetBrowArea456( float2 uv , float browCount , float selectBrow )
-			{
-				return float2(uv.x * 0.5+0.5,0.5
-				 + (uv.y / (browCount*2.0)) + ((browCount - selectBrow) / (browCount*2.0)));
-			}
-			
-
-			VertexOutput vert ( VertexInput v  )
-			{
-				VertexOutput o = (VertexOutput)0;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-				float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
-				o.ase_texcoord4.xyz = ase_worldNormal;
-				
-				o.ase_texcoord3.xy = v.ase_texcoord.xy;
-				
-				//setting value to unused interpolator channels and avoid initialization warnings
-				o.ase_texcoord3.zw = 0;
-				o.ase_texcoord4.w = 0;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					float3 defaultVertexValue = v.vertex.xyz;
-				#else
-					float3 defaultVertexValue = float3(0, 0, 0);
-				#endif
-				float3 vertexValue = defaultVertexValue;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					v.vertex.xyz = vertexValue;
-				#else
-					v.vertex.xyz += vertexValue;
-				#endif
-				v.ase_normal = v.ase_normal;
-
-				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
-				float4 positionCS = TransformWorldToHClip( positionWS );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				o.worldPos = positionWS;
-				#endif
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-				VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-				vertexInput.positionWS = positionWS;
-				vertexInput.positionCS = positionCS;
-				o.shadowCoord = GetShadowCoord( vertexInput );
-				#endif
-				#ifdef ASE_FOG
-				o.fogFactor = ComputeFogFactor( positionCS.z );
-				#endif
-				o.clipPos = positionCS;
-				return o;
-			}
-
-			half4 frag ( VertexOutput IN  ) : SV_Target
-			{
-				UNITY_SETUP_INSTANCE_ID( IN );
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				float3 WorldPosition = IN.worldPos;
-				#endif
-				float4 ShadowCoords = float4( 0, 0, 0, 0 );
-
-				#if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-						ShadowCoords = IN.shadowCoord;
-					#elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
-						ShadowCoords = TransformWorldToShadowCoord( WorldPosition );
-					#endif
-				#endif
-				float2 uv_MainTex6 = IN.ase_texcoord3.xy;
-				float4 tex2DNode6 = tex2D( _MainTex, uv_MainTex6 );
-				float2 uv0213 = IN.ase_texcoord3.xy * float2( 1,1 ) + float2( 0,0 );
-				float2 uvcoord323 = uv0213;
-				float2 uv414 = uvcoord323;
-				float mouthCount414 = 8.0;
-				float selectMouth414 = _SelectMouth;
-				float2 localGetMouthArea414 = GetMouthArea414( uv414 , mouthCount414 , selectMouth414 );
-				float2 uv415 = float2( 0.5,0.5 );
-				float mouthCount415 = 8.0;
-				float selectMouth415 = _SelectMouth;
-				float2 localGetMouthArea415 = GetMouthArea415( uv415 , mouthCount415 , selectMouth415 );
-				float4 _MouthTRS = float4(2,4,0,0.079);
-				float2 appendResult336 = (float2(_MouthTRS.x , _MouthTRS.y));
-				float2 appendResult335 = (float2(_MouthTRS.z , _MouthTRS.w));
-				float4 tex2DNode337 = tex2D( _ExpressionMap, ( ( ( ( localGetMouthArea414 - localGetMouthArea415 ) * appendResult336 ) + localGetMouthArea415 ) + appendResult335 ) );
-				float2 break356 = abs( ( ( uvcoord323 - float2( 0.5,0.34 ) ) * float2( 1,2 ) ) );
-				float smoothstepResult357 = smoothstep( 0.2 , 0.3 , break356.y);
-				float smoothstepResult421 = smoothstep( 0.23 , 0.27 , break356.x);
-				float4 lerpResult306 = lerp( tex2DNode6 , tex2DNode337 , ( ( 1.0 - smoothstepResult357 ) * ( 1.0 - smoothstepResult421 ) * tex2DNode337.a ));
-				float2 uv279 = uvcoord323;
-				float eyesCount279 = 8.0;
-				float selectFace279 = _SelectFace;
-				float2 localGetEyeArea279 = GetEyeArea279( uv279 , eyesCount279 , selectFace279 );
-				float2 uv275 = float2( 0.5,0.5 );
-				float eyesCount275 = 8.0;
-				float selectFace275 = _SelectFace;
-				float2 localGetEyeArea275 = GetEyeArea275( uv275 , eyesCount275 , selectFace275 );
-				float4 _EyeTRS = float4(1,4,0,-0.02);
-				float2 appendResult232 = (float2(_EyeTRS.x , _EyeTRS.y));
-				float2 appendResult233 = (float2(_EyeTRS.z , _EyeTRS.w));
-				float4 tex2DNode215 = tex2D( _ExpressionMap, ( ( ( ( localGetEyeArea279 - localGetEyeArea275 ) * appendResult232 ) + localGetEyeArea275 ) + appendResult233 ) );
-				float smoothstepResult296 = smoothstep( 0.25 , 0.25 , abs( ( ( uvcoord323 - float2( 0.5,0.54 ) ) * float2( 2,2 ) ) ).y);
-				float4 lerpResult455 = lerp( lerpResult306 , tex2DNode215 , ( tex2DNode215.a * ( 1.0 - smoothstepResult296 ) ));
-				float2 uv444 = uvcoord323;
-				float browCount444 = 4.0;
-				float selectBrow444 = _SelectBrow;
-				float2 localGetBrowArea444 = GetBrowArea444( uv444 , browCount444 , selectBrow444 );
-				float2 uv456 = float2( 0.5,0.5 );
-				float browCount456 = 4.0;
-				float selectBrow456 = _SelectBrow;
-				float2 localGetBrowArea456 = GetBrowArea456( uv456 , browCount456 , selectBrow456 );
-				float4 _BrowTRS = float4(1,4,0,-0.077);
-				float2 appendResult437 = (float2(_BrowTRS.x , _BrowTRS.y));
-				float2 appendResult433 = (float2(_BrowTRS.z , _BrowTRS.w));
-				float4 tex2DNode436 = tex2D( _ExpressionMap, ( ( ( ( localGetBrowArea444 - localGetBrowArea456 ) * appendResult437 ) + localGetBrowArea456 ) + appendResult433 ) );
-				float2 temp_cast_0 = (0.65).xx;
-				float smoothstepResult452 = smoothstep( 0.15 , 0.19 , abs( ( ( uvcoord323 - temp_cast_0 ) * float2( 2,3 ) ) ).y);
-				float4 lerpResult363 = lerp( lerpResult455 , tex2DNode436 , ( tex2DNode436.a * ( 1.0 - smoothstepResult452 ) ));
-				float4 temp_output_493_0 = ( _Color * ( float4( 1,1,1,0 ) * lerpResult363 ) );
-				float temp_output_501_0 = ( 1.0 - _ShadowRamp );
-				float ase_lightAtten = 0;
-				Light ase_lightAtten_mainLight = GetMainLight( ShadowCoords );
-				ase_lightAtten = ase_lightAtten_mainLight.distanceAttenuation * ase_lightAtten_mainLight.shadowAttenuation;
-				float smoothstepResult479 = smoothstep( ( 0.5 - temp_output_501_0 ) , ( 0.5 + temp_output_501_0 ) , ( 1.0 - ase_lightAtten ));
-				float4 transform461 = mul(GetObjectToWorldMatrix(),float4( 0,0,1,0 ));
-				float3 appendResult460 = (float3(transform461.xyz));
-				float3 objectDirection463 = appendResult460;
-				float3 appendResult465 = (float3(_MainLightPosition.xyz.x , 0.0 , _MainLightPosition.xyz.z));
-				float3 normalizeResult458 = normalize( ( appendResult465 * float3( -1,-1,-1 ) ) );
-				float3 lightXZDirection462 = normalizeResult458;
-				float3 normalizeResult470 = normalize( cross( objectDirection463 , lightXZDirection462 ) );
-				float2 uv0472 = IN.ase_texcoord3.xy * float2( 1,1 ) + float2( 0,0 );
-				float2 appendResult484 = (float2(( ( normalizeResult470.y * 1.0 ) * uv0472.x ) , uv0472.y));
-				float4 tex2DNode476 = tex2D( _SelfMask, appendResult484 );
-				float dotResult469 = dot( objectDirection463 , lightXZDirection462 );
-				float temp_output_505_0 = (0.01 + (( acos( ( dotResult469 * -1.0 ) ) / PI ) - 0.0) * (0.99 - 0.01) / (1.0 - 0.0));
-				float smoothstepResult498 = smoothstep( ( tex2DNode476.r - 0.0 ) , ( tex2DNode476.r + 0.0 ) , temp_output_505_0);
-				float temp_output_508_0 = ( (( _ReceiveShadow )?( saturate( ( ( 1.0 - smoothstepResult479 ) + ( 1.0 - tex2DNode476.b ) ) ) ):( 1.0 )) * (( _AntiAliasing1 )?( ( 1.0 - step( tex2DNode476.r , temp_output_505_0 ) ) ):( ( 1.0 - smoothstepResult498 ) )) );
-				float4 lerpResult511 = lerp( ( _ShadowDistruction * temp_output_493_0 ) , temp_output_493_0 , temp_output_508_0);
-				float3 ase_worldViewDir = ( _WorldSpaceCameraPos.xyz - WorldPosition );
-				ase_worldViewDir = normalize(ase_worldViewDir);
-				float3 ase_worldNormal = IN.ase_texcoord4.xyz;
-				float fresnelNdotV507 = dot( ase_worldNormal, ase_worldViewDir );
-				float fresnelNode507 = ( 0.0 + 1.0 * pow( 1.0 - fresnelNdotV507, 5.0 ) );
-				
-				float lerpResult284 = lerp( _OutlineEnable1 , 1.0 , 1.0);
-				clip( tex2DNode6.a - 0.5);
-				
-				float3 BakedAlbedo = 0;
-				float3 BakedEmission = 0;
-				float3 Color = ( lerpResult511 + ( temp_output_508_0 * fresnelNode507 ) ).rgb;
-				float Alpha = ( lerpResult284 * tex2DNode6.a );
-				float AlphaClipThreshold = 0.5;
-
-				#ifdef _ALPHATEST_ON
-					clip( Alpha - AlphaClipThreshold );
-				#endif
-
-				#ifdef ASE_FOG
-					Color = MixFog( Color, IN.fogFactor );
-				#endif
-
-				#ifdef LOD_FADE_CROSSFADE
-					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
-				#endif
-
-				return half4( Color, Alpha );
-			}
-
-			ENDHLSL
-		}
-
-		
-		Pass
-		{
-			
-			Name "ShadowCaster"
-			Tags { "LightMode"="ShadowCaster" }
-
-			ZWrite On
-			ZTest LEqual
-
-			HLSLPROGRAM
-			#pragma multi_compile_instancing
-			#pragma multi_compile_fog
-			#define ASE_FOG 1
-			#define ASE_SRP_VERSION 70201
-
-			#pragma prefer_hlslcc gles
-			#pragma exclude_renderers d3d11_9x
-
-			#pragma vertex ShadowPassVertex
-			#pragma fragment ShadowPassFragment
-
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-			
-
-			struct VertexInput
-			{
-				float4 vertex : POSITION;
-				float3 ase_normal : NORMAL;
-				float4 ase_texcoord : TEXCOORD0;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct VertexOutput
-			{
-				float4 clipPos : SV_POSITION;
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				float3 worldPos : TEXCOORD0;
-				#endif
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-				float4 shadowCoord : TEXCOORD1;
-				#endif
-				float4 ase_texcoord2 : TEXCOORD2;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			sampler2D _MainTex;
-			CBUFFER_START( UnityPerMaterial )
-			float4 _ShadowDistruction;
-			float4 _Color;
-			float _SelectMouth;
-			float _SelectFace;
-			float _SelectBrow;
-			float _ReceiveShadow;
-			float _ShadowRamp;
-			float _AntiAliasing1;
-			float _OutlineEnable1;
-			CBUFFER_END
-
-
-			
-			float3 _LightDirection;
-
-			VertexOutput ShadowPassVertex( VertexInput v )
-			{
-				VertexOutput o;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO( o );
-
-				o.ase_texcoord2.xy = v.ase_texcoord.xy;
-				
-				//setting value to unused interpolator channels and avoid initialization warnings
-				o.ase_texcoord2.zw = 0;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					float3 defaultVertexValue = v.vertex.xyz;
-				#else
-					float3 defaultVertexValue = float3(0, 0, 0);
-				#endif
-				float3 vertexValue = defaultVertexValue;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					v.vertex.xyz = vertexValue;
-				#else
-					v.vertex.xyz += vertexValue;
-				#endif
-
-				v.ase_normal = v.ase_normal;
-
-				float3 positionWS = TransformObjectToWorld( v.vertex.xyz );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				o.worldPos = positionWS;
-				#endif
-
-				float3 normalWS = TransformObjectToWorldDir( v.ase_normal );
-
-				float4 clipPos = TransformWorldToHClip( ApplyShadowBias( positionWS, normalWS, _LightDirection ) );
-
-				#if UNITY_REVERSED_Z
-					clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
-				#else
-					clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
-				#endif
-
-				#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-					vertexInput.positionWS = positionWS;
-					vertexInput.positionCS = clipPos;
-					o.shadowCoord = GetShadowCoord( vertexInput );
-				#endif
-				o.clipPos = clipPos;
-
-				return o;
-			}
-
-			half4 ShadowPassFragment(VertexOutput IN  ) : SV_TARGET
-			{
-				UNITY_SETUP_INSTANCE_ID( IN );
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
-
-				#if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-				float3 WorldPosition = IN.worldPos;
-				#endif
-				float4 ShadowCoords = float4( 0, 0, 0, 0 );
-
-				#if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-					#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-						ShadowCoords = IN.shadowCoord;
-					#elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
-						ShadowCoords = TransformWorldToShadowCoord( WorldPosition );
-					#endif
-				#endif
-
-				float lerpResult284 = lerp( _OutlineEnable1 , 1.0 , 1.0);
-				float2 uv_MainTex6 = IN.ase_texcoord2.xy;
-				float4 tex2DNode6 = tex2D( _MainTex, uv_MainTex6 );
-				clip( tex2DNode6.a - 0.5);
-				
-				float Alpha = ( lerpResult284 * tex2DNode6.a );
-				float AlphaClipThreshold = 0.5;
-
-				#ifdef _ALPHATEST_ON
-					clip(Alpha - AlphaClipThreshold);
-				#endif
-
-				#ifdef LOD_FADE_CROSSFADE
-					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
-				#endif
-				return 0;
-			}
-
-			ENDHLSL
-		}
-
-	
-	}
-	CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ZDFace"
-	Fallback "Hidden/InternalErrorShader"
-	
+    Properties
+    {
+        [HideInInspector] _AlphaCutoff ("Alpha Cutoff ", Range(0, 1)) = 0.5
+        [HideInInspector] _EmissionColor ("Emission Color", Color) = (1, 1, 1, 1)
+        [NoScaleOffset]_MainTex ("MainTex", 2D) = "white" { }
+        _Color ("Color", Color) = (1, 1, 1, 1)
+        [NoScaleOffset]_ExpressionMap ("Expression Map", 2D) = "white" { }
+        [NoScaleOffset]_SelfMask ("SelfMask", 2D) = "white" { }
+        _ShadowDistruction ("ShadowDistruction", Color) = (0.9716981, 0.5819566, 0.5179334, 1)
+        [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
+        [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
+        [IntRange]_SelectMouth ("Select Mouth ", Range(1, 8)) = 1
+        [Toggle]_AntiAliasing1 ("Anti Aliasing", Float) = 1
+        [Toggle]_ReceiveShadow ("Receive Shadow", Float) = 0
+        [Toggle(_OutlineEnable) ]_OutlineEnable1 ("Enable Outline", Float) = 1
+        _ShadowRamp ("ShadowRamp", Range(0, 1)) = 1
+        [HideInInspector] _texcoord ("", 2D) = "white" { }
+    }
+    
+    SubShader
+    {
+        LOD 0
+        
+        
+        Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Opaque" "Queue" = "Geometry" }
+        
+        Cull Back
+        HLSLINCLUDE
+        #pragma target 3.0
+        ENDHLSL
+        
+        UsePass "Hidden/LWRP/General/ShadowCaster"
+        UsePass "Hidden/LWRP/General/DepthOnly"
+        UsePass "Hidden/LWRP/General/Outline"
+        UsePass "Hidden/LWRP/General/ShadowCaster"
+        UsePass "Hidden/LWRP/General/DepthOnly"
+        UsePass "Hidden/LWRP/General/Outline"
+        
+        Pass
+        {
+            
+            Name "Forward"
+            Tags { "LightMode" = "UniversalForward" }
+            
+            Blend One Zero, One Zero
+            ZWrite On
+            ZTest LEqual
+            Offset 0, 0
+            ColorMask RGBA
+            
+            
+            HLSLPROGRAM
+            
+            #pragma multi_compile_instancing
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 70201
+            
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            
+            #if ASE_SRP_VERSION <= 70108
+                #define REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR
+            #endif
+            
+            #define ASE_NEEDS_FRAG_WORLD_POSITION
+            #define ASE_NEEDS_FRAG_SHADOWCOORDS
+            #define ASE_NEEDS_VERT_NORMAL
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _SHADOWS_SOFT
+            
+            
+            struct VertexInput
+            {
+                float4 vertex: POSITION;
+                float3 ase_normal: NORMAL;
+                float4 ase_texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    float3 worldPos: TEXCOORD0;
+                #endif
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    float4 shadowCoord: TEXCOORD1;
+                #endif
+                #ifdef ASE_FOG
+                    float fogFactor: TEXCOORD2;
+                #endif
+                float4 ase_texcoord3: TEXCOORD3;
+                float4 ase_texcoord4: TEXCOORD4;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            sampler2D _MainTex;
+            sampler2D _ExpressionMap;
+            sampler2D _SelfMask;
+            CBUFFER_START(UnityPerMaterial)
+            float4 _ShadowDistruction;
+            float4 _Color;
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            float _ReceiveShadow;
+            float _ShadowRamp;
+            float _AntiAliasing1;
+            float _OutlineEnable1;
+            CBUFFER_END
+            
+            
+            float2 GetMouthArea414(float2 uv, float mouthCount, float selectMouth)
+            {
+                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
+                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                return float2(pX, pY);
+            }
+            
+            float2 GetMouthArea415(float2 uv, float mouthCount, float selectMouth)
+            {
+                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
+                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                return float2(pX, pY);
+            }
+            
+            float2 GetEyeArea279(float2 uv, float eyesCount, float selectFace)
+            {
+                return float2(uv.x * 0.5, (uv.y / eyesCount) + ((eyesCount - (selectFace)) / eyesCount));
+            }
+            
+            float2 GetEyeArea275(float2 uv, float eyesCount, float selectFace)
+            {
+                return float2(uv.x * 0.5, (uv.y / eyesCount) + ((eyesCount - (selectFace)) / eyesCount));
+            }
+            
+            float2 GetBrowArea444(float2 uv, float browCount, float selectBrow)
+            {
+                return float2(uv.x * 0.5 + 0.5, 0.5
+                + (uv.y / (browCount * 2.0)) + ((browCount - selectBrow) / (browCount * 2.0)));
+            }
+            
+            float2 GetBrowArea456(float2 uv, float browCount, float selectBrow)
+            {
+                return float2(uv.x * 0.5 + 0.5, 0.5
+                + (uv.y / (browCount * 2.0)) + ((browCount - selectBrow) / (browCount * 2.0)));
+            }
+            
+            
+            VertexOutput vert(VertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+                o.ase_texcoord4.xyz = ase_worldNormal;
+                
+                o.ase_texcoord3.xy = v.ase_texcoord.xy;
+                
+                //setting value to unused interpolator channels and avoid initialization warnings
+                o.ase_texcoord3.zw = 0;
+                o.ase_texcoord4.w = 0;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+                v.ase_normal = v.ase_normal;
+                
+                float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
+                float4 positionCS = TransformWorldToHClip(positionWS);
+                
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    o.worldPos = positionWS;
+                #endif
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    VertexPositionInputs vertexInput = (VertexPositionInputs)0;
+                    vertexInput.positionWS = positionWS;
+                    vertexInput.positionCS = positionCS;
+                    o.shadowCoord = GetShadowCoord(vertexInput);
+                #endif
+                #ifdef ASE_FOG
+                    o.fogFactor = ComputeFogFactor(positionCS.z);
+                #endif
+                o.clipPos = positionCS;
+                return o;
+            }
+            
+            half4 frag(VertexOutput IN): SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    float3 WorldPosition = IN.worldPos;
+                #endif
+                float4 ShadowCoords = float4(0, 0, 0, 0);
+                
+                #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                        ShadowCoords = IN.shadowCoord;
+                    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+                        ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
+                    #endif
+                #endif
+                float2 uv_MainTex6 = IN.ase_texcoord3.xy;
+                float4 tex2DNode6 = tex2D(_MainTex, uv_MainTex6);
+                float2 uv0213 = IN.ase_texcoord3.xy * float2(1, 1) + float2(0, 0);
+                float2 uvcoord323 = uv0213;
+                float2 uv414 = uvcoord323;
+                float mouthCount414 = 8.0;
+                float selectMouth414 = _SelectMouth;
+                float2 localGetMouthArea414 = GetMouthArea414(uv414, mouthCount414, selectMouth414);
+                float2 uv415 = float2(0.5, 0.5);
+                float mouthCount415 = 8.0;
+                float selectMouth415 = _SelectMouth;
+                float2 localGetMouthArea415 = GetMouthArea415(uv415, mouthCount415, selectMouth415);
+                float4 _MouthTRS = float4(2, 4, 0, 0.079);
+                float2 appendResult336 = (float2(_MouthTRS.x, _MouthTRS.y));
+                float2 appendResult335 = (float2(_MouthTRS.z, _MouthTRS.w));
+                float4 tex2DNode337 = tex2D(_ExpressionMap, ((((localGetMouthArea414 - localGetMouthArea415) * appendResult336) + localGetMouthArea415) + appendResult335));
+                float2 break356 = abs(((uvcoord323 - float2(0.5, 0.34)) * float2(1, 2)));
+                float smoothstepResult357 = smoothstep(0.2, 0.3, break356.y);
+                float smoothstepResult421 = smoothstep(0.23, 0.27, break356.x);
+                float4 lerpResult306 = lerp(tex2DNode6, tex2DNode337, ((1.0 - smoothstepResult357) * (1.0 - smoothstepResult421) * tex2DNode337.a));
+                float2 uv279 = uvcoord323;
+                float eyesCount279 = 8.0;
+                float selectFace279 = _SelectFace;
+                float2 localGetEyeArea279 = GetEyeArea279(uv279, eyesCount279, selectFace279);
+                float2 uv275 = float2(0.5, 0.5);
+                float eyesCount275 = 8.0;
+                float selectFace275 = _SelectFace;
+                float2 localGetEyeArea275 = GetEyeArea275(uv275, eyesCount275, selectFace275);
+                float4 _EyeTRS = float4(1, 4, 0, -0.02);
+                float2 appendResult232 = (float2(_EyeTRS.x, _EyeTRS.y));
+                float2 appendResult233 = (float2(_EyeTRS.z, _EyeTRS.w));
+                float4 tex2DNode215 = tex2D(_ExpressionMap, ((((localGetEyeArea279 - localGetEyeArea275) * appendResult232) + localGetEyeArea275) + appendResult233));
+                float smoothstepResult296 = smoothstep(0.25, 0.25, abs(((uvcoord323 - float2(0.5, 0.54)) * float2(2, 2))).y);
+                float4 lerpResult455 = lerp(lerpResult306, tex2DNode215, (tex2DNode215.a * (1.0 - smoothstepResult296)));
+                float2 uv444 = uvcoord323;
+                float browCount444 = 4.0;
+                float selectBrow444 = _SelectBrow;
+                float2 localGetBrowArea444 = GetBrowArea444(uv444, browCount444, selectBrow444);
+                float2 uv456 = float2(0.5, 0.5);
+                float browCount456 = 4.0;
+                float selectBrow456 = _SelectBrow;
+                float2 localGetBrowArea456 = GetBrowArea456(uv456, browCount456, selectBrow456);
+                float4 _BrowTRS = float4(1, 4, 0, -0.077);
+                float2 appendResult437 = (float2(_BrowTRS.x, _BrowTRS.y));
+                float2 appendResult433 = (float2(_BrowTRS.z, _BrowTRS.w));
+                float4 tex2DNode436 = tex2D(_ExpressionMap, ((((localGetBrowArea444 - localGetBrowArea456) * appendResult437) + localGetBrowArea456) + appendResult433));
+                float2 temp_cast_0 = (0.65).xx;
+                float smoothstepResult452 = smoothstep(0.15, 0.19, abs(((uvcoord323 - temp_cast_0) * float2(2, 3))).y);
+                float4 lerpResult363 = lerp(lerpResult455, tex2DNode436, (tex2DNode436.a * (1.0 - smoothstepResult452)));
+                float4 temp_output_493_0 = (_Color * (float4(1, 1, 1, 0) * lerpResult363));
+                float temp_output_501_0 = (1.0 - _ShadowRamp);
+                float ase_lightAtten = 0;
+                Light ase_lightAtten_mainLight = GetMainLight(ShadowCoords);
+                ase_lightAtten = ase_lightAtten_mainLight.distanceAttenuation * ase_lightAtten_mainLight.shadowAttenuation;
+                float smoothstepResult479 = smoothstep((0.5 - temp_output_501_0), (0.5 + temp_output_501_0), (1.0 - ase_lightAtten));
+                float4 transform461 = mul(GetObjectToWorldMatrix(), float4(0, 0, 1, 0));
+                float3 appendResult460 = (float3(transform461.xyz));
+                float3 objectDirection463 = appendResult460;
+                float3 appendResult465 = (float3(_MainLightPosition.xyz.x, 0.0, _MainLightPosition.xyz.z));
+                float3 normalizeResult458 = normalize((appendResult465 * float3(-1, -1, -1)));
+                float3 lightXZDirection462 = normalizeResult458;
+                float3 normalizeResult470 = normalize(cross(objectDirection463, lightXZDirection462));
+                float2 uv0472 = IN.ase_texcoord3.xy * float2(1, 1) + float2(0, 0);
+                float2 appendResult484 = (float2(((normalizeResult470.y * 1.0) * uv0472.x), uv0472.y));
+                float4 tex2DNode476 = tex2D(_SelfMask, appendResult484);
+                float dotResult469 = dot(objectDirection463, lightXZDirection462);
+                float temp_output_505_0 = (0.01 + ((acos((dotResult469 * - 1.0)) / PI) - 0.0) * (0.99 - 0.01) / (1.0 - 0.0));
+                float smoothstepResult498 = smoothstep((tex2DNode476.r - 0.0), (tex2DNode476.r + 0.0), temp_output_505_0);
+                float temp_output_508_0 = (((_ReceiveShadow)?(saturate(((1.0 - smoothstepResult479) + (1.0 - tex2DNode476.b)))): (1.0)) * ((_AntiAliasing1)?((1.0 - step(tex2DNode476.r, temp_output_505_0))): ((1.0 - smoothstepResult498))));
+                float4 lerpResult511 = lerp((_ShadowDistruction * temp_output_493_0), temp_output_493_0, temp_output_508_0);
+                float3 ase_worldViewDir = (_WorldSpaceCameraPos.xyz - WorldPosition);
+                ase_worldViewDir = normalize(ase_worldViewDir);
+                float3 ase_worldNormal = IN.ase_texcoord4.xyz;
+                float fresnelNdotV507 = dot(ase_worldNormal, ase_worldViewDir);
+                float fresnelNode507 = (0.0 + 1.0 * pow(1.0 - fresnelNdotV507, 5.0));
+                
+                float lerpResult284 = lerp(_OutlineEnable1, 1.0, 1.0);
+                clip(tex2DNode6.a - 0.5);
+                
+                float3 BakedAlbedo = 0;
+                float3 BakedEmission = 0;
+                float3 Color = (lerpResult511 + (temp_output_508_0 * fresnelNode507)).rgb;
+                float Alpha = (lerpResult284 * tex2DNode6.a);
+                float AlphaClipThreshold = 0.5;
+                
+                #ifdef _ALPHATEST_ON
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+                
+                #ifdef ASE_FOG
+                    Color = MixFog(Color, IN.fogFactor);
+                #endif
+                
+                #ifdef LOD_FADE_CROSSFADE
+                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                #endif
+                
+                return half4(Color, Alpha);
+            }
+            
+            ENDHLSL
+            
+        }
+        
+        
+        Pass
+        {
+            
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            
+            ZWrite On
+            ZTest LEqual
+            
+            HLSLPROGRAM
+            
+            #pragma multi_compile_instancing
+            #pragma multi_compile_fog
+            #define ASE_FOG 1
+            #define ASE_SRP_VERSION 70201
+            
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            
+            
+            
+            struct VertexInput
+            {
+                float4 vertex: POSITION;
+                float3 ase_normal: NORMAL;
+                float4 ase_texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    float3 worldPos: TEXCOORD0;
+                #endif
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    float4 shadowCoord: TEXCOORD1;
+                #endif
+                float4 ase_texcoord2: TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            sampler2D _MainTex;
+            CBUFFER_START(UnityPerMaterial)
+            float4 _ShadowDistruction;
+            float4 _Color;
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            float _ReceiveShadow;
+            float _ShadowRamp;
+            float _AntiAliasing1;
+            float _OutlineEnable1;
+            CBUFFER_END
+            
+            
+            
+            float3 _LightDirection;
+            
+            VertexOutput ShadowPassVertex(VertexInput v)
+            {
+                VertexOutput o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                o.ase_texcoord2.xy = v.ase_texcoord.xy;
+                
+                //setting value to unused interpolator channels and avoid initialization warnings
+                o.ase_texcoord2.zw = 0;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+                
+                v.ase_normal = v.ase_normal;
+                
+                float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
+                
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    o.worldPos = positionWS;
+                #endif
+                
+                float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
+                
+                float4 clipPos = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
+                
+                #if UNITY_REVERSED_Z
+                    clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+                #else
+                    clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+                #endif
+                
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    VertexPositionInputs vertexInput = (VertexPositionInputs)0;
+                    vertexInput.positionWS = positionWS;
+                    vertexInput.positionCS = clipPos;
+                    o.shadowCoord = GetShadowCoord(vertexInput);
+                #endif
+                o.clipPos = clipPos;
+                
+                return o;
+            }
+            
+            half4 ShadowPassFragment(VertexOutput IN): SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                
+                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
+                    float3 WorldPosition = IN.worldPos;
+                #endif
+                float4 ShadowCoords = float4(0, 0, 0, 0);
+                
+                #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
+                    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                        ShadowCoords = IN.shadowCoord;
+                    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+                        ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
+                    #endif
+                #endif
+                
+                float lerpResult284 = lerp(_OutlineEnable1, 1.0, 1.0);
+                float2 uv_MainTex6 = IN.ase_texcoord2.xy;
+                float4 tex2DNode6 = tex2D(_MainTex, uv_MainTex6);
+                clip(tex2DNode6.a - 0.5);
+                
+                float Alpha = (lerpResult284 * tex2DNode6.a);
+                float AlphaClipThreshold = 0.5;
+                
+                #ifdef _ALPHATEST_ON
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+                
+                #ifdef LOD_FADE_CROSSFADE
+                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                #endif
+                return 0;
+            }
+            
+            ENDHLSL
+            
+        }
+    }
+    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ZDFace"
+    Fallback "Hidden/InternalErrorShader"
 }
 /*ASEBEGIN
 Version=17800
@@ -814,4 +814,4 @@ WireConnection;453;0;449;0
 WireConnection;1;2;500;0
 WireConnection;1;3;522;0
 ASEEND*/
-//CHKSM=6D0E85987BD7D52F4117BAD7AA5DE023909BF7FC
+// CHKSM = 6D0E85987BD7D52F4117BAD7AA5DE023909BF7FC

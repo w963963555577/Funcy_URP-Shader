@@ -85,6 +85,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public MaterialProperty selectFace { get; set; }
         public MaterialProperty selectMouth { get; set; }
 
+        public MaterialProperty browRect { get; set; }
+        public MaterialProperty faceRect { get; set; }
+        public MaterialProperty mouthRect { get; set; }
+
         bool drawBaseMap = false;
         public virtual void FindProperties()
         {
@@ -150,6 +154,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             selectBrow = FindProperty("_SelectBrow", props);
             selectFace = FindProperty("_SelectFace", props);
             selectMouth = FindProperty("_SelectMouth", props);
+            browRect = FindProperty("_BrowRect", props);
+            faceRect = FindProperty("_FaceRect", props);
+            mouthRect = FindProperty("_MouthRect", props);
         }
 
         
@@ -327,8 +334,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 EditorGUI.BeginDisabledGroup(mat.GetFloat("_ExpressionEnable") == 0.0);
                 materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
                 materialEditor.ShaderProperty(selectBrow, selectBrow.displayName);
+                materialEditor.ShaderProperty(browRect, browRect.displayName);
                 materialEditor.ShaderProperty(selectFace, selectFace.displayName);
+                materialEditor.ShaderProperty(faceRect, faceRect.displayName);
                 materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
+                materialEditor.ShaderProperty(mouthRect, mouthRect.displayName);
                 EditorGUI.EndDisabledGroup();
             });
 
