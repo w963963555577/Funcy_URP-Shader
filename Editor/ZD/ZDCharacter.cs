@@ -79,6 +79,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public MaterialProperty diffuseBlend { get; set; }
 
 
+        public MaterialProperty expressionEnable { get; set; }
         public MaterialProperty expressionMap { get; set; }
         public MaterialProperty selectBrow { get; set; }
         public MaterialProperty selectFace { get; set; }
@@ -144,6 +145,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             diffuseBlend = FindProperty("_DiffuseBlend", props);
 
 
+            expressionEnable = FindProperty("_ExpressionEnable", props);
             expressionMap = FindProperty("_ExpressionMap", props);
             selectBrow = FindProperty("_SelectBrow", props);
             selectFace = FindProperty("_SelectFace", props);
@@ -318,7 +320,19 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 }
             });
 
-            DrawArea("Expression", () => {                                
+
+            DrawArea("Expression System", () => {
+
+                materialEditor.ShaderProperty(expressionEnable, "Enable");
+                EditorGUI.BeginDisabledGroup(mat.GetFloat("_ExpressionEnable") == 0.0);
+                materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
+                materialEditor.ShaderProperty(selectBrow, selectBrow.displayName);
+                materialEditor.ShaderProperty(selectFace, selectFace.displayName);
+                materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
+                EditorGUI.EndDisabledGroup();
+            });
+
+            DrawArea("Custom Lighting", () => {
                 materialEditor.ShaderProperty(customLightColor, "Color");
                 materialEditor.ShaderProperty(customLightIntensity, "Intansity");
 
@@ -331,19 +345,6 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
                 materialEditor.ShaderProperty(selfShadowRemap, selfShadowRemap.displayName);
-            });
-
-            DrawArea("Custom Lighting", () => {
-                mat.DisableKeyword("_CustomLighting");
-                //materialEditor.ShaderProperty(customLighting, "Enable " + customLighting.displayName);
-
-
-                materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
-                materialEditor.ShaderProperty(selectBrow, selectBrow.displayName);
-                materialEditor.ShaderProperty(selectFace, selectFace.displayName);
-                materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
-
-                //materialEditor.ShaderProperty(FindProperty("_CustomLightInstanceID"), "_CustomLightInstanceID");
             });
 
             MaterialChangeCheck();
