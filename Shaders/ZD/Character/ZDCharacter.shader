@@ -263,15 +263,9 @@ Shader "ZDShader/LWRP/Character"
             #pragma exclude_renderers d3d11_9x
             #pragma target 3.0
             
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _SHADOWS_SOFT
-            
-            
-            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
-            
-            #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
+			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+			#pragma multi_compile _ _SHADOWS_SOFT
             
             
             
@@ -368,14 +362,11 @@ Shader "ZDShader/LWRP/Character"
                 float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
                 half3 normalWS: TEXCOORD3;
                 
-                #ifdef _MAIN_LIGHT_SHADOWS
-                    float4 shadowCoord: TEXCOORD4; // compute shadow coord per-vertex for the main light
-                #endif
                 
                 #ifdef _SelfMaskEnable
-                    float3 objectDirection: TEXCOORD5;
-                    float3 lightXZDirection: TEXCOORD6;
-                    float3 objectUp: TEXCOORD7;
+                    float3 objectDirection: TEXCOORD4;
+                    float3 lightXZDirection: TEXCOORD5;
+                    float3 objectUp: TEXCOORD6;
                 #endif
                 
                 float4 positionCS: SV_POSITION;
@@ -410,10 +401,6 @@ Shader "ZDShader/LWRP/Character"
                     output.bitangentWS = vertexNormalInput.bitangentWS;
                 #endif
                 
-                #ifdef _MAIN_LIGHT_SHADOWS
-                    output.shadowCoord = GetShadowCoord(vertexInput);
-                #endif
-                
                 #if _SelfMaskEnable
                     Light mainLight = GetMainLight();
                     
@@ -430,7 +417,6 @@ Shader "ZDShader/LWRP/Character"
                     output.objectDirection.y = 0;
                     output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                     
-                    
                     output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 #endif
                 
@@ -442,25 +428,6 @@ Shader "ZDShader/LWRP/Character"
             float Remap(float value, float from1, float to1, float from2, float to2)
             {
                 return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
-            }
-            
-            float PBRShadow(Varyings i, Light mainLight)
-            {
-                #if _NORMALMAP
-                    half3 normalWS = TransformTangentToWorld(surfaceData.normalTS,
-                    half3x3(i.tangentWS, i.bitangentWS, i.normalWS));
-                #else
-                    half3 normalWS = i.normalWS;
-                #endif
-                normalWS = normalize(normalWS);
-                
-                float3 positionWS = i.positionWSAndFogFactor.xyz;
-                half3 viewDirectionWS = SafeNormalize(GetCameraPositionWS() - positionWS);
-                
-                BRDFData brdfData;
-                InitializeBRDFData(1.0.rrr, 0.0, 0.0, 0.0, 1.0, brdfData);
-                
-                return LightingPhysicallyBased(brdfData, mainLight, normalWS, viewDirectionWS).r;
             }
             
             #if _SelfMaskEnable
@@ -563,11 +530,10 @@ Shader "ZDShader/LWRP/Character"
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
-                #ifdef _MAIN_LIGHT_SHADOWS
-                    Light mainLight = GetMainLight(i.shadowCoord);
-                #else
-                    Light mainLight = GetMainLight();
-                #endif
+                
+                float4 shadowCoords = TransformWorldToShadowCoord(i.positionWSAndFogFactor.xyz);
+                Light mainLight = GetMainLight(shadowCoords);
+                
                 
                 mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
@@ -575,11 +541,9 @@ Shader "ZDShader/LWRP/Character"
                 
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 half NdotL = dot(i.normalWS, mainLight.direction);
-                half pbr = mainLight.shadowAttenuation;
-                pbr *= min(2, mainLight.distanceAttenuation); //max intensity = 2, prevent over bright if light too close, can expose this float to editor if you wish to
+                half pbr = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 
-
-
+                
                 //Expression
                 half2 mouthArea = GetMouthArea(i.uv01.zw, 8.0, _SelectMouth);
                 half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth);
@@ -610,13 +574,13 @@ Shader "ZDShader/LWRP/Character"
                 browMaskRect.x = smoothstep(0.99, 0.99, browMaskRect.x);
                 browMaskRect.y = smoothstep(0.15, 0.19, browMaskRect.y);
                 half browMask = (1.0 - browMaskRect.x) * (1.0 - browMaskRect.y);
-
+                
                 _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes, eyesMask);
                 _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow, browMask);
                 
-
-
-
+                
+                
+                
                 //Prepare Property....
                 //......................
                 
@@ -646,8 +610,8 @@ Shader "ZDShader/LWRP/Character"
                 float shadowPow0 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_0_var.rgb))), shadowStrength);
                 float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
                 
-            
-                                                
+                
+                
                 #if _DiscolorationSystem
                     //Discoloration
                     half4 step_var ;
@@ -744,6 +708,9 @@ Shader "ZDShader/LWRP/Character"
                 float fogFactor = i.positionWSAndFogFactor.w;
                 
                 float3 finalColor = emissive ;
+                
+                //LODDitheringTransition(i.positionCS.xyz, unity_LODFade.x);
+                
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 float4 finalRGBA = float4(finalColor, 1);
