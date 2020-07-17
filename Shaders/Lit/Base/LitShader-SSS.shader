@@ -45,6 +45,8 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
         
         _MaxHDR ("Max HDR", Range(0.0, 10.0)) = 10.0
         
+        _WireframeViewSplit ("Wireframe Map", Range(0, 1)) = 0.0
+        
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
         [HideInInspector] _Blend ("__blend", Float) = 0.0
@@ -82,7 +84,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
+            #pragma target 3.0
             
             // -------------------------------------
             // Material Keywords
@@ -144,6 +146,8 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 half _SubsurfaceRadius;
                 half4 _RimLightColor;
                 half _MaxHDR;
+                
+                half _WireframeViewSplit;
                 CBUFFER_END
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -234,7 +238,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     float4 positionOS: POSITION;
                     float3 normalOS: NORMAL;
                     float4 tangentOS: TANGENT;
-                    float2 texcoord: TEXCOORD0;
+                    float4 texcoord: TEXCOORD0;
                     float2 lightmapUV: TEXCOORD1;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 };
@@ -262,6 +266,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                         float4 shadowCoord: TEXCOORD7;
                     #endif
+                    float4 srcPos: TEXCOORD8;
+                    
+                    half3 barycentricCoordinates: TEXCOORD9;
                     
                     float4 positionCS: SV_POSITION;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -321,7 +328,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
                     
-                    output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                    output.uv = TRANSFORM_TEX(input.texcoord.xy, _BaseMap);
                     
                     #ifdef _NORMALMAP
                         output.normalWS = half4(normalInput.normalWS, viewDirWS.x);
@@ -346,7 +353,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     #endif
                     
                     output.positionCS = vertexInput.positionCS;
+                    output.srcPos = ComputeScreenPos(output.positionCS);
                     
+                    output.barycentricCoordinates = float3(floor(input.texcoord.z), frac(input.texcoord.z) * 10, input.texcoord.w);
                     return output;
                 }
                 
@@ -427,6 +436,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     color.rgb = clamp(color, 0.0.xxxx, (max(albedo, GI)) * _MaxHDR);
                     return half4(color, alpha);
                 }
+                
                 // Used in Standard (Physically Based) shader
                 half4 LitPassFragment(Varyings input): SV_Target
                 {
@@ -438,11 +448,20 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
-                    
+                    input.srcPos.xyz = input.srcPos.xyz / input.srcPos.w;
                     
                     half3 sssColor = SAMPLE_TEXTURE2D(_SubsurfaceMap, sampler_SubsurfaceMap, input.uv).rgb * _SubsurfaceColor.rgb;
                     half4 color = UniversalFragmentPBR_SSS(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, sssColor, surfaceData.alpha);
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                    
+                    half size = 1.3;
+                    float3 mass = input.barycentricCoordinates.xyz;
+                    half3 width = abs(ddx(mass)) + abs(ddy(mass));
+                    half3 eF = smoothstep(0, width * size, mass);
+                    half wireframe = min(min(eF.x, eF.y), eF.z);
+                    half3 wireframeColor = lerp(color.rgb, half3(0.3, 0.5, 1.0) * 0.5 + color.rgb, 1.0 - wireframe);
+                    color.rgb = lerp(color.rgb, wireframeColor, step(input.srcPos.x, _WireframeViewSplit-0.0075));
+                    
                     return color;
                 }
                 
@@ -503,6 +522,8 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             half _SubsurfaceRadius;
             half4 _RimLightColor;
             half _MaxHDR;
+            
+            half _WireframeViewSplit;
             CBUFFER_END
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
@@ -531,9 +552,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 
                 #if UNITY_REVERSED_Z
-                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE *10);
+                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
                 #else
-                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE*10);
+                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
                 #endif
                 
                 return positionCS;
@@ -608,6 +629,8 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             half _SubsurfaceRadius;
             half4 _RimLightColor;
             half _MaxHDR;
+            
+            half _WireframeViewSplit;
             CBUFFER_END
             
             struct Attributes
