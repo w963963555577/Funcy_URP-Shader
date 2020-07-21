@@ -588,7 +588,7 @@ Shader "ZDShader/LWRP/Character"
                     _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a);
                     
                 #endif
-                /*
+                
                 //Prepare Property....
                 //......................
                 
@@ -712,10 +712,10 @@ Shader "ZDShader/LWRP/Character"
                 
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w;
-                */
-                float3 finalColor = _diffuse_var.rgb;
                 
-                //finalColor = MixFog(finalColor, fogFactor);
+                float3 finalColor = emissive.rgb;
+                
+                finalColor = MixFog(finalColor, fogFactor);
                 
                 float4 finalRGBA = float4(finalColor, 1);
                 
