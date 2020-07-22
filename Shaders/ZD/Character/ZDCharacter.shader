@@ -79,6 +79,10 @@ Shader "ZDShader/LWRP/Character"
         //Expression
         [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
         [NoScaleOffset]_ExpressionMap ("Map", 2D) = "white" { }
+        
+        [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
+        [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
+        
         [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
         _BrowRect ("Brow UV Rect", Vector) = (0, 0.45, 0.855, 0.3)
         [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
@@ -188,9 +192,13 @@ Shader "ZDShader/LWRP/Character"
             
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            half _SelectBrow;
-            half _SelectFace;
-            half _SelectMouth;
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            
+            half4 _BrowRect;
+            half4 _FaceRect;
+            half4 _MouthRect;
             CBUFFER_END
             
             
@@ -277,7 +285,10 @@ Shader "ZDShader/LWRP/Character"
             #pragma shader_feature_local _SelfMaskEnable
             #pragma shader_feature_local _DiscolorationSystem
             #pragma shader_feature_local _ExpressionEnable
-            
+            #if _ExpressionEnable
+                #pragma shader_feature_local _ExpressionFormat_Wink
+                #pragma shader_feature_local _ExpressionFormat_FaceSheet
+            #endif
             #pragma multi_compile_fog
             
             
@@ -352,7 +363,7 @@ Shader "ZDShader/LWRP/Character"
             TEXTURE2D(_mask);                       SAMPLER(sampler_mask);
             TEXTURE2D(_NormalMap);                  SAMPLER(sampler_NormalMap);
             TEXTURE2D(_SelfMask);                   SAMPLER(sampler_SelfMask);
-            TEXTURE2D(_ExpressionMap);                   SAMPLER(sampler_ExpressionMap);
+            TEXTURE2D(_ExpressionMap);              SAMPLER(sampler_ExpressionMap);
             
             struct Attributes
             {
@@ -516,23 +527,27 @@ Shader "ZDShader/LWRP/Character"
                 }
             #endif
             
+            #if _ExpressionEnable
+                
+                float2 GetBrowArea(float2 uv, float browCount, float selectBrow, half2 offsetScale)
+                {
+                    return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + ((browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0)));
+                }
+                
+                float2 GetEyesArea(float2 uv, float eyesCount, float selectFace, half2 offsetScale)
+                {
+                    return float2(uv.x * offsetScale.x, uv.y * offsetScale.y + ((eyesCount - (selectFace)) / eyesCount));
+                }
+                
+                float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth, half2 offsetScale)
+                {
+                    float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
+                    float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                    return float2(pX, pY);
+                }
+                
+            #endif
             
-            float2 GetBrowArea(float2 uv, float browCount, float selectBrow, half2 offsetScale)
-            {
-                return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + ((browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0)));
-            }
-            
-            float2 GetEyesArea(float2 uv, float eyesCount, float selectFace, half2 offsetScale)
-            {
-                return float2(uv.x * offsetScale.x, uv.y * offsetScale.y + ((eyesCount - (selectFace)) / eyesCount));
-            }
-            
-            float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth, half2 offsetScale)
-            {
-                float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
-                float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
-                return float2(pX, pY);
-            }
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
@@ -550,43 +565,66 @@ Shader "ZDShader/LWRP/Character"
                 half pbr = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 
                 #if _ExpressionEnable
-                    half maskBlur = 0.05;
-                    half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
-                    half2 browOffset = half2(0.5, 1.0 / 8.0);
-                    half2 browArea = GetBrowArea(i.uv01.zw, 8.0, _SelectBrow, browOffset);
-                    half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0, _SelectBrow, browOffset);
-                    half2 browUV = ((browArea - browPivot) * _BrowTRS.xy) + browPivot + half2(_BrowTRS.z * browOffset.x, _BrowTRS.w * browOffset.y);
-                    half2 browMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _BrowTRS.xy + half2(0.5, 0.5) + _BrowTRS.zw;
-                    half2 browMaskRect = abs(((browMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
-                    half browMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _BrowTRS.x, 1.0, browMaskRect.x), smoothstep(0.5 - maskBlur * _BrowTRS.y, 0.5, browMaskRect.y)));
-                    half4 Brow = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, browUV);
+                    half maskBlur = 0.01;
+                    #if _ExpressionFormat_FaceSheet
+                        half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
+                        half2 browOffset = half2(0.5, 1.0 / 8.0);
+                        half2 browArea = GetBrowArea(i.uv01.zw, 8.0, _SelectBrow, browOffset);
+                        half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0, _SelectBrow, browOffset);
+                        half2 browUV = ((browArea - browPivot) * _BrowTRS.xy) + browPivot + half2(_BrowTRS.z * browOffset.x, _BrowTRS.w * browOffset.y);
+                        half2 browMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _BrowTRS.xy + half2(0.5, 0.5) + _BrowTRS.zw;
+                        half2 browMaskRect = abs(((browMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
+                        half browMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _BrowTRS.x, 1.0, browMaskRect.x), smoothstep(0.5 - maskBlur * _BrowTRS.y, 0.5, browMaskRect.y)));
+                        half4 Brow = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, browUV);
+                    #endif
                     
+                    #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
+                        half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
+                        
+                        #if _ExpressionFormat_FaceSheet
+                            half2 eyeOffset = half2(0.5, 0.125);
+                            half2 eyesArea = GetEyesArea(i.uv01.zw, 8.0, _SelectFace, eyeOffset);
+                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 8.0, _SelectFace, eyeOffset);
+                        #endif
+                        #if _ExpressionFormat_Wink
+                            half2 eyeOffset = half2(1.0, 0.5);
+                            half2 eyesArea = GetEyesArea(i.uv01.zw, 2.0, _SelectFace, eyeOffset);
+                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 2.0, _SelectFace, eyeOffset);
+                        #endif
+                        
+                        half2 eyesUV = ((eyesArea - eyesPivot) * _EyesTRS.xy) + eyesPivot + half2(_EyesTRS.z * eyeOffset.x, _EyesTRS.w * eyeOffset.y);
+                        half2 eyesMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _EyesTRS.xy + half2(0.5, 0.5) + _EyesTRS.zw;
+                        half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
+                        half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
+                        half4 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV);
+                    #endif
                     
-                    half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
-                    half2 eyeOffset = half2(0.5, 0.125);
-                    half2 eyesArea = GetEyesArea(i.uv01.zw, 8.0, _SelectFace, eyeOffset);
-                    half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 8.0, _SelectFace, eyeOffset);
-                    half2 eyesUV = ((eyesArea - eyesPivot) * _EyesTRS.xy) + eyesPivot + half2(_EyesTRS.z * eyeOffset.x, _EyesTRS.w * eyeOffset.y);
-                    half2 eyesMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _EyesTRS.xy + half2(0.5, 0.5) + _EyesTRS.zw;
-                    half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
-                    half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
-                    half4 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV);
+                    #if _ExpressionFormat_FaceSheet
+                        half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
+                        half2 mouthOffset = half2(0.25, 0.125);
+                        half2 mouthArea = GetMouthArea(i.uv01.zw, 8.0, _SelectMouth, mouthOffset);
+                        half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth, mouthOffset);
+                        half2 mouthUV = ((mouthArea - mouthPivot) * _MouthsTRS.xy) + mouthPivot + half2(_MouthsTRS.z * mouthOffset.x, _MouthsTRS.w * mouthOffset.y);
+                        half2 mouthMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _MouthsTRS.xy + half2(0.5, 0.5) + _MouthsTRS.zw;
+                        half2 mouthMaskRect = abs(((mouthMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
+                        half mouthMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _MouthsTRS.x, 1.0, mouthMaskRect.x), smoothstep(1.0 - maskBlur * _MouthsTRS.y, 1.0, mouthMaskRect.y)));
+                        half4 Mouth = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, mouthUV);
+                    #endif
+                    half alpha = 0.0;
+                    #if _ExpressionFormat_FaceSheet
+                    alpha=
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
+                    #endif
                     
-                    half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
-                    half2 mouthOffset = half2(0.25, 0.125);
-                    half2 mouthArea = GetMouthArea(i.uv01.zw, 8.0, _SelectMouth, mouthOffset);
-                    half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth, mouthOffset);
-                    half2 mouthUV = ((mouthArea - mouthPivot) * _MouthsTRS.xy) + mouthPivot + half2(_MouthsTRS.z * mouthOffset.x, _MouthsTRS.w * mouthOffset.y);
-                    half2 mouthMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _MouthsTRS.xy + half2(0.5, 0.5) + _MouthsTRS.zw;
-                    half2 mouthMaskRect = abs(((mouthMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
-                    half mouthMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _MouthsTRS.x, 1.0, mouthMaskRect.x), smoothstep(1.0 - maskBlur * _MouthsTRS.y, 1.0, mouthMaskRect.y)));
-                    half4 Mouth = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, mouthUV);
+                    #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * Eyes.a);
+                    #endif
                     
+                    #if _ExpressionFormat_FaceSheet
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a);
+                    #endif
                     
-                    _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
-                    _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * Eyes.a);
-                    _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a);
-                    
+                                        
                 #endif
                 
                 //Prepare Property....
