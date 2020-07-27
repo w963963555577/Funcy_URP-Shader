@@ -484,10 +484,12 @@ Shader "ZDShader/LWRP/Character"
                     return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
                 }
                 
-                void Step8Color(half gray, half eyeAreaReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
+                void Step8Color(half gray, half2 eyeAreaReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
                 {
                     float gray_oneminus = (1.0 - gray);
-                    
+                    #if _ExpressionEnable
+                        float eyeCenter = smoothstep(0.5, 1.0, eyeAreaReplace.x) * eyeAreaReplace.y;                        
+                    #endif
                     float grayArea_9 = saturate((smoothstep(0.90, 1.00, gray) * 2.0));
                     float grayArea_8 = saturate((smoothstep(0.70, 0.80, gray) * 2.0));
                     float grayArea_7 = saturate((smoothstep(0.60, 0.70, gray) * 2.0));
@@ -497,8 +499,11 @@ Shader "ZDShader/LWRP/Character"
                     float grayArea_3 = saturate((smoothstep(0.70, 0.80, gray_oneminus) * 2.0));
                     float grayArea_2 = saturate((smoothstep(0.80, 0.90, gray_oneminus) * 2.0));
                     float grayArea_1 = saturate((smoothstep(0.90, 0.95, gray_oneminus) * 2.0));
-                    float grayArea_0 = saturate((smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
                     
+                    float grayArea_0 = saturate((smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
+                    #if _ExpressionEnable
+                        grayArea_0 = max(grayArea_0, saturate(smoothstep(0.0, 0.5, eyeAreaReplace.x) - eyeCenter));
+                    #endif
                     
                     float fillArea_9 = grayArea_9;
                     float fillArea_8 = grayArea_8 - grayArea_9;
@@ -508,8 +513,8 @@ Shader "ZDShader/LWRP/Character"
                     float fillArea_4 = grayArea_4 - grayArea_3;
                     float fillArea_3 = grayArea_3 - grayArea_2;
                     #if _ExpressionEnable
-                        float fillArea_2 = eyeAreaReplace;
-                        grayArea_1 = max(grayArea_1, grayArea_2) * (1.0 - eyeAreaReplace);
+                        float fillArea_2 = eyeCenter;
+                        grayArea_1 = max(grayArea_1, grayArea_2) * (1.0 - eyeCenter);
                     #else
                         float fillArea_2 = grayArea_2 - grayArea_1;
                     #endif
@@ -666,9 +671,9 @@ Shader "ZDShader/LWRP/Character"
                     half blackArea;
                     half skinArea;
                     half eyeArea;
-                    half eyeAreaReplace = 0.0;
+                    half2 eyeAreaReplace = 0.0;
                     #if _ExpressionEnable
-                        eyeAreaReplace = eyesMask * smoothstep(0.5, 1.0, Eyes.a);
+                        eyeAreaReplace = half2(Eyes.a, eyesMask);
                     #endif
                     Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, step_var, blackArea, skinArea, eyeArea);
                     
@@ -765,8 +770,8 @@ Shader "ZDShader/LWRP/Character"
                 float3 finalColor = emissive.rgb;
                 
                 finalColor = MixFog(finalColor, fogFactor);
-                                            
-                float4 finalRGBA = float4(finalColor, 1);                
+                
+                float4 finalRGBA = float4(finalColor, 1);
                 
                 return finalRGBA;
             }
