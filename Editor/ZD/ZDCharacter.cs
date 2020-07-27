@@ -403,7 +403,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                     }
 
                 }
-                if (GUILayout.Button("Mobile"))
+                if (GUILayout.Button("Combine"))
                 {
                     switch (format)
                     {

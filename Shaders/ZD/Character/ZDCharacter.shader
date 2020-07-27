@@ -484,7 +484,7 @@ Shader "ZDShader/LWRP/Character"
                     return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
                 }
                 
-                void Step8Color(half gray, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
+                void Step8Color(half gray, half eyeAreaReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
                 {
                     float gray_oneminus = (1.0 - gray);
                     
@@ -507,14 +507,20 @@ Shader "ZDShader/LWRP/Character"
                     float fillArea_5 = grayArea_5 - grayArea_6;
                     float fillArea_4 = grayArea_4 - grayArea_3;
                     float fillArea_3 = grayArea_3 - grayArea_2;
-                    float fillArea_2 = grayArea_2 - grayArea_1;
+                    #if _ExpressionEnable
+                        float fillArea_2 = eyeAreaReplace;
+                        grayArea_1 = max(grayArea_1, grayArea_2) * (1.0 - eyeAreaReplace);
+                    #else
+                        float fillArea_2 = grayArea_2 - grayArea_1;
+                    #endif
+                    
                     float fillArea_1 = grayArea_1 - grayArea_0;
                     float fillArea_0 = grayArea_0;
                     
                     blackArea = fillArea_0;
                     skinArea = fillArea_1;
-                    eyeArea = fillArea_2;
                     
+                    eyeArea = fillArea_2;
                     color = _DiscolorationColor_8 * fillArea_8 + _DiscolorationColor_9 * fillArea_9 +
                     _DiscolorationColor_7 * fillArea_7 + _DiscolorationColor_6 * fillArea_6 +
                     _DiscolorationColor_5 * fillArea_5 + _DiscolorationColor_4 * fillArea_4 +
@@ -612,19 +618,17 @@ Shader "ZDShader/LWRP/Character"
                     #endif
                     half alpha = 0.0;
                     #if _ExpressionFormat_FaceSheet
-                    alpha=
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
+                        alpha = _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * Eyes.a);
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a));
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
                         _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a);
                     #endif
                     
-                                        
                 #endif
                 
                 //Prepare Property....
@@ -662,18 +666,25 @@ Shader "ZDShader/LWRP/Character"
                     half blackArea;
                     half skinArea;
                     half eyeArea;
-                    Step8Color(_SelfMask_UV0_var.a, step_var, blackArea, skinArea, eyeArea);
+                    half eyeAreaReplace = 0.0;
+                    #if _ExpressionEnable
+                        eyeAreaReplace = eyesMask * smoothstep(0.5, 1.0, Eyes.a);
+                    #endif
+                    Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, step_var, blackArea, skinArea, eyeArea);
+                    
                     half3 colorRGB_A = step_var.rgb;
                     half3 colorRGB_B = _diffuse_var.rgb;
+                    
                     
                     half3 colorHSV_A = RGB2HSV(colorRGB_A);
                     half3 colorHSV_B = RGB2HSV(colorRGB_B);
                     
-                    half3 mupArea = lerp(_diffuse_var.rgb, _diffuse_var.rgb * _DiscolorationColor_1.rgb * skinArea +
-                    _diffuse_var.rgb * eyeArea * _DiscolorationColor_2.rgb +
-                    _diffuse_var.rgb * (1.0 - skinArea - eyeArea), skinArea + eyeArea);
+                    half3 mupArea = lerp(_diffuse_var.rgb, colorRGB_B * _DiscolorationColor_1.rgb * skinArea +
+                    colorRGB_B * eyeArea * _DiscolorationColor_2.rgb +
+                    colorRGB_B * (1.0 - skinArea - eyeArea), skinArea + eyeArea);
                     
                     _diffuse_var.rgb = lerp(HSV2RGB(half3(colorHSV_A.rg, colorHSV_B.b * (step_var.a + 1.0) + max(0, step_var.a))), mupArea, skinArea + eyeArea + blackArea);
+                    
                     
                 #endif
                 
@@ -754,8 +765,8 @@ Shader "ZDShader/LWRP/Character"
                 float3 finalColor = emissive.rgb;
                 
                 finalColor = MixFog(finalColor, fogFactor);
-                
-                float4 finalRGBA = float4(finalColor, 1);
+                                            
+                float4 finalRGBA = float4(finalColor, 1);                
                 
                 return finalRGBA;
             }
