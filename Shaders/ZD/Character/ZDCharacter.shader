@@ -488,7 +488,7 @@ Shader "ZDShader/LWRP/Character"
                 {
                     float gray_oneminus = (1.0 - gray);
                     #if _ExpressionEnable
-                        float eyeCenter = smoothstep(0.5, 1.0, eyeAreaReplace.x) * eyeAreaReplace.y;                        
+                        float eyeCenter = smoothstep(0.5, 1.0, eyeAreaReplace.x) * eyeAreaReplace.y;
                     #endif
                     float grayArea_9 = saturate((smoothstep(0.90, 1.00, gray) * 2.0));
                     float grayArea_8 = saturate((smoothstep(0.70, 0.80, gray) * 2.0));
@@ -502,7 +502,7 @@ Shader "ZDShader/LWRP/Character"
                     
                     float grayArea_0 = saturate((smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
                     #if _ExpressionEnable
-                        grayArea_0 = max(grayArea_0, saturate(smoothstep(0.0, 0.5, eyeAreaReplace.x) - eyeCenter));
+                        grayArea_0 = max(grayArea_0, saturate(smoothstep(0.4, 0.5, eyeAreaReplace.x) * eyeAreaReplace.y - eyeCenter));
                     #endif
                     
                     float fillArea_9 = grayArea_9;
@@ -520,6 +520,7 @@ Shader "ZDShader/LWRP/Character"
                     #endif
                     
                     float fillArea_1 = grayArea_1 - grayArea_0;
+
                     float fillArea_0 = grayArea_0;
                     
                     blackArea = fillArea_0;
