@@ -484,7 +484,7 @@ Shader "ZDShader/LWRP/Character"
                     return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
                 }
                 
-                void Step8Color(half gray, half2 eyeAreaReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
+                void Step8Color(half gray, half2 eyeAreaReplace, half2 browReplace, half2 mouthReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
                 {
                     float gray_oneminus = (1.0 - gray);
                     #if _ExpressionEnable
@@ -503,6 +503,10 @@ Shader "ZDShader/LWRP/Character"
                     float grayArea_0 = saturate((smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
                     #if _ExpressionEnable
                         grayArea_0 = max(grayArea_0, saturate(smoothstep(0.4, 0.5, eyeAreaReplace.x) * eyeAreaReplace.y - eyeCenter));
+                        #if _ExpressionFormat_FaceSheet
+                            grayArea_0 = max(grayArea_0, smoothstep(0.5, 1.0, browReplace.x) * browReplace.y);
+                            grayArea_0 = max(grayArea_0, smoothstep(0.5, 1.0, mouthReplace.x) * mouthReplace.y);
+                        #endif
                     #endif
                     
                     float fillArea_9 = grayArea_9;
@@ -520,7 +524,7 @@ Shader "ZDShader/LWRP/Character"
                     #endif
                     
                     float fillArea_1 = grayArea_1 - grayArea_0;
-
+                    
                     float fillArea_0 = grayArea_0;
                     
                     blackArea = fillArea_0;
@@ -673,10 +677,17 @@ Shader "ZDShader/LWRP/Character"
                     half skinArea;
                     half eyeArea;
                     half2 eyeAreaReplace = 0.0;
+                    half2 browReplace = 0.0;
+                    half2 mouthReplace = 0.0;
                     #if _ExpressionEnable
                         eyeAreaReplace = half2(Eyes.a, eyesMask);
+                        #if _ExpressionFormat_FaceSheet
+                            browReplace = half2(Brow.a, browMask);
+                            mouthReplace = half2(Mouth.a, mouthMask);
+                        #endif
                     #endif
-                    Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, step_var, blackArea, skinArea, eyeArea);
+                    
+                    Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, browReplace, mouthReplace, step_var, blackArea, skinArea, eyeArea);
                     
                     half3 colorRGB_A = step_var.rgb;
                     half3 colorRGB_B = _diffuse_var.rgb;
@@ -690,7 +701,6 @@ Shader "ZDShader/LWRP/Character"
                     colorRGB_B * (1.0 - skinArea - eyeArea), skinArea + eyeArea);
                     
                     _diffuse_var.rgb = lerp(HSV2RGB(half3(colorHSV_A.rg, colorHSV_B.b * (step_var.a + 1.0) + max(0, step_var.a))), mupArea, skinArea + eyeArea + blackArea);
-                    
                     
                 #endif
                 
