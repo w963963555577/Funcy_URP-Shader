@@ -245,7 +245,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
                 #endif
                 
                 
-                half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
+                half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV + temp_output_35_0 * _RefractionIntensity);
                 
                 
                 
