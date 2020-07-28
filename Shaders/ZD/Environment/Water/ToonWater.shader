@@ -20,7 +20,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
         _DepthArea ("DepthArea", Float) = 0
         _DepthHard ("DepthHard", Float) = 0
         [HDR]_SpecularColor ("SpecularColor", Color) = (1, 1, 1, 0)
-        _RampMap ("Ramp Map", 2D) = "white" { }        
+        _RampMap ("Ramp Map", 2D) = "white" { }
     }
     
     SubShader
@@ -68,6 +68,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _MobileSSPR
             
             #pragma vertex vert
             #pragma fragment frag
@@ -80,12 +81,21 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "../../../../ShaderLibrary/SSR.hlsl"
+            
             
             sampler2D _NormalMap;
             uniform float4 _CameraDepthTexture_TexelSize;
             sampler2D _FoamMap;
             sampler2D _RampMap;
+            //textures
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+            
+            TEXTURE2D(_MobileSSPR_ColorRT);
+            sampler LinearClampSampler;
+            
+            sampler2D _SSPR_UVNoiseTex;
+            sampler2D _ReflectionAreaTex;
             CBUFFER_START(UnityPerMaterial)
             float _WaveDirection;
             float _WaveSpeed;
@@ -234,11 +244,9 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
                     screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
                 #endif
                 
-                float3 uvz = GetSSRUVZ(worldPos, NoV, R, screenUV, 0.1, _RampMap);
                 
-                half4 ssrColor = float4(SHADERGRAPH_SAMPLE_SCENE_COLOR(uvz.xy) * uvz.z, 1.0);
-                ssrColor.a = saturate((ssrColor.r + ssrColor.g + ssrColor.b) / 1.5);
-                ssrColor.rgb = ssrColor.rgb;
+                half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
+                
                 
                 
                 
@@ -250,16 +258,14 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
                 float3 ase_worldNormal = IN.ase_texcoord3.xyz;
                 float fresnelNdotV129 = dot(ase_worldNormal, ase_worldViewDir);
                 float fresnelNode129 = (0.0 + 0.65 * pow(1.0 - fresnelNdotV129, 1.0));
-                float temp_output_102_0 = saturate(((((tex2D(_FoamMap, uv_Foam0134)).rgb + ((tex2D(_FoamMap, uv_Foam1135)).rgb * float3(0.5, 0.5, 0.5)))).x * depthArea90 * fresnelNode129));
+                float temp_output_102_0 = saturate(((((tex2D(_FoamMap, uv_Foam0134)).rgb + ((tex2D(_FoamMap, uv_Foam1135)).rgb * float3(0.5, 0.5, 0.5)))).x * depthArea90 * 0.5 * _FoamColor.a));
                 float4 lerpResult118 = lerp(lerpResult109, (_FoamColor * temp_output_102_0), temp_output_102_0);
-                
-                
                 
                 float3 Color = ((saturate((pow(saturate(dotResult288), (0.0 + (_Specular - 0.0) * (10.0 - 0.0) / (1.0 - 0.0))) * pow(temp_output_115_0, 10.0))) * _SpecularColor) + lerpResult118).rgb;
                 
                 float Alpha = 1;
                 half3 environmentColor = GlossyEnvironmentReflection(R, 1.0 - 1.0, 1.0);
-                Color = lerp(lerp(Color, environmentColor, _Reflection), ssrColor.rgb, ssrColor.a * _Reflection);
+                Color = lerp(lerp(Color, environmentColor, _Reflection * (1.0 - temp_output_102_0)), ssrColor.rgb, ssrColor.a * _Reflection * (1.0 - temp_output_102_0));
                 Color = MixFog(Color, IN.fogCoord);
                 return half4(Color.rgb, 1.0);
             }
