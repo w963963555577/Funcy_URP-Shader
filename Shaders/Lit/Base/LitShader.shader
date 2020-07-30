@@ -51,6 +51,8 @@ Shader "ZDShader/LWRP/PBR Base"
         
         // Editmode props
         [HideInInspector] _QueueOffset ("Queue offset", Float) = 0.0
+        
+        [Toggle(_DrawMeshInstancedProcedural)] _DrawMeshInstancedProcedural ("DrawMeshInstancedProceduralEnable", Float) = 0.0
     }
     
     SubShader
@@ -71,10 +73,6 @@ Shader "ZDShader/LWRP/PBR Base"
             
             HLSLPROGRAM
             
-            #pragma prefer_hlslcc gles
-            #pragma exclude_renderers d3d11_9x
-            #pragma target 2.0
-            
             // -------------------------------------
             // Material Keywords
             // unused shader_feature variants are stripped from build automatically
@@ -90,6 +88,8 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma shader_feature _GLOSSYREFLECTIONS_OFF
             #pragma shader_feature _SPECULAR_SETUP
             #pragma shader_feature _RECEIVE_SHADOWS_OFF
+            
+            #pragma shader_feature_local _DrawMeshInstancedProcedural
             
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
@@ -108,8 +108,10 @@ Shader "ZDShader/LWRP/PBR Base"
             
             //--------------------------------------
             // GPU Instancing
-            #pragma multi_compile_instancing
-            
+            #if _DrawMeshInstancedProcedural
+            #else
+                #pragma multi_compile_instancing
+            #endif
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
             
@@ -130,6 +132,10 @@ Shader "ZDShader/LWRP/PBR Base"
                 half _Metallic;
                 half _BumpScale;
                 half _OcclusionStrength;
+                #if _DrawMeshInstancedProcedural
+                    StructuredBuffer<float4x4> ObjectToWorldBuffer;
+                    StructuredBuffer<float4x4> WorldToObjectBuffer;
+                #endif
                 CBUFFER_END
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -221,7 +227,11 @@ Shader "ZDShader/LWRP/PBR Base"
                     float4 tangentOS: TANGENT;
                     float2 texcoord: TEXCOORD0;
                     float2 lightmapUV: TEXCOORD1;
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    #if _DrawMeshInstancedProcedural
+                        uint mid: SV_INSTANCEID;
+                    #else
+                        UNITY_VERTEX_INPUT_INSTANCE_ID
+                    #endif
                 };
                 
                 struct Varyings
@@ -249,8 +259,12 @@ Shader "ZDShader/LWRP/PBR Base"
                     #endif
                     
                     float4 positionCS: SV_POSITION;
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
-                    UNITY_VERTEX_OUTPUT_STEREO
+                    #if _DrawMeshInstancedProcedural
+                        
+                    #else
+                        UNITY_VERTEX_INPUT_INSTANCE_ID
+                        UNITY_VERTEX_OUTPUT_STEREO
+                    #endif
                 };
                 
                 void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData)
@@ -290,18 +304,56 @@ Shader "ZDShader/LWRP/PBR Base"
                 ///////////////////////////////////////////////////////////////////////////////
                 //                  Vertex and Fragment functions                            //
                 ///////////////////////////////////////////////////////////////////////////////
-                
+                #if _DrawMeshInstancedProcedural
+                    VertexPositionInputs InitVertexPositionInputs(float3 positionOS, uint id)
+                    {
+                        VertexPositionInputs input;
+                        input.positionWS = mul(ObjectToWorldBuffer[id], float4(positionOS, 1.0)).xyz;
+                        input.positionVS = TransformWorldToView(input.positionWS);
+                        input.positionCS = TransformWorldToHClip(input.positionWS);
+                        
+                        float4 ndc = input.positionCS * 0.5f;
+                        input.positionNDC.xy = float2(ndc.x, ndc.y * _ProjectionParams.x) + ndc.w;
+                        input.positionNDC.zw = input.positionCS.zw;
+                        
+                        return input;
+                    }
+                    
+                    VertexNormalInputs InitVertexNormalInputs(float3 normalOS, float4 tangentOS, uint id)
+                    {
+                        VertexNormalInputs tbn;
+                        
+                        // mikkts space compliant. only normalize when extracting normal at frag.
+                        real sign = tangentOS.w * GetOddNegativeScale();
+                        #ifdef UNITY_ASSUME_UNIFORM_SCALING
+                            tbn.normalWS.xyz = SafeNormalize(mul((real3x3)ObjectToWorldBuffer[id], normalOS.xyz));
+                        #else
+                            tbn.normalWS.xyz = SafeNormalize(mul(normalOS, (float3x3)WorldToObjectBuffer[id]));
+                        #endif
+                        tbn.tangentWS.xyz = SafeNormalize(mul((real3x3)ObjectToWorldBuffer[id], tangentOS.xyz));
+                        tbn.bitangentWS = cross(tbn.normalWS, tbn.tangentWS) * sign;
+                        return tbn;
+                    }
+                #endif
                 // Used in Standard (Physically Based) shader
                 Varyings LitPassVertex(Attributes input)
                 {
                     Varyings output = (Varyings)0;
                     
-                    UNITY_SETUP_INSTANCE_ID(input);
-                    UNITY_TRANSFER_INSTANCE_ID(input, output);
-                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                    VertexPositionInputs vertexInput;
+                    VertexNormalInputs normalInput;
+                    #if _DrawMeshInstancedProcedural
+                        vertexInput = InitVertexPositionInputs(input.positionOS.xyz, input.mid);
+                        normalInput = InitVertexNormalInputs(input.normalOS, input.tangentOS, input.mid);
+                    #else
+                        UNITY_SETUP_INSTANCE_ID(input);
+                        UNITY_TRANSFER_INSTANCE_ID(input, output);
+                        UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                        
+                        vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+                        normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                    #endif
                     
-                    VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                    VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
                     half3 viewDirWS = GetCameraPositionWS() - vertexInput.positionWS;
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -338,9 +390,11 @@ Shader "ZDShader/LWRP/PBR Base"
                 // Used in Standard (Physically Based) shader
                 half4 LitPassFragment(Varyings input): SV_Target
                 {
-                    UNITY_SETUP_INSTANCE_ID(input);
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                    
+                    #if _DrawMeshInstancedProcedural
+                    #else
+                        UNITY_SETUP_INSTANCE_ID(input);
+                        UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                    #endif
                     SurfaceData surfaceData;
                     InitializeStandardLitSurfaceData(input.uv, surfaceData);
                     
@@ -359,10 +413,12 @@ Shader "ZDShader/LWRP/PBR Base"
             
         }
         
+        /*
         // Used for rendering shadowmaps
         UsePass "Universal Render Pipeline/Lit/ShadowCaster"
         UsePass "Universal Render Pipeline/Lit/DepthOnly"
         UsePass "Universal Render Pipeline/Lit/Meta"
+        */
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
