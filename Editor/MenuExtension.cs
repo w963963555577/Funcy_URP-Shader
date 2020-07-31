@@ -60,7 +60,7 @@ public class MenuExtension
             return mats;
         }
     }
-    [MenuItem("GameObject/ZD/Select Dependencies Materials", false, 47)]
+    [MenuItem("GameObject/Select Dependencies Materials", false, 47)]
     public static void SelectDependenciesMaterials()
     {        
         Selection.objects = SelectionMaterials.ToArray();
@@ -69,7 +69,7 @@ public class MenuExtension
             EditorGUIUtility.PingObject(o);
         }
     }
-    [MenuItem("GameObject/ZD/Select Dependencies Textures", false, 48)]
+    [MenuItem("GameObject/Select Dependencies Textures", false, 48)]
     public static void SelectDependenciesTextures()
     {
         List<Texture> texes = new List<Texture>();

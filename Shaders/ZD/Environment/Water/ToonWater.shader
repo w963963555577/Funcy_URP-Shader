@@ -39,7 +39,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             Tags { "LightMode" = "UniversalForward" }
             
             Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
-            ZWrite Off
+            ZWrite On
             ZTest LEqual
             Offset 0, 0
             ColorMask RGBA

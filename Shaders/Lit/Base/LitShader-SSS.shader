@@ -117,6 +117,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             #pragma multi_compile _ LIGHTMAP_ON
             #pragma multi_compile_fog
             
+            #pragma multi_compile _MobileSSPR
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
@@ -153,7 +154,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
                 TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
                 TEXTURE2D(_SpecGlossMap);       SAMPLER(sampler_SpecGlossMap);
-                TEXTURE2D(_SubsurfaceMap);       SAMPLER(sampler_SubsurfaceMap);
+                TEXTURE2D(_SubsurfaceMap);      SAMPLER(sampler_SubsurfaceMap);
+                
+                TEXTURE2D(_MobileSSPR_ColorRT); sampler LinearClampSampler;
                 
                 #ifdef _SPECULAR_SETUP
                     #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, uv)
@@ -395,6 +398,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     InitializeBRDFData(albedo, metallic, specular, smoothness, alpha, brdfData);
                     
                     Light mainLight = GetMainLight(inputData.shadowCoord);
+                    
                     MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, half4(0, 0, 0, 0));
                     
                     half3 GI = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
@@ -449,7 +453,10 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     input.srcPos.xyz = input.srcPos.xyz / input.srcPos.w;
-                    
+                    #if _MobileSSPR
+                    half4 SSPR = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, input.srcPos.xy); //use LinearClampSampler to make it blurry
+                    #endif
+                    //_MainLightShadowParams.x *= inputData.shadowCoord.x;
                     half3 sssColor = SAMPLE_TEXTURE2D(_SubsurfaceMap, sampler_SubsurfaceMap, input.uv).rgb * _SubsurfaceColor.rgb;
                     half4 color = UniversalFragmentPBR_SSS(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, sssColor, surfaceData.alpha);
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
@@ -460,7 +467,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     half3 eF = smoothstep(0, width * size, mass);
                     half wireframe = min(min(eF.x, eF.y), eF.z);
                     half3 wireframeColor = lerp(color.rgb, half3(0.3, 0.5, 1.0) * 0.5 + color.rgb, 1.0 - wireframe);
-                    color.rgb = lerp(color.rgb, wireframeColor, step(input.srcPos.x, _WireframeViewSplit-0.0075));
+                    color.rgb = lerp(color.rgb, wireframeColor, step(input.srcPos.x, _WireframeViewSplit - 0.0075));
                     
                     return color;
                 }
@@ -470,6 +477,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             ENDHLSL
             
         }
+        
         
         // Used for rendering shadowmaps
         Pass
