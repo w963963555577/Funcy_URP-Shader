@@ -199,9 +199,9 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                     vertexInput.positionCS = positionCS;
                     o.shadowCoord = GetShadowCoord(vertexInput);
                 #endif
-                #ifdef ASE_FOG
-                    o.fogFactor = ComputeFogFactor(positionCS.z);
-                #endif
+                
+                o.fogFactor = ComputeFogFactor(positionCS.z);
+                
                 o.clipPos = positionCS;
                 return o;
             }
@@ -251,17 +251,13 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 float Alpha = 1.0;
                 float AlphaClipThreshold = 0.5;
 
-                #ifdef _ALPHATEST_ON
-                    clip(Alpha - AlphaClipThreshold);
-                #endif
-
-                #ifdef LOD_FADE_CROSSFADE
-                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-                #endif
-
-                #ifdef ASE_FOG
-                    Color = MixFog(Color, IN.fogFactor);
-                #endif
+                
+                clip(Alpha - AlphaClipThreshold);
+                                
+                //LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                                
+                Color = MixFog(Color, IN.fogFactor);
+                
 
                 return half4(Color, Alpha);
             }
@@ -451,13 +447,13 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 float Alpha = 1.0;
                 float AlphaClipThreshold = 0.5;
 
-                #ifdef _ALPHATEST_ON
-                    clip(Alpha - AlphaClipThreshold);
-                #endif
 
-                #ifdef LOD_FADE_CROSSFADE
-                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-                #endif
+                clip(Alpha - AlphaClipThreshold);
+
+
+
+                LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+
                 return 0;
             }
             
