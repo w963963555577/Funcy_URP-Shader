@@ -27,8 +27,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
     {
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Opaque" "Queue" = "Geometry" }
         
-        Cull Off
-        
         Pass
         {
             Name "Forward"
@@ -37,6 +35,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             Blend One Zero, One Zero
             ZWrite On
             ZTest LEqual
+            Cull Off
             Offset 0, 0
             ColorMask RGBA
             
@@ -44,7 +43,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             #pragma multi_compile_instancing
             #pragma multi_compile_fog
-
 
 
             #pragma vertex vert
@@ -263,7 +261,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             ZWrite On
             ZTest LEqual
-            Cull[_Cull]
             
             HLSLPROGRAM
             
@@ -368,9 +365,9 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 
                 #if UNITY_REVERSED_Z
-                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
+                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #else
-                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
+                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
                 
                 return positionCS;
@@ -378,7 +375,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             Varyings ShadowPassVertex(Attributes input)
             {
-                Varyings output;
+                Varyings output;                
                 #ifdef _DrawMeshInstancedProcedural
                     uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
                 #else
@@ -444,7 +441,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             ZWrite On
             ColorMask 0
-            Cull[_Cull]
             
             HLSLPROGRAM
             
@@ -591,6 +587,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             ENDHLSL
             
         }
-        UsePass "Universal Render Pipeline/Lit/Meta"
+        //UsePass "Universal Render Pipeline/Lit/Meta"
     }
 }

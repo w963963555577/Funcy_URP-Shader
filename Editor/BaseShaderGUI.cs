@@ -432,8 +432,8 @@ namespace UnityEditor
         {
             if (material == null)
                 throw new ArgumentNullException("material");
-
-            bool alphaClip = material.GetFloat("_AlphaClip") == 1;
+            
+            bool alphaClip = material.HasProperty("_AlphaClip") && material.GetFloat("_AlphaClip") == 1;
             if (alphaClip)
             {
                 material.EnableKeyword("_ALPHATEST_ON");
@@ -447,7 +447,7 @@ namespace UnityEditor
             if (material.HasProperty("_QueueOffset"))
                 queueOffset = queueOffsetRange - (int)material.GetFloat("_QueueOffset");
 
-            SurfaceType surfaceType = (SurfaceType)material.GetFloat("_Surface");
+            SurfaceType surfaceType = material.HasProperty("_Surface") ? (SurfaceType)material.GetFloat("_Surface") : SurfaceType.Opaque;
             if (surfaceType == SurfaceType.Opaque)
             {
                 if (alphaClip)

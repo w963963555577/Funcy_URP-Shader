@@ -2,15 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using Unity.Mathematics;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 #endif
 [ExecuteInEditMode]
 public class RenderMeshInstancedProcedural : MonoBehaviour
-{
+{    
     public ComputeShader cullingComputeShader;
     public List<RenderGroup> renderGroups = new List<RenderGroup>();
+
     [System.Serializable]
     public class RenderGroup
     {
@@ -18,7 +20,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         private ComputeBuffer _WorldToObjectBuffer;
 
 
-        private ComputeBuffer allInstanceTransformBuffer;
+        private ComputeBuffer boundsBuffer;
         private ComputeBuffer visibleInstanceOnlyTransformBuffer;
         private ComputeBuffer argsBuffer;
 
@@ -27,24 +29,25 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         {            
             if (_ObjectToWorldBuffer != null) _ObjectToWorldBuffer.Release();
             if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Release();
-            if (allInstanceTransformBuffer != null) allInstanceTransformBuffer.Release();
+            if (boundsBuffer != null) boundsBuffer.Release();
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Release();
 
             _ObjectToWorldBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
-            _WorldToObjectBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);            
-            allInstanceTransformBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 3); //float3 posWS only, per grass
+            _WorldToObjectBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
+            boundsBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 3 * 2); //float3 posWS only, per grass
             visibleInstanceOnlyTransformBuffer = new ComputeBuffer(objs.Count, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
 
-            Matrix4x4[] o2w =new Matrix4x4[objs.Count];
-            Matrix4x4[] w2o =new Matrix4x4[objs.Count];
+            float4x4[] o2w =new float4x4[objs.Count];
+            float4x4[] w2o =new float4x4[objs.Count];
 
-            List<Vector3> positions = new List<Vector3>();
+            List<float3x2> bounds = new List<float3x2>();
             int index = 0;
             foreach (var o in objs)
             {
                 o2w[index] = o.localToWorldMatrix;
                 w2o[index] = o.worldToLocalMatrix;
-                positions.Add(o.bounds.center);
+                float3x2 _bounds = new float3x2(o.bounds.center, o.bounds.extents);
+                bounds.Add(_bounds);
                 index++;
             }
             _ObjectToWorldBuffer.SetData(o2w);
@@ -55,7 +58,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             mat.SetBuffer("_ObjectToWorldBuffer", _ObjectToWorldBuffer);
             mat.SetBuffer("_WorldToObjectBuffer", _WorldToObjectBuffer);
 
-            allInstanceTransformBuffer.SetData(positions);
+            boundsBuffer.SetData(bounds);
             mat.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
 
 
@@ -77,7 +80,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
         }
 
-        public void Draw(ComputeShader cullingComputeShader)
+        public void Draw(ComputeShader cullingComputeShader, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix)
         {
             if (instancedMaterial == null)
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
@@ -86,18 +89,16 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
                 instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural");
 
             //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
-            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
-            Matrix4x4 v = Camera.main.worldToCameraMatrix;
-            Matrix4x4 p = Camera.main.projectionMatrix;
-            Matrix4x4 vp = p * v;
-            cullingComputeShader.SetMatrix("_VPMatrix", vp);
+            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);            
+            cullingComputeShader.SetMatrix("_VMatrix", ViewMatrix);
+            cullingComputeShader.SetMatrix("_PMatrix", ProjectionMatrix);
             cullingComputeShader.SetFloat("_MaxDrawDistance", Camera.main.farClipPlane);
-            cullingComputeShader.SetBuffer(0, "_AllInstancesTransformBuffer", allInstanceTransformBuffer);
+            cullingComputeShader.SetBuffer(0, "_BoundsBuffer", boundsBuffer);
             cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
             cullingComputeShader.Dispatch(0, Mathf.CeilToInt(objs.Count / 1024f), 1, 1);
             ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
 
-            Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(1000, 1000, 1000)), argsBuffer);
+            Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer);
         }
 
         public MeshFilter reference;
@@ -119,7 +120,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         {            
             if (_ObjectToWorldBuffer != null) _ObjectToWorldBuffer.Dispose(); _ObjectToWorldBuffer = null;
             if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Dispose(); _WorldToObjectBuffer = null;
-            if (allInstanceTransformBuffer != null) allInstanceTransformBuffer.Dispose(); allInstanceTransformBuffer = null;
+            if (boundsBuffer != null) boundsBuffer.Dispose(); boundsBuffer = null;
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose(); visibleInstanceOnlyTransformBuffer = null;
             if (argsBuffer != null) argsBuffer.Release(); argsBuffer = null;
 
@@ -140,9 +141,12 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     }
     void LateUpdate()
     {
+        Matrix4x4 v = Camera.main.worldToCameraMatrix;
+        Matrix4x4 p = Camera.main.projectionMatrix;
+        Matrix4x4 vp = p * v;
         foreach (var rg in renderGroups)
         {
-            if (!rg.activeGroup) rg.Draw(cullingComputeShader);
+            if (!rg.activeGroup) rg.Draw(cullingComputeShader, v, p);
         }
     }
 
