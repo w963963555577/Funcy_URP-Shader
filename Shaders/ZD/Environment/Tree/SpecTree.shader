@@ -1,5 +1,3 @@
-// Made with Amplify Shader Editor
-// Available at the Unity Asset Store - http://u3d.as/y3X
 Shader "ZDShader/LWRP/Environment/SpecialTree"
 {
     Properties
@@ -118,8 +116,8 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
             #endif
             CBUFFER_END
-            sampler2D _PositionMask;
-            sampler2D _BaseMap;
+            TEXTURE2D(_PositionMask);            SAMPLER(sampler_PositionMask);
+            TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
 
 
             
@@ -174,7 +172,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 o.ase_texcoord3.zw = 0;
                 o.ase_texcoord4.w = 0;
 
-                float3 vertexValue = ((tex2Dlod(_PositionMask, float4(((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), 0, 0.0)).r * appendResult132) / ase_objectScale);
+                float3 vertexValue = SAMPLE_TEXTURE2D_LOD(_PositionMask, sampler_PositionMask, ((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), unity_LODFade).r * appendResult132 / ase_objectScale;
 
                 v.vertex.xyz += vertexValue;
 
@@ -192,13 +190,11 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
 
 
                 o.worldPos = positionWS;
-
-                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-                    VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-                    vertexInput.positionWS = positionWS;
-                    vertexInput.positionCS = positionCS;
-                    o.shadowCoord = GetShadowCoord(vertexInput);
-                #endif
+                
+                VertexPositionInputs vertexInput = (VertexPositionInputs)0;
+                vertexInput.positionWS = positionWS;
+                vertexInput.positionCS = positionCS;
+                o.shadowCoord = GetShadowCoord(vertexInput);
                 
                 o.fogFactor = ComputeFogFactor(positionCS.z);
                 
@@ -213,20 +209,13 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                     UNITY_SETUP_INSTANCE_ID(IN);
                     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
                 #endif
-                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-                    float3 WorldPosition = IN.worldPos;
-                #endif
-                float4 ShadowCoords = float4(0, 0, 0, 0);
-
-                #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-                    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-                        ShadowCoords = IN.shadowCoord;
-                    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
-                        ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
-                    #endif
-                #endif
+                
+                float3 WorldPosition = IN.worldPos;
+                
+                float4 ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
+                
                 float2 uv_BaseMap = IN.ase_texcoord3.xy * _BaseMap_ST.xy + _BaseMap_ST.zw;
-                float4 tex2DNode5 = tex2D(_BaseMap, uv_BaseMap);
+                float4 tex2DNode5 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv_BaseMap);
                 float3 ase_worldNormal = IN.ase_texcoord4.xyz;
                 float dotResult41 = dot(ase_worldNormal, _MainLightPosition.xyz);
                 float temp_output_47_0 = saturate((dotResult41 + _LambertOffset));
@@ -252,13 +241,12 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 float AlphaClipThreshold = 0.5;
 
                 
-                clip(Alpha - AlphaClipThreshold);
-                                
+                //clip(Alpha - AlphaClipThreshold);
+                
                 //LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-                                
+                
                 Color = MixFog(Color, IN.fogFactor);
                 
-
                 return half4(Color, Alpha);
             }
             
@@ -266,57 +254,45 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
         }
 
-        
+        // Used for rendering shadowmaps
+        // Used for rendering shadowmaps
         Pass
         {
-            
             Name "ShadowCaster"
             Tags { "LightMode" = "ShadowCaster" }
-
+            
             ZWrite On
             ZTest LEqual
+            Cull[_Cull]
             
             HLSLPROGRAM
             
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            
+            //--------------------------------------
+            // GPU Instancing
             #pragma multi_compile_instancing
             #pragma multi_compile _ _DrawMeshInstancedProcedural
-            #pragma multi_compile_fog
-
-            #pragma vertex vert
-            #pragma fragment frag
-
+            
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            
+            
+            //#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-            struct VertexInput
-            {
-                float4 vertex: POSITION;
-                float3 ase_normal: NORMAL;
-                float4 ase_texcoord: TEXCOORD0;
-
-                #ifdef _DrawMeshInstancedProcedural
-                    uint mid: SV_INSTANCEID;
-                #else
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
-                #endif
-            };
-
-            struct VertexOutput
-            {
-                float4 clipPos: SV_POSITION;
-                float3 worldPos: TEXCOORD0;
-                float4 shadowCoord: TEXCOORD1;
-                float4 ase_texcoord2: TEXCOORD2;
-                
-                #ifdef _DrawMeshInstancedProcedural
-                #else
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
-                    UNITY_VERTEX_OUTPUT_STEREO
-                #endif
-            };
-
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            
             CBUFFER_START(UnityPerMaterial)
             float4 _PositionMask_ST;
             float4 _BaseMap_ST;
@@ -340,227 +316,84 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
             #endif
             CBUFFER_END
-            sampler2D _PositionMask;
-            sampler2D _BaseMap;
+            TEXTURE2D(_PositionMask);            SAMPLER(sampler_PositionMask);
+            TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
 
-
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
-
-            VertexOutput vert(VertexInput v)
+            
+            struct Attributes
             {
-                VertexOutput o;
-                #ifdef _DrawMeshInstancedProcedural
-                    uint id = _VisibleInstanceOnlyTransformIDBuffer[ v.mid];
-                #else
-                    UNITY_SETUP_INSTANCE_ID(v);
-                    UNITY_TRANSFER_INSTANCE_ID(v, o);
-                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                #endif
-                float2 appendResult182 = (float2(v.vertex.xyz.xy));
-                float temp_output_107_0 = (v.vertex.xyz.y * _Amount);
-                float4 transform95 = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
-                float lerpResult126 = lerp((sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance), (sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance * (distance(v.vertex.xyz.y, transform95.y) / 3.0)), _OriginWeight);
-                float temp_output_125_0 = (sin(((temp_output_107_0 * (_ZMotionSpeed / 10.0)) + (_TimeParameters.x * (_Speed / 10.0) * _ZMotionSpeed))) * _ZMotion);
-                float3 appendResult132 = (float3(0.0, 0.0, (lerpResult126 * temp_output_125_0)));
-                float3 ase_objectScale = float3(length(GetObjectToWorldMatrix()[ 0 ].xyz), length(GetObjectToWorldMatrix()[ 1 ].xyz), length(GetObjectToWorldMatrix()[ 2 ].xyz));
-                
-                o.ase_texcoord2.xy = v.ase_texcoord.xy;
-                
-                //setting value to unused interpolator channels and avoid initialization warnings
-                o.ase_texcoord2.zw = 0;
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    float3 defaultVertexValue = v.vertex.xyz;
-                #else
-                    float3 defaultVertexValue = float3(0, 0, 0);
-                #endif
-                float3 vertexValue = ((tex2Dlod(_PositionMask, float4(((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), 0, 0.0)).r * appendResult132) / ase_objectScale);
-                #ifdef ASE_ABSOLUTE_VERTEX_POS
-                    v.vertex.xyz = vertexValue;
-                #else
-                    v.vertex.xyz += vertexValue;
-                #endif
-
-                v.ase_normal = v.ase_normal;
-
-                float3 positionWS = float3(0.0, 0.0, 0.0);
-                
-                #ifdef _DrawMeshInstancedProcedural
-                    positionWS = mul(_ObjectToWorldBuffer[id], float4(v.vertex.xyz, 1.0)).xyz;
-                #else
-                    positionWS = TransformObjectToWorld(v.vertex.xyz);
-                #endif
-
-                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-                    o.worldPos = positionWS;
-                #endif
-                
-                float3 normalWS = float3(0.0, 0.0, 0.0);
-                #ifdef _DrawMeshInstancedProcedural
-                    normalWS = mul(_ObjectToWorldBuffer[id], v.ase_normal).xyz;
-                #else
-                    normalWS = TransformObjectToWorldDir(v.ase_normal);
-                #endif
-                float4 clipPos = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
-
-                #if UNITY_REVERSED_Z
-                    clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
-                #else
-                    clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
-                #endif
-
-                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-                    VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-                    vertexInput.positionWS = positionWS;
-                    vertexInput.positionCS = clipPos;
-                    o.shadowCoord = GetShadowCoord(vertexInput);
-                #endif
-                o.clipPos = clipPos;
-
-                return o;
-            }
-
-            half4 frag(VertexOutput IN): SV_TARGET
-            {
-                #ifdef _DrawMeshInstancedProcedural
-                #else
-                    UNITY_SETUP_INSTANCE_ID(IN);
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-                #endif
-                #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
-                    float3 WorldPosition = IN.worldPos;
-                #endif
-                float4 ShadowCoords = float4(0, 0, 0, 0);
-
-                #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
-                    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
-                        ShadowCoords = IN.shadowCoord;
-                    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
-                        ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
-                    #endif
-                #endif
-
-                float2 uv_BaseMap = IN.ase_texcoord2.xy * _BaseMap_ST.xy + _BaseMap_ST.zw;
-                float4 tex2DNode5 = tex2D(_BaseMap, uv_BaseMap);
-                clip(tex2DNode5.a - _ClipThreshod);
-                
-                float Alpha = 1.0;
-                float AlphaClipThreshold = 0.5;
-
-
-                clip(Alpha - AlphaClipThreshold);
-
-
-
-                LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-
-                return 0;
-            }
-            
-            ENDHLSL
-            
-        }
-        
-        
-        Pass
-        {
-            
-            Name "DepthOnly"
-            Tags { "LightMode" = "DepthOnly" }
-
-            ZWrite On
-            ColorMask 0
-            
-            HLSLPROGRAM
-            
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ _DrawMeshInstancedProcedural
-            #pragma multi_compile_fog
-
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-
-            struct VertexInput
-            {
-                float4 vertex: POSITION;
-                float3 ase_normal: NORMAL;
-                float4 ase_texcoord: TEXCOORD0;
-
+                float4 positionOS: POSITION;
+                float3 normalOS: NORMAL;
+                float2 texcoord: TEXCOORD0;
                 #ifdef _DrawMeshInstancedProcedural
                     uint mid: SV_INSTANCEID;
                 #else
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 #endif
             };
-
-            struct VertexOutput
+            
+            struct Varyings
             {
-                float4 clipPos: SV_POSITION;
-                float3 worldPos: TEXCOORD0;
-                float4 shadowCoord: TEXCOORD1;
-                float4 ase_texcoord2: TEXCOORD2;
-                
+                float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                     UNITY_VERTEX_OUTPUT_STEREO
                 #endif
             };
-
-            CBUFFER_START(UnityPerMaterial)
-            float4 _PositionMask_ST;
-            float4 _BaseMap_ST;
-            float4 _BlendColor_SelfShadow;
-            float4 _BlendColor_Dark;
-            float4 _BlendColor_Mid;
-            float4 _BlendColor_Light;
-            float4 _SpecColor;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            float _OriginWeight;
-            float _ZMotionSpeed;
-            float _ZMotion;
-            float _LambertOffset;
-            float _ClipThreshod;
-            float _SpecularOffset;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            sampler2D _PositionMask;
-            sampler2D _BaseMap;
-
-
             
-            VertexOutput vert(VertexInput v)
+            float4 GetShadowPositionHClip(Attributes input)
             {
-                VertexOutput o = (VertexOutput)0;
                 #ifdef _DrawMeshInstancedProcedural
-                    uint id = _VisibleInstanceOnlyTransformIDBuffer[v.mid];
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                    
+                    float3 positionWS = mul(_ObjectToWorldBuffer[id], float4(input.positionOS.xyz, 1.0)).xyz;
+                    float3 normalWS = float3(0, 0, 0);
+                    
+                    #ifdef UNITY_ASSUME_UNIFORM_SCALING
+                        normalWS = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], input.normalOS));
+                    #else
+                        normalWS = SafeNormalize(mul(input.normalOS, (real3x3)_WorldToObjectBuffer[id]));
+                    #endif
                 #else
-                    UNITY_SETUP_INSTANCE_ID(v);
-                    UNITY_TRANSFER_INSTANCE_ID(v, o);
-                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                    float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                    float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                    
                 #endif
                 
-                float2 appendResult182 = (float2(v.vertex.xyz.xy));
-                float temp_output_107_0 = (v.vertex.xyz.y * _Amount);
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
+                
+                #if UNITY_REVERSED_Z
+                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
+                #else
+                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE * 10);
+                #endif
+                
+                return positionCS;
+            }
+            
+            Varyings ShadowPassVertex(Attributes input)
+            {
+                Varyings output;
+                #ifdef _DrawMeshInstancedProcedural
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                #endif
+
+                float2 appendResult182 = (float2(input.positionOS.xyz.xy));
+                float temp_output_107_0 = (input.positionOS.xyz.y * _Amount);
                 float4 transform95 = float4(0, 0, 0, 1);
                 #ifdef _DrawMeshInstancedProcedural
                     transform95 = mul(_ObjectToWorldBuffer[id], float4(0, 0, 0, 1));
                 #else
                     transform95 = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
                 #endif
-                float lerpResult126 = lerp((sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance), (sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance * (distance(v.vertex.xyz.y, transform95.y) / 3.0)), _OriginWeight);
+                float lerpResult126 = lerp((sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance), (sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance * (distance(input.positionOS.xyz.y, transform95.y) / 3.0)), _OriginWeight);
                 float temp_output_125_0 = (sin(((temp_output_107_0 * (_ZMotionSpeed / 10.0)) + (_TimeParameters.x * (_Speed / 10.0) * _ZMotionSpeed))) * _ZMotion);
                 float3 appendResult132 = (float3(0.0, 0.0, (lerpResult126 * temp_output_125_0)));
 
@@ -570,66 +403,194 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 #else
                     ase_objectScale = float3(length(GetObjectToWorldMatrix()[ 0 ].xyz), length(GetObjectToWorldMatrix()[ 1 ].xyz), length(GetObjectToWorldMatrix()[ 2 ].xyz));
                 #endif
+                
+                float3 vertexValue = SAMPLE_TEXTURE2D_LOD(_PositionMask, sampler_PositionMask, ((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), unity_LODFade).r * appendResult132 / ase_objectScale;
+                input.positionOS.xyz += vertexValue;
 
-                o.ase_texcoord2.xy = v.ase_texcoord.xy;
-                
-                //setting value to unused interpolator channels and avoid initialization warnings
-                o.ase_texcoord2.zw = 0;
-                
-                float3 vertexValue = ((tex2Dlod(_PositionMask, float4(((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), 0, 0.0)).r * appendResult132) / ase_objectScale);
-                //v.vertex.xyz += vertexValue;
-
-                float3 positionWS = float3(0.0, 0.0, 0.0);
-                
-                #ifdef _DrawMeshInstancedProcedural
-                    positionWS = mul(_ObjectToWorldBuffer[id], float4(v.vertex.xyz, 1.0)).xyz;
-                #else
-                    positionWS = TransformObjectToWorld(v.vertex.xyz);
-                #endif
-                
-                
-                o.worldPos = positionWS;
-                
-
-                o.clipPos = TransformWorldToHClip(positionWS);
-                
-                VertexPositionInputs vertexInput = (VertexPositionInputs)0;
-                vertexInput.positionWS = positionWS;
-                vertexInput.positionCS = o.clipPos;
-                o.shadowCoord = GetShadowCoord(vertexInput);
-                
-                return o;
+                output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                output.positionCS = GetShadowPositionHClip(input);
+                return output;
+            }
+            
+            half Alpha(half albedoAlpha, half cutoff)
+            {
+                half alpha = albedoAlpha ;
+                clip(alpha - cutoff);
+                return alpha;
             }
 
-            half4 frag(VertexOutput IN): SV_TARGET
+            half4 SampleAlbedoAlpha(float2 uv, TEXTURE2D_PARAM(albedoAlphaMap, sampler_albedoAlphaMap))
             {
-                #ifdef _DrawMeshInstancedProcedural
-                #else
-                    UNITY_SETUP_INSTANCE_ID(IN);
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-                #endif
-
-                float3 WorldPosition = IN.worldPos;
-
-                float4 ShadowCoords = float4(0, 0, 0, 0);
-
-                ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
+                return SAMPLE_TEXTURE2D(albedoAlphaMap, sampler_albedoAlphaMap, uv);
+            }
 
 
-                float2 uv_BaseMap = IN.ase_texcoord2.xy * _BaseMap_ST.xy + _BaseMap_ST.zw;
-                float4 tex2DNode5 = tex2D(_BaseMap, uv_BaseMap);
-                clip(tex2DNode5.a - _ClipThreshod);
-                
-                float Alpha = 1.0;
-                float AlphaClipThreshold = 0.5;
-
-                clip(Alpha - AlphaClipThreshold);
-                LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-
+            half4 ShadowPassFragment(Varyings input): SV_TARGET
+            {
+                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _ClipThreshod);
                 return 0;
             }
+            
+            
             ENDHLSL
             
         }
+        
+        
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+            
+            ZWrite On
+            ColorMask 0
+            Cull[_Cull]
+            
+            HLSLPROGRAM
+            
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+            
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            
+            
+            CBUFFER_START(UnityPerMaterial)
+            float4 _PositionMask_ST;
+            float4 _BaseMap_ST;
+            float4 _BlendColor_SelfShadow;
+            float4 _BlendColor_Dark;
+            float4 _BlendColor_Mid;
+            float4 _BlendColor_Light;
+            float4 _SpecColor;
+            float _Speed;
+            float _Amount;
+            float _Distance;
+            float _OriginWeight;
+            float _ZMotionSpeed;
+            float _ZMotion;
+            float _LambertOffset;
+            float _ClipThreshod;
+            float _SpecularOffset;
+            #ifdef _DrawMeshInstancedProcedural
+                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+                StructuredBuffer<float4x4> _WorldToObjectBuffer;
+                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+            #endif
+            CBUFFER_END
+            TEXTURE2D(_PositionMask);            SAMPLER(sampler_PositionMask);
+            TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
+
+            struct Attributes
+            {
+                float4 position: POSITION;
+                float2 texcoord: TEXCOORD0;
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
+            };
+            
+            struct Varyings
+            {
+                float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+                
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
+            };
+            
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                #ifdef _DrawMeshInstancedProcedural
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #endif
+
+                
+                float2 appendResult182 = (float2(input.position.xyz.xy));
+                float temp_output_107_0 = (input.position.xyz.y * _Amount);
+                float4 transform95 = float4(0, 0, 0, 1);
+                #ifdef _DrawMeshInstancedProcedural
+                    transform95 = mul(_ObjectToWorldBuffer[id], float4(0, 0, 0, 1));
+                #else
+                    transform95 = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
+                #endif
+                float lerpResult126 = lerp((sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance), (sin(((0.0 * _Speed) + temp_output_107_0)) * _Distance * (distance(input.position.xyz.y, transform95.y) / 3.0)), _OriginWeight);
+                float temp_output_125_0 = (sin(((temp_output_107_0 * (_ZMotionSpeed / 10.0)) + (_TimeParameters.x * (_Speed / 10.0) * _ZMotionSpeed))) * _ZMotion);
+                float3 appendResult132 = (float3(0.0, 0.0, (lerpResult126 * temp_output_125_0)));
+
+                float3 ase_objectScale = float3(0, 0, 0);
+                #ifdef _DrawMeshInstancedProcedural
+                    ase_objectScale = float3(length(_ObjectToWorldBuffer[id][ 0 ].xyz), length(_ObjectToWorldBuffer[id][ 1 ].xyz), length(_ObjectToWorldBuffer[id][ 2 ].xyz));
+                #else
+                    ase_objectScale = float3(length(GetObjectToWorldMatrix()[ 0 ].xyz), length(GetObjectToWorldMatrix()[ 1 ].xyz), length(GetObjectToWorldMatrix()[ 2 ].xyz));
+                #endif
+                
+                float3 vertexValue = SAMPLE_TEXTURE2D_LOD(_PositionMask, sampler_PositionMask, ((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), unity_LODFade).r * appendResult132 / ase_objectScale;
+                input.position.xyz += vertexValue;
+                
+                output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                
+                float3 positionWS = float3(0.0, 0.0, 0.0);
+                #ifdef _DrawMeshInstancedProcedural
+                    positionWS = mul(_ObjectToWorldBuffer[id], float4(input.position.xyz, 1.0)).xyz;
+                #else
+                    positionWS = TransformObjectToWorld(input.position.xyz);
+                #endif
+                
+                output.positionCS = TransformWorldToHClip(positionWS);
+                return output;
+            }
+            
+            half Alpha(half albedoAlpha, half cutoff)
+            {
+                half alpha = albedoAlpha;
+                clip(alpha - cutoff);
+                return alpha;
+            }
+
+            half4 SampleAlbedoAlpha(float2 uv, TEXTURE2D_PARAM(albedoAlphaMap, sampler_albedoAlphaMap))
+            {
+                return SAMPLE_TEXTURE2D(albedoAlphaMap, sampler_albedoAlphaMap, uv);
+            }
+
+
+            half4 DepthOnlyFragment(Varyings input): SV_TARGET
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _ClipThreshod);
+                return 0;
+            }
+            
+            
+            ENDHLSL
+            
+        }
+        UsePass "Universal Render Pipeline/Lit/Meta"
     }
 }
