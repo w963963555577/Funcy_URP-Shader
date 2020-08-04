@@ -8,8 +8,6 @@ float4x4 _PMatrix;
 
 float _MaxDrawDistance;
 
-bool _CullingEnabled;
-
 StructuredBuffer<float3x2> _BoundsBuffer; //will not change until instance count change
 AppendStructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
 
@@ -61,7 +59,7 @@ void ViewCulling(uint3 id: SV_DispatchThreadID)
     float minY = min(min(min(p1.y, p2.y), min(p3.y, p4.y)), min(min(p5.y, p6.y), min(p7.y, p8.y)));
     
     float2 allow = float2(1.0, 1.0);
-    if (!_CullingEnabled || vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y)
+    if (vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y)
     {
         _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
     }
