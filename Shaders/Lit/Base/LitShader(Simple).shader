@@ -108,13 +108,16 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             #pragma shader_feature _SPECULAR_SETUP
             #pragma shader_feature _RECEIVE_SHADOWS_OFF
             
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _SHADOWS_SOFT
             
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
-            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS            
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
-            #pragma multi_compile _ _SHADOWS_SOFT
+            
             // -------------------------------------
             // Unity defined keywords
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
@@ -154,6 +157,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float _ZMotionSpeed;
                 float _OriginWeight;
                 half _DebugMask;
+                #ifdef _DrawMeshInstancedProcedural
+                    StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+                    StructuredBuffer<float4x4> _WorldToObjectBuffer;
+                    StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+                #endif
                 CBUFFER_END
                 #include "../../../ShaderLibrary/VertexAnimation.hlsl"
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -245,7 +253,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                     float4 tangentOS: TANGENT;
                     float2 texcoord: TEXCOORD0;
                     float2 lightmapUV: TEXCOORD1;
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    #ifdef _DrawMeshInstancedProcedural
+                        uint mid: SV_INSTANCEID;
+                    #else
+                        UNITY_VERTEX_INPUT_INSTANCE_ID
+                    #endif
                 };
                 
                 struct Varyings
@@ -273,8 +285,12 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                     #endif
                     
                     float4 positionCS: SV_POSITION;
-                    UNITY_VERTEX_INPUT_INSTANCE_ID
-                    UNITY_VERTEX_OUTPUT_STEREO
+                    
+                    #ifdef _DrawMeshInstancedProcedural
+                    #else
+                        UNITY_VERTEX_INPUT_INSTANCE_ID
+                        UNITY_VERTEX_OUTPUT_STEREO
+                    #endif
                 };
                 
                 void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData)
@@ -314,18 +330,61 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 ///////////////////////////////////////////////////////////////////////////////
                 //                  Vertex and Fragment functions                            //
                 ///////////////////////////////////////////////////////////////////////////////
-                
+                #ifdef _DrawMeshInstancedProcedural
+                    VertexPositionInputs InitVertexPositionInputs(float3 positionOS, uint id)
+                    {
+                        VertexPositionInputs input;
+                        input.positionWS = mul(_ObjectToWorldBuffer[id], float4(positionOS, 1.0)).xyz;
+                        input.positionVS = TransformWorldToView(input.positionWS);
+                        input.positionCS = TransformWorldToHClip(input.positionWS);
+                        
+                        float4 ndc = input.positionCS * 0.5f;
+                        input.positionNDC.xy = float2(ndc.x, ndc.y * _ProjectionParams.x) + ndc.w;
+                        input.positionNDC.zw = input.positionCS.zw;
+                        
+                        return input;
+                    }
+                    
+                    VertexNormalInputs InitVertexNormalInputs(float3 normalOS, float4 tangentOS, uint id)
+                    {
+                        VertexNormalInputs tbn;
+                        
+                        // mikkts space compliant. only normalize when extracting normal at frag.
+                        real sign = tangentOS.w * GetOddNegativeScale();
+                        #ifdef UNITY_ASSUME_UNIFORM_SCALING
+                            tbn.normalWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], normalOS.xyz));
+                        #else
+                            tbn.normalWS.xyz = SafeNormalize(mul(normalOS, (real3x3)_WorldToObjectBuffer[id]));
+                        #endif
+                        tbn.tangentWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], tangentOS.xyz));
+                        tbn.bitangentWS = cross(tbn.normalWS, tbn.tangentWS) * sign;
+                        return tbn;
+                    }
+                #endif
                 // Used in Standard (Physically Based) shader
                 Varyings LitPassVertex(Attributes input)
                 {
                     Varyings output = (Varyings)0;
-                    
-                    UNITY_SETUP_INSTANCE_ID(input);
-                    UNITY_TRANSFER_INSTANCE_ID(input, output);
-                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                    #ifdef _DrawMeshInstancedProcedural
+                        uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                    #else
+                        UNITY_SETUP_INSTANCE_ID(input);
+                        UNITY_TRANSFER_INSTANCE_ID(input, output);
+                        UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                    #endif
                     input.positionOS = WindAnimation(input.positionOS);
-                    VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                    VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                    
+                    VertexPositionInputs vertexInput;
+                    VertexNormalInputs normalInput;
+                    
+                    #ifdef _DrawMeshInstancedProcedural
+                        vertexInput = InitVertexPositionInputs(input.positionOS.xyz, id);
+                        normalInput = InitVertexNormalInputs(input.normalOS, input.tangentOS, id);
+                    #else
+                        vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+                        normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                    #endif
+                                        
                     half3 viewDirWS = GetCameraPositionWS() - vertexInput.positionWS;
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -362,9 +421,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 // Used in Standard (Physically Based) shader
                 half4 LitPassFragment(Varyings input): SV_Target
                 {
-                    UNITY_SETUP_INSTANCE_ID(input);
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                    
+                    #ifdef _DrawMeshInstancedProcedural
+                    #else
+                        UNITY_SETUP_INSTANCE_ID(input);
+                        UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                    #endif
                     SurfaceData surfaceData;
                     InitializeStandardLitSurfaceData(input.uv, surfaceData);
                     
@@ -406,6 +467,8 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             
             #pragma vertex ShadowPassVertex
@@ -437,6 +500,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             float _ZMotionSpeed;
             float _OriginWeight;
             half _DebugMask;
+            #ifdef _DrawMeshInstancedProcedural
+                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+                StructuredBuffer<float4x4> _WorldToObjectBuffer;
+                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+            #endif
             CBUFFER_END
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
@@ -448,19 +516,42 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float4 positionOS: POSITION;
                 float3 normalOS: NORMAL;
                 float2 texcoord: TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct Varyings
             {
                 float2 uv: TEXCOORD0;
                 float4 positionCS: SV_POSITION;
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             
             float4 GetShadowPositionHClip(Attributes input)
             {
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                    
+                    float3 positionWS = mul(_ObjectToWorldBuffer[id], float4(input.positionOS.xyz, 1.0)).xyz;
+                    float3 normalWS = float3(0, 0, 0);
+                    
+                    #ifdef UNITY_ASSUME_UNIFORM_SCALING
+                        normalWS = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], input.normalOS));
+                    #else
+                        normalWS = SafeNormalize(mul(input.normalOS, (real3x3)_WorldToObjectBuffer[id]));
+                    #endif
+                #else
+                    float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                    float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                    
+                #endif
                 
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 
@@ -476,7 +567,10 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             Varyings ShadowPassVertex(Attributes input)
             {
                 Varyings output;
-                UNITY_SETUP_INSTANCE_ID(input);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                #endif
                 //WindAnimation
                 input.positionOS = WindAnimation(input.positionOS);
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
@@ -523,6 +617,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
@@ -548,32 +643,58 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             float _ZMotionSpeed;
             float _OriginWeight;
             half _DebugMask;
+            #ifdef _DrawMeshInstancedProcedural
+                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+                StructuredBuffer<float4x4> _WorldToObjectBuffer;
+                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+            #endif
             CBUFFER_END
             #include "../../../ShaderLibrary/VertexAnimation.hlsl"
             struct Attributes
             {
                 float4 position: POSITION;
                 float2 texcoord: TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct Varyings
             {
                 float2 uv: TEXCOORD0;
                 float4 positionCS: SV_POSITION;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             
             Varyings DepthOnlyVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
-                UNITY_SETUP_INSTANCE_ID(input);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #endif
                 //WindAnimation
                 input.position = WindAnimation(input.position);
+                
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
-                output.positionCS = TransformObjectToHClip(input.position.xyz);
+                float3 positionWS = float3(0.0, 0.0, 0.0);
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    positionWS = mul(_ObjectToWorldBuffer[id], float4(input.position.xyz, 1.0)).xyz;
+                #else
+                    positionWS = TransformObjectToWorld(input.position.xyz);
+                #endif
+                
+                output.positionCS = TransformWorldToHClip(positionWS);
                 return output;
             }
             
@@ -763,7 +884,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 half4 albedoAlpha = SampleAlbedoAlpha(IN.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
                 half alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
                 
-                
                 float4 clipPos = 0;
                 float3 worldPos = 0;
                 
@@ -783,10 +903,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             ENDHLSL
             
         }
-        
-        
-        
-        //UsePass "Hidden/LWRP/General/PlanarShadow"
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the

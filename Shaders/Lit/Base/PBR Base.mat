@@ -8,10 +8,10 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: PBR Base
-  m_Shader: {fileID: 4800000, guid: 6d0ccf6406be0554f8138cb948af0be0, type: 3}
-  m_ShaderKeywords: 
+  m_Shader: {fileID: 4800000, guid: ea44f5c82198d9543aad39bc54315cdb, type: 3}
+  m_ShaderKeywords: _DrawMeshInstancedProcedural
   m_LightmapFlags: 6
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap:
@@ -21,7 +21,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 750b1bd7ba8bd28489650de6d0a95cc5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -29,6 +29,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ExpressionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -40,11 +44,27 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _OutlineWidthControl:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _PositionMask:
         m_Texture: {fileID: 2800000, guid: 60375bd730403aa4dba368c0c4b1003f, type: 3}
         m_Scale: {x: 1, y: 0.16}
         m_Offset: {x: 0, y: 0.28}
+    - _SelfMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _diffuse:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _mask:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -54,29 +74,78 @@ Material:
     - _Blend: 0
     - _BumpScale: 1
     - _Cull: 2
+    - _CustomLightIntensity: 1
+    - _CustomLighting: 1
     - _Cutoff: 0.5
     - _DebugMask: 1
+    - _DiffuseBlend: 0.2
+    - _DiscolorationColorCount: 2
+    - _DiscolorationSystem: 0
     - _Distance: 0.196
     - _DstBlend: 0
+    - _EdgeLightIntensity: 1
+    - _EdgeLightWidth: 1
+    - _EmissionOn: 0
+    - _EmissionxBase: 0
     - _EnvironmentReflections: 1
+    - _ExpressionEnable: 0
+    - _ExpressionFormat_FaceSheet: 1
+    - _ExpressionFormat_Wink: 0
+    - _Flash: 0
+    - _Gloss: 0.5
     - _GlossMapScale: 1
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _OriginWeight: 0
+    - _OutlineEnable: 1
     - _QueueOffset: 0
+    - _ReceiveShadow: 1
     - _ReceiveShadows: 1
+    - _SelectBrow: 1
+    - _SelectFace: 1
+    - _SelectMouth: 1
+    - _SelfMaskDirection: 0
+    - _SelfMaskEnable: 0
+    - _SelfShadowRamp: 0.8
+    - _ShadowOffset: 0.6
+    - _ShadowRamp: 1
+    - _ShadowRefraction: 1
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _Speed: 2.15
     - _SrcBlend: 1
     - _Surface: 0
+    - _ViewCulling: 1
     - _WorkflowMode: 1
     - _ZMotion: 0.5
     - _ZMotionSpeed: 10
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.5729352, g: 0.6111325, b: 0.9716981, a: 1}
+    - _BrowRect: {r: 0, g: 0.45, b: 0.855, a: 0.3}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _CustomLightColor: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_0: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_1: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_2: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_3: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_4: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_5: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_6: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_7: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_8: {r: 1, g: 1, b: 1, a: 1}
+    - _DiscolorationColor_9: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _FaceRect: {r: 0, g: -0.02, b: 0.855, a: 0.37}
+    - _MouthRect: {r: 0, g: -0.97, b: 0.427, a: 0.28}
+    - _OutlineColor: {r: 0.0075, g: 0.0006, b: 0.0006, a: 1}
+    - _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur: {r: 0, g: 0.5, b: 0.5, a: 0}
+    - _Picker_0: {r: 0.9686275, g: 0.8039216, b: 0.7882354, a: 1}
+    - _Picker_1: {r: 0.5764706, g: 0.6235294, b: 0.8705883, a: 1}
+    - _ShadowColor0: {r: 1, g: 0.7344488, b: 0.514151, a: 1}
+    - _ShadowColor1: {r: 0.3160377, g: 0.4365495, b: 1, a: 1}
+    - _ShadowColorElse: {r: 0.5471698, g: 0.5471698, b: 0.5471698, a: 1}
     - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+    - _SpecularColor: {r: 0.6176471, g: 0.6145149, b: 0.5722318, a: 1}

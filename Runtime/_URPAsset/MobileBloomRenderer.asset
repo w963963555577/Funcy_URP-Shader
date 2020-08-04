@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MobileBloomPass
   m_EditorClassIdentifier: 
   settings:
-    Event: 500
+    Event: 1000
     blitMaterial: {fileID: 2100000, guid: 72af3f7302ef4f94eb9e46bc820b8df0, type: 2}
     BlurAmount: 1
     BloomAmount: 1.5
@@ -75,6 +75,6 @@ MonoBehaviour:
     fadeOutScreenBorderWidth: 0.5
     RT_height: 1024
     ApplyFillHoleFix: 1
-    swapIteration: 2
+    swapIteration: 4
     SSPR_computeShader: {fileID: 7200000, guid: 07c79ca1bcd69d84cafeb19534a40fc3,
       type: 3}

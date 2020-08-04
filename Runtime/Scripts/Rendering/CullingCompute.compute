@@ -1,4 +1,4 @@
-﻿#pragma kernel CSMain
+﻿#pragma kernel ViewCulling
 
 //Matrix4x4 v = Camera.main.worldToCameraMatrix;
 //Matrix4x4 p = Camera.main.projectionMatrix; //unity C# use opengl standard projection matrix
@@ -6,18 +6,22 @@
 float4x4 _VMatrix;
 float4x4 _PMatrix;
 
+float _MaxDrawDistance;
+
+bool _CullingEnabled;
+
 StructuredBuffer<float3x2> _BoundsBuffer; //will not change until instance count change
 AppendStructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
 
-float3 WorldToViewPoint(float4x4 VPMatrix, half3 worloPos)
+float4 WorldToViewPoint(float4x4 VPMatrix, float3 worloPos)
 {
-    half4 result = mul(VPMatrix, float4(worloPos, 1.0));
+    float4 result = mul(VPMatrix, float4(worloPos, 1.0));
     result.xyz /= result.w;
-    return result.xyz;
+    return result;
 }
 
-[numthreads(1024, 1, 1)]
-void CSMain(uint3 id: SV_DispatchThreadID)
+[numthreads(64, 1, 1)]
+void ViewCulling(uint3 id: SV_DispatchThreadID)
 {
     float4x4 _VPMatrix = mul(_PMatrix, _VMatrix);
     float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
@@ -33,21 +37,31 @@ void CSMain(uint3 id: SV_DispatchThreadID)
     float3 p7 = _center + float3(-_extents.x, +_extents.y, +_extents.z);
     float3 p8 = _center + float3(+_extents.x, -_extents.y, -_extents.z);
     
-    p0 = abs(WorldToViewPoint(_VPMatrix, p0));
-    p1 = abs(WorldToViewPoint(_VPMatrix, p1));
-    p2 = abs(WorldToViewPoint(_VPMatrix, p2));
-    p3 = abs(WorldToViewPoint(_VPMatrix, p3));
-    p4 = abs(WorldToViewPoint(_VPMatrix, p4));
-    p5 = abs(WorldToViewPoint(_VPMatrix, p5));
-    p6 = abs(WorldToViewPoint(_VPMatrix, p6));
-    p7 = abs(WorldToViewPoint(_VPMatrix, p7));
-    p8 = abs(WorldToViewPoint(_VPMatrix, p8));
+    float4 vp0 = WorldToViewPoint(_VPMatrix, p0);
+    float4 vp1 = WorldToViewPoint(_VPMatrix, p1);
+    float4 vp2 = WorldToViewPoint(_VPMatrix, p2);
+    float4 vp3 = WorldToViewPoint(_VPMatrix, p3);
+    float4 vp4 = WorldToViewPoint(_VPMatrix, p4);
+    float4 vp5 = WorldToViewPoint(_VPMatrix, p5);
+    float4 vp6 = WorldToViewPoint(_VPMatrix, p6);
+    float4 vp7 = WorldToViewPoint(_VPMatrix, p7);
+    float4 vp8 = WorldToViewPoint(_VPMatrix, p8);
     
-    half minX = min(min(min(p1.x, p2.x), min(p3.x, p4.x)), min(min(p5.x, p6.x), min(p7.x, p8.x)));
-    half minY = min(min(min(p1.y, p2.y), min(p3.y, p4.y)), min(min(p5.y, p6.y), min(p7.y, p8.y)));
+    p0 = abs(vp0.xyz);
+    p1 = abs(vp1.xyz);
+    p2 = abs(vp2.xyz);
+    p3 = abs(vp3.xyz);
+    p4 = abs(vp4.xyz);
+    p5 = abs(vp5.xyz);
+    p6 = abs(vp6.xyz);
+    p7 = abs(vp7.xyz);
+    p8 = abs(vp8.xyz);
     
-    half2 allow = half2(1.0, 1.0);
-    if (p0.z <= 1.0 && minX <= allow.x && minY <= allow.y)
+    float minX = min(min(min(p1.x, p2.x), min(p3.x, p4.x)), min(min(p5.x, p6.x), min(p7.x, p8.x)));
+    float minY = min(min(min(p1.y, p2.y), min(p3.y, p4.y)), min(min(p5.y, p6.y), min(p7.y, p8.y)));
+    
+    float2 allow = float2(1.0, 1.0);
+    if (!_CullingEnabled || vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y)
     {
         _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
     }

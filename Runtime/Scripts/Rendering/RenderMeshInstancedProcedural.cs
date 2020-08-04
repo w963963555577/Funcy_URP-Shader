@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using System.Linq;
 using Unity.Mathematics;
 #if UNITY_EDITOR
@@ -12,13 +13,12 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 {    
     public ComputeShader cullingComputeShader;
     public List<RenderGroup> renderGroups = new List<RenderGroup>();
-
+    public bool viewCulling = true;
     [System.Serializable]
     public class RenderGroup
     {
         private ComputeBuffer _ObjectToWorldBuffer;
         private ComputeBuffer _WorldToObjectBuffer;
-
 
         private ComputeBuffer boundsBuffer;
         private ComputeBuffer visibleInstanceOnlyTransformBuffer;
@@ -80,7 +80,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
         }
 
-        public void Draw(ComputeShader cullingComputeShader, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix)
+        public void Draw(ComputeShader cullingComputeShader, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling)
         {
             if (instancedMaterial == null)
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
@@ -88,21 +88,27 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (!instancedMaterial.IsKeywordEnabled("_DrawMeshInstancedProcedural"))
                 instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural");
 
+
             //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
-            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);            
+            var kernel = cullingComputeShader.FindKernel("ViewCulling");
+
+            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
+            cullingComputeShader.SetBool("_CullingEnabled", viewCulling);
             cullingComputeShader.SetMatrix("_VMatrix", ViewMatrix);
             cullingComputeShader.SetMatrix("_PMatrix", ProjectionMatrix);
-            cullingComputeShader.SetFloat("_MaxDrawDistance", Camera.main.farClipPlane);
-            cullingComputeShader.SetBuffer(0, "_BoundsBuffer", boundsBuffer);
-            cullingComputeShader.SetBuffer(0, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-            cullingComputeShader.Dispatch(0, Mathf.CeilToInt(objs.Count / 1024f), 1, 1);
+            cullingComputeShader.SetFloat("_MaxDrawDistance", farClipDistance);
+            cullingComputeShader.SetBuffer(kernel, "_BoundsBuffer", boundsBuffer);
+            cullingComputeShader.SetBuffer(kernel, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
+            cullingComputeShader.Dispatch(kernel, Mathf.CeilToInt(objs.Count / 64f), 1, 1);
             ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
 
-            Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer);
+            Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer, 0, null, shadowCastingMode);
         }
 
         public MeshFilter reference;
         public bool activeGroup = true;
+        public float farClipDistance = 150f;
+        public ShadowCastingMode shadowCastingMode = ShadowCastingMode.On;
 
         [SerializeField] List<MeshRenderer> objs = new List<MeshRenderer>();
 
@@ -146,7 +152,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         Matrix4x4 vp = p * v;
         foreach (var rg in renderGroups)
         {
-            if (!rg.activeGroup) rg.Draw(cullingComputeShader, v, p);
+            if (!rg.activeGroup) rg.Draw(cullingComputeShader, v, p, viewCulling);
         }
     }
 
@@ -266,6 +272,9 @@ public class RenderMeshInstancedProcedural_Editor : Editor
         
         GUILayout.Space(5);
 
+        data.viewCulling = EditorGUILayout.Toggle("View Culling", data.viewCulling);
+
+
         bool isRootChange = false;
 
         int removeIndex = -1;
@@ -289,7 +298,15 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                 }
 
                 GUILayout.EndHorizontal();
+                rg.farClipDistance = EditorGUILayout.FloatField("Max Distance", rg.farClipDistance);
+                rg.shadowCastingMode = (ShadowCastingMode)EditorGUILayout.EnumPopup("Shadow Mode",rg.shadowCastingMode);
                 GUILayout.Label("Object Count = " + rg.objectCount);
+
+                if (GUI.changed)
+                {
+                    EditorUtility.SetDirty(target);
+                    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);
+                }
             },
             () => 
             {

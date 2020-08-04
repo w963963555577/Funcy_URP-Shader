@@ -48,9 +48,7 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)
-            
-            
+            CBUFFER_START(UnityPerMaterial)                        
             half _SampleNum;
             half _SampleDensity;
             

@@ -170,11 +170,10 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 o.ase_texcoord3.zw = 0;
                 o.ase_texcoord4.w = 0;
 
-                float3 vertexValue = SAMPLE_TEXTURE2D_LOD(_PositionMask, sampler_PositionMask, ((appendResult182 * _PositionMask_ST.xy) + _PositionMask_ST.zw), unity_LODFade).r * appendResult132 / ase_objectScale;
+                float3 vertexValue = SAMPLE_TEXTURE2D_LOD(_PositionMask, sampler_PositionMask, ((appendResult182.xy * _PositionMask_ST.xy) + _PositionMask_ST.zw), unity_LODFade).r * appendResult132.xyz / ase_objectScale.xyz;
 
                 v.vertex.xyz += vertexValue;
-
-                v.ase_normal = v.ase_normal;
+                
                 
                 float3 positionWS = float3(0.0, 0.0, 0.0);
                 
