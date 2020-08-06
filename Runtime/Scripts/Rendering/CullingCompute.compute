@@ -1,5 +1,5 @@
 ﻿#pragma kernel ViewCulling
-
+#pragma kernel Default
 //Matrix4x4 v = Camera.main.worldToCameraMatrix;
 //Matrix4x4 p = Camera.main.projectionMatrix; //unity C# use opengl standard projection matrix
 //cullingComputeShader.SetMatrix("_VPMatrix", p * v); //set from C#
@@ -63,4 +63,10 @@ void ViewCulling(uint3 id: SV_DispatchThreadID)
     {
         _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
     }
+}
+
+[numthreads(64, 1, 1)]
+void Default(uint3 id: SV_DispatchThreadID)
+{
+    _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
 }
