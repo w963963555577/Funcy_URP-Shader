@@ -372,7 +372,12 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                         UNITY_TRANSFER_INSTANCE_ID(input, output);
                         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                     #endif
-                    input.positionOS = WindAnimation(input.positionOS);
+                    
+                    #ifdef _DrawMeshInstancedProcedural
+                        input.positionOS = WindAnimation(input.positionOS, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                    #else
+                        input.positionOS = WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
+                    #endif
                     
                     VertexPositionInputs vertexInput;
                     VertexNormalInputs normalInput;
@@ -384,7 +389,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                         vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
                         normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
                     #endif
-                                        
+                    
                     half3 viewDirWS = GetCameraPositionWS() - vertexInput.positionWS;
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -553,6 +558,13 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                     
                 #endif
                 
+                //WindAnimation
+                #ifdef _DrawMeshInstancedProcedural
+                    input.positionOS = WindAnimation(input.positionOS, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                #else
+                    input.positionOS = WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
+                #endif
+                
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 
                 #if UNITY_REVERSED_Z
@@ -571,8 +583,7 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 #else
                     UNITY_SETUP_INSTANCE_ID(input);
                 #endif
-                //WindAnimation
-                input.positionOS = WindAnimation(input.positionOS);
+                
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
@@ -683,7 +694,11 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 #endif
                 //WindAnimation
-                input.position = WindAnimation(input.position);
+                #ifdef _DrawMeshInstancedProcedural
+                    input.position = WindAnimation(input.position, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                #else
+                    input.position = WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
+                #endif
                 
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 float3 positionWS = float3(0.0, 0.0, 0.0);
@@ -807,7 +822,8 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                input.positionOS = WindAnimation(input.positionOS);
+                //WindAnimation
+                input.positionOS = WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 output.positionOS = input.positionOS;
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
                 VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
