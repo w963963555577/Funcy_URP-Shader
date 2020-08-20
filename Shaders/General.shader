@@ -510,6 +510,25 @@ Shader "Hidden/LWRP/General"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             #define AI_RENDERPIPELINE
+            CBUFFER_START(UnityPerMaterial)
+            float _FramesX;
+            float _FramesY;
+            float _Frames;
+            float _ImpostorSize;
+            float _Parallax;
+            float _TextureBias;
+            float _ClipMask;
+            float _DepthSize;
+            float _AI_ShadowBias;
+            float _AI_ShadowView;
+            float4 _Offset;
+            float4 _AI_SizeOffset;
+            float _EnergyConservingSpecularColor;
+            
+            #ifdef EFFECT_HUE_VARIATION
+                half4 _HueVariation;
+            #endif
+            CBUFFER_END
             
             #include "../ShaderLibrary/Impostors.hlsl"
             
@@ -590,6 +609,25 @@ Shader "Hidden/LWRP/General"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             #define AI_RENDERPIPELINE
+            CBUFFER_START(UnityPerMaterial)
+            float _FramesX;
+            float _FramesY;
+            float _Frames;
+            float _ImpostorSize;
+            float _Parallax;
+            float _TextureBias;
+            float _ClipMask;
+            float _DepthSize;
+            float _AI_ShadowBias;
+            float _AI_ShadowView;
+            float4 _Offset;
+            float4 _AI_SizeOffset;
+            float _EnergyConservingSpecularColor;
+            
+            #ifdef EFFECT_HUE_VARIATION
+                half4 _HueVariation;
+            #endif
+            CBUFFER_END
             
             #include "../ShaderLibrary/Impostors.hlsl"
             
@@ -670,6 +708,25 @@ Shader "Hidden/LWRP/General"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             #define AI_RENDERPIPELINE
+            CBUFFER_START(UnityPerMaterial)
+            float _FramesX;
+            float _FramesY;
+            float _Frames;
+            float _ImpostorSize;
+            float _Parallax;
+            float _TextureBias;
+            float _ClipMask;
+            float _DepthSize;
+            float _AI_ShadowBias;
+            float _AI_ShadowView;
+            float4 _Offset;
+            float4 _AI_SizeOffset;
+            float _EnergyConservingSpecularColor;
+            
+            #ifdef EFFECT_HUE_VARIATION
+                half4 _HueVariation;
+            #endif
+            CBUFFER_END
             
             #include "../ShaderLibrary/Impostors.hlsl"
             
@@ -760,6 +817,25 @@ Shader "Hidden/LWRP/General"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
             
             #define AI_RENDERPIPELINE
+            CBUFFER_START(UnityPerMaterial)
+            float _FramesX;
+            float _FramesY;
+            float _Frames;
+            float _ImpostorSize;
+            float _Parallax;
+            float _TextureBias;
+            float _ClipMask;
+            float _DepthSize;
+            float _AI_ShadowBias;
+            float _AI_ShadowView;
+            float4 _Offset;
+            float4 _AI_SizeOffset;
+            float _EnergyConservingSpecularColor;
+            
+            #ifdef EFFECT_HUE_VARIATION
+                half4 _HueVariation;
+            #endif
+            CBUFFER_END
             
             #include "../ShaderLibrary/Impostors.hlsl"
             

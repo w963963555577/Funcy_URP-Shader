@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PBR Base
   m_Shader: {fileID: 4800000, guid: ea44f5c82198d9543aad39bc54315cdb, type: 3}
-  m_ShaderKeywords: _DrawMeshInstancedProcedural
+  m_ShaderKeywords: 
   m_LightmapFlags: 6
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0

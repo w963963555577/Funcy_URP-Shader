@@ -153,9 +153,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
                 float _Speed;
                 float _Amount;
                 float _Distance;
-                float _ZMotion;
-                float _ZMotionSpeed;
-                float _OriginWeight;
                 half _DebugMask;
                 #ifdef _DrawMeshInstancedProcedural
                     StructuredBuffer<float4x4> _ObjectToWorldBuffer;
@@ -501,9 +498,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             float _Speed;
             float _Amount;
             float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
             half _DebugMask;
             #ifdef _DrawMeshInstancedProcedural
                 StructuredBuffer<float4x4> _ObjectToWorldBuffer;
@@ -650,9 +644,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             float _Speed;
             float _Amount;
             float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
             half _DebugMask;
             #ifdef _DrawMeshInstancedProcedural
                 StructuredBuffer<float4x4> _ObjectToWorldBuffer;
@@ -765,9 +756,6 @@ Shader "ZDShader/LWRP/PBR Base(Simple)"
             float _Speed;
             float _Amount;
             float _Distance;
-            float _ZMotion;
-            float _ZMotionSpeed;
-            float _OriginWeight;
             half _DebugMask;
             CBUFFER_END
             #include "../../../ShaderLibrary/VertexAnimation.hlsl"

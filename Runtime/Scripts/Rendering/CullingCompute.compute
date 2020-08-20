@@ -1,15 +1,20 @@
-﻿#pragma kernel ViewCulling
-#pragma kernel Default
-//Matrix4x4 v = Camera.main.worldToCameraMatrix;
-//Matrix4x4 p = Camera.main.projectionMatrix; //unity C# use opengl standard projection matrix
-//cullingComputeShader.SetMatrix("_VPMatrix", p * v); //set from C#
-float4x4 _VMatrix;
+﻿float4x4 _VMatrix;
 float4x4 _PMatrix;
-
+StructuredBuffer<float3x2> _BoundsBuffer; //will not change until instance count change
 float _MaxDrawDistance;
 
-StructuredBuffer<float3x2> _BoundsBuffer; //will not change until instance count change
 AppendStructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
+RWStructuredBuffer<uint> _VisibleTransformIDBuffer; //will set counter to 0 per frame, then fill in by this compute shader
+
+#pragma kernel Default
+[numthreads(64, 1, 1)]
+void Default(uint3 id: SV_DispatchThreadID)
+{
+    _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
+}
+
+#pragma kernel ViewCulling
+#pragma kernel ViewRendererCulling
 
 float4 WorldToViewPoint(float4x4 VPMatrix, float3 worloPos)
 {
@@ -18,12 +23,9 @@ float4 WorldToViewPoint(float4x4 VPMatrix, float3 worloPos)
     return result;
 }
 
-[numthreads(64, 1, 1)]
-void ViewCulling(uint3 id: SV_DispatchThreadID)
+bool BoundsInView(float3 _center, float3 _extents)
 {
     float4x4 _VPMatrix = mul(_PMatrix, _VMatrix);
-    float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
-    float3 _extents = _BoundsBuffer[id.x]._m01_m11_m21;
     
     float3 p0 = _center;
     float3 p1 = _center + float3(+_extents.x, +_extents.y, +_extents.z);
@@ -59,14 +61,43 @@ void ViewCulling(uint3 id: SV_DispatchThreadID)
     float minY = min(min(min(p1.y, p2.y), min(p3.y, p4.y)), min(min(p5.y, p6.y), min(p7.y, p8.y)));
     
     float2 allow = float2(1.0, 1.0);
-    if (vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y)
+    return vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y;
+}
+
+[numthreads(64, 1, 1)]
+void ViewCulling(uint3 id: SV_DispatchThreadID)
+{
+    float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
+    float3 _extents = _BoundsBuffer[id.x]._m01_m11_m21;
+    
+    bool boundInView = BoundsInView(_center, _extents);
+    
+    if (boundInView)
     {
         _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
+        _VisibleTransformIDBuffer[id.x] = 1;
+    }
+    else
+    {
+        _VisibleTransformIDBuffer[id.x] = 0;
     }
 }
 
 [numthreads(64, 1, 1)]
-void Default(uint3 id: SV_DispatchThreadID)
+void ViewRendererCulling(uint3 id: SV_DispatchThreadID)
 {
-    _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
+    float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
+    float3 _extents = _BoundsBuffer[id.x]._m01_m11_m21;
+    
+    bool boundInView = BoundsInView(_center, _extents);
+    
+    if (boundInView)
+    {        
+        _VisibleTransformIDBuffer[id.x] = 1;
+    }
+    else
+    {
+        _VisibleTransformIDBuffer[id.x] = 0;
+    }
 }
+

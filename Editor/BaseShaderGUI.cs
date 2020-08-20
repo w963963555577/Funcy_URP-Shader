@@ -580,7 +580,7 @@ namespace UnityEditor
 
             if (animBools.Find(a => a.name == text) == null)
             {
-                if (animBools.Count == 0)
+                if (animBools.Count == 0 && materialEditor != null)
                 {
                     EditorApplication.update += () => { materialEditor.Repaint();
                         foreach (var obj in materialEditor.targets)

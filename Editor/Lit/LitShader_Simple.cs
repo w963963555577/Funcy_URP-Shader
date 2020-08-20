@@ -145,16 +145,22 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
         {
-            base.OnGUI(materialEditorIn,properties);
-            
-            DrawArea("Tree Winding",()=> {
-                materialEditor.ShaderProperty(speed, speed.displayName);
-                materialEditor.ShaderProperty(amount, amount.displayName);
-                materialEditor.ShaderProperty(distance, distance.displayName);
-                materialEditor.TexturePropertySingleLine(positionMask.displayName.ToGUIContent(), positionMask);
-                materialEditor.TextureScaleOffsetProperty(positionMask);
-                materialEditor.ShaderProperty(debugMask, debugMask.displayName);
+            DrawArea("Lit Setting", () =>
+            {
+                base.OnGUI(materialEditorIn, properties);
             });
+            if(materialEditor != null)
+            {
+                DrawArea("Tree Winding", () => {
+                    materialEditor.ShaderProperty(speed, speed.displayName);
+                    materialEditor.ShaderProperty(amount, amount.displayName);
+                    materialEditor.ShaderProperty(distance, distance.displayName);
+                    materialEditor.TexturePropertySingleLine(positionMask.displayName.ToGUIContent(), positionMask);
+                    materialEditor.TextureScaleOffsetProperty(positionMask);
+                    materialEditor.ShaderProperty(debugMask, debugMask.displayName);
+                });
+            }
+            
             
         }
     }

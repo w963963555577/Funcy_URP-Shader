@@ -177,8 +177,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             // (MaterialProperty value might come from renderer material property block)
             var hasGlossMap = false;
             var isSpecularWorkFlow = false;
-            var opaque = ((BaseShaderGUI.SurfaceType)material.GetFloat("_Surface") ==
-                          BaseShaderGUI.SurfaceType.Opaque);
+             
+            var opaque = ((BaseShaderGUI.SurfaceType)material.GetFloat("_Surface") == BaseShaderGUI.SurfaceType.Opaque);
+
             if (material.HasProperty("_WorkflowMode"))
             {
                 isSpecularWorkFlow = (WorkflowMode)material.GetFloat("_WorkflowMode") == WorkflowMode.Specular;

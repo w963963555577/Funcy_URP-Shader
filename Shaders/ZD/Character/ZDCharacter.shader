@@ -690,8 +690,7 @@ Shader "ZDShader/LWRP/Character"
                     Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, browReplace, mouthReplace, step_var, blackArea, skinArea, eyeArea);
                     
                     half3 colorRGB_A = step_var.rgb;
-                    half3 colorRGB_B = _diffuse_var.rgb;
-                    
+                    half3 colorRGB_B = _diffuse_var.rgb;                    
                     
                     half3 colorHSV_A = RGB2HSV(colorRGB_A);
                     half3 colorHSV_B = RGB2HSV(colorRGB_B);

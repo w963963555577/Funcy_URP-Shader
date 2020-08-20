@@ -22,7 +22,10 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
         private ComputeBuffer boundsBuffer;
         private ComputeBuffer visibleInstanceOnlyTransformBuffer;
+        private ComputeBuffer visibleTransformIDBuffer;
+        uint[] visibleTransformID;
         private ComputeBuffer argsBuffer;
+
 
         private Material instancedMaterial;
         public void UpdateBuffer()
@@ -31,11 +34,14 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Release();
             if (boundsBuffer != null) boundsBuffer.Release();
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Release();
+            if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Release();
 
             _ObjectToWorldBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
             _WorldToObjectBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
             boundsBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 3 * 2); //float3 posWS only, per grass
             visibleInstanceOnlyTransformBuffer = new ComputeBuffer(objs.Count, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
+            visibleTransformIDBuffer = new ComputeBuffer(objs.Count, sizeof(uint)); //uint only, per visible grass
+            visibleTransformID = new uint[objs.Count];
 
             float4x4[] o2w =new float4x4[objs.Count];
             float4x4[] w2o =new float4x4[objs.Count];
@@ -60,8 +66,8 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
             boundsBuffer.SetData(bounds);
             mat.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-
-
+            mat.SetBuffer("_VisibleTransformIDBuffer", visibleTransformIDBuffer);
+            
             ///////////////////////////
             // Indirect args buffer
             ///////////////////////////
@@ -85,8 +91,10 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (instancedMaterial == null)
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
 
-            if (!instancedMaterial.IsKeywordEnabled("_DrawMeshInstancedProcedural"))
-                instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural");
+            if (activeGroup)
+            { instancedMaterial.DisableKeyword("_DrawMeshInstancedProcedural"); }
+            else
+            { instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural"); }            
 
             
             //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
@@ -98,10 +106,34 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             cullingComputeShader.SetFloat("_MaxDrawDistance", farClipDistance);
             cullingComputeShader.SetBuffer(kernel, "_BoundsBuffer", boundsBuffer);
             cullingComputeShader.SetBuffer(kernel, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
+            cullingComputeShader.SetBuffer(kernel, "_VisibleTransformIDBuffer", visibleTransformIDBuffer);
             cullingComputeShader.Dispatch(kernel, Mathf.CeilToInt(objs.Count / 64f), 1, 1);
-            ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
+            
 
-            Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer, 0, null, shadowCastingMode);
+            if (!activeGroup)
+            {
+                ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
+                Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer, 0, null, shadowCastingMode);
+            }
+            else
+            {
+                if (viewCulling)
+                {
+                    visibleTransformIDBuffer.GetData(visibleTransformID);
+                    for (int i = 0; i < objs.Count; i++)
+                    {
+                        objs[i].enabled = visibleTransformID[i] == 1;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < objs.Count; i++)
+                    {
+                        objs[i].enabled = true;
+                    }
+                }
+            }
+
         }
 
         public MeshFilter reference;
@@ -127,6 +159,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Dispose(); _WorldToObjectBuffer = null;
             if (boundsBuffer != null) boundsBuffer.Dispose(); boundsBuffer = null;
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose(); visibleInstanceOnlyTransformBuffer = null;
+            if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Dispose(); visibleTransformIDBuffer = null;
             if (argsBuffer != null) argsBuffer.Release(); argsBuffer = null;
 
             var mat = reference.GetComponent<MeshRenderer>().sharedMaterial;            
@@ -141,7 +174,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     {
         foreach (var rg in renderGroups)
         {
-            if (!rg.activeGroup) rg.UpdateBuffer();
+            rg.UpdateBuffer();
         }
     }
     void LateUpdate()
@@ -151,7 +184,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         Matrix4x4 vp = p * v;
         foreach (var rg in renderGroups)
         {
-            if (!rg.activeGroup) rg.Draw(cullingComputeShader, v, p, viewCulling);
+            rg.Draw(cullingComputeShader, v, p, viewCulling);
         }
     }
 
@@ -159,7 +192,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     {
         foreach (var rg in renderGroups)
         {
-            if (!rg.activeGroup) rg.UpdateBuffer();            
+            rg.UpdateBuffer();            
         }
     }
 
@@ -305,15 +338,9 @@ public class RenderMeshInstancedProcedural_Editor : Editor
             {
                 rg.activeGroup = GUILayout.Toggle(rg.activeGroup, "", GUILayout.Width(15));
                 if (GUI.changed || isRootChange)
-                {
-                    if (rg.activeGroup)
-                    {
-                        rg.Dispose();                        
-                    }
-                    else
-                    {
-                        rg.UpdateBuffer();
-                    }
+                {                    
+                    var mat = rg.reference.GetComponent<MeshRenderer>().sharedMaterial;
+                                                                                    
                     foreach (var o in rg.GetObjects())
                     {
                         o.gameObject.SetActive(rg.activeGroup);

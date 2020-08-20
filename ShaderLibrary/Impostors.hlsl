@@ -1,8 +1,3 @@
-// Amplify Impostors
-// Copyright (c) Amplify Creations, Lda <info@amplify.pt>
-
-#ifndef AMPLIFYIMPOSTORS_INCLUDED
-#define AMPLIFYIMPOSTORS_INCLUDED
 
 #include "ImpostorsConfig.hlsl" 
 
@@ -57,30 +52,6 @@ sampler2D _Emission;
 
 #if defined(AI_HD_RENDERPIPELINE) && ( AI_HDRP_VERSION >= 50702 )
 	TEXTURE2D(_Features);
-#endif
-
-#if defined(AI_RENDERPIPELINE) && ( AI_HDRP_VERSION >= 50702 || AI_LWRP_VERSION >= 50702 ) 
-CBUFFER_START(UnityPerMaterial)
-#endif
-float _FramesX;
-float _FramesY;
-float _Frames;
-float _ImpostorSize;
-float _Parallax;
-float _TextureBias;
-float _ClipMask;
-float _DepthSize;
-float _AI_ShadowBias;
-float _AI_ShadowView;
-float4 _Offset;
-float4 _AI_SizeOffset;
-float _EnergyConservingSpecularColor;
-
-#ifdef EFFECT_HUE_VARIATION
-	half4 _HueVariation;
-#endif
-#if defined(AI_RENDERPIPELINE) && ( AI_HDRP_VERSION >= 50702 || AI_LWRP_VERSION >= 50702 ) 
-CBUFFER_END
 #endif
 
 
@@ -147,7 +118,7 @@ inline void OctaImpostorVertex( inout float4 vertex, inout float3 normal, inout 
 	float fractionsFrame = fractions.x;
 	float fractionsPrevFrame = fractions.y;
 	float fractionsUVscale = fractions.z;
-
+	
 	// Basic data
 	float3 worldOrigin = 0;
 	float4 perspective = float4( 0, 0, 0, 1 );
@@ -584,4 +555,4 @@ inline void SphereImpostorFragment( inout SurfaceOutputStandardSpecular o, out f
 	if( UNITY_NEAR_CLIP_VALUE < 0 )
 		clipPos = clipPos * 0.5 + 0.5;
 }
-#endif //AMPLIFYIMPOSTORS_INCLUDED
+
