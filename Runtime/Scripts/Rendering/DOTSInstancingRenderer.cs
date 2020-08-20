@@ -16,14 +16,18 @@ using System.Linq;
 public class DOTSInstancingRenderer : MonoBehaviour
 {    
     private void Awake()
+    {        
+
+    }
+    // Start is called before the first frame update
+    private void OnEnable()
     {
-        if (!this.enabled) return;
         World world = World.DefaultGameObjectInjectionWorld;
         var entityManager = world.EntityManager;
         foreach (var ren in GetComponentsInChildren<MeshRenderer>())
         {
             if (!ren.gameObject.activeInHierarchy) continue;
-            EntityArchetype archetype = entityManager.CreateArchetype(         
+            EntityArchetype archetype = entityManager.CreateArchetype(
             typeof(RenderMesh),
             typeof(RenderBounds),
             typeof(LocalToWorld));
@@ -38,18 +42,14 @@ public class DOTSInstancingRenderer : MonoBehaviour
             {
                 mesh = ren.GetComponent<MeshFilter>().sharedMesh,
                 material = ren.sharedMaterial,
-                castShadows=ren.shadowCastingMode,
-                 layer= ren.gameObject.layer, receiveShadows=ren.receiveShadows, subMesh=0
+                castShadows = ren.shadowCastingMode,
+                layer = ren.gameObject.layer,
+                receiveShadows = ren.receiveShadows,
+                subMesh = 0
             });
             ren.enabled = false;
         }
-        
-    }
-    // Start is called before the first frame update
-    private void OnEnable()
-    {
 
     }
 
-    
 }
