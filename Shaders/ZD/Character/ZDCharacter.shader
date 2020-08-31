@@ -83,7 +83,7 @@ Shader "ZDShader/LWRP/Character"
         [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
         [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
         
-        [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
+        /*[IntRange]*/_SelectBrow ("Select Brow", Range(1, 4)) = 1
         _BrowRect ("Brow UV Rect", Vector) = (0, 0.45, 0.855, 0.3)
         [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
         _FaceRect ("Eyes UV Rect", Vector) = (0, -0.02, 0.855, 0.37)
@@ -581,12 +581,18 @@ Shader "ZDShader/LWRP/Character"
                 half pbr = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 
                 #if _ExpressionEnable
+                    
+                    _SelectBrow = round(_SelectBrow);
+                    _SelectFace = round(_SelectFace);
+                    _SelectMouth = round(_SelectMouth);
+
                     half maskBlur = 0.01;
                     #if _ExpressionFormat_FaceSheet
                         half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
                         half2 browOffset = half2(0.5, 1.0 / 8.0);
                         half2 browArea = GetBrowArea(i.uv01.zw, 8.0, _SelectBrow, browOffset);
-                        half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0, _SelectBrow, browOffset);
+                        half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0,
+                        _SelectBrow, browOffset);
                         half2 browUV = ((browArea - browPivot) * _BrowTRS.xy) + browPivot + half2(_BrowTRS.z * browOffset.x, _BrowTRS.w * browOffset.y);
                         half2 browMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _BrowTRS.xy + half2(0.5, 0.5) + _BrowTRS.zw;
                         half2 browMaskRect = abs(((browMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
@@ -690,7 +696,7 @@ Shader "ZDShader/LWRP/Character"
                     Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, browReplace, mouthReplace, step_var, blackArea, skinArea, eyeArea);
                     
                     half3 colorRGB_A = step_var.rgb;
-                    half3 colorRGB_B = _diffuse_var.rgb;                    
+                    half3 colorRGB_B = _diffuse_var.rgb;
                     
                     half3 colorHSV_A = RGB2HSV(colorRGB_A);
                     half3 colorHSV_B = RGB2HSV(colorRGB_B);
