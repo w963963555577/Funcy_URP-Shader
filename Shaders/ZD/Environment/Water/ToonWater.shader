@@ -24,14 +24,9 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
     }
     
     SubShader
-    {
-        
-        
-        Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent" }
-        Cull Back
-        HLSLINCLUDE
-        #pragma target 3.0
-        ENDHLSL
+    {                
+        Tags { "RenderPipeline" = "UniversalPipeline" }
+
         
         Pass
         {
@@ -84,7 +79,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             
             
             sampler2D _NormalMap;
-            uniform float4 _CameraDepthTexture_TexelSize;
+            
             sampler2D _FoamMap;
             sampler2D _RampMap;
             //textures
@@ -93,9 +88,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             
             TEXTURE2D(_MobileSSPR_ColorRT);
             sampler LinearClampSampler;
-            
-            sampler2D _SSPR_UVNoiseTex;
-            sampler2D _ReflectionAreaTex;
+
             CBUFFER_START(UnityPerMaterial)
             float _WaveDirection;
             float _WaveSpeed;

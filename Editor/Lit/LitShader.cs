@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.Rendering;
 
 namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
@@ -8,13 +9,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     {
         // Properties
         private LitGUI.LitProperties litProperties;
+        private MaterialProperty ssprEnabled;
 
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
-
+            ssprEnabled = FindProperty("_SSPREnabled", properties, false);
+            
         }
 
         // material changed check
@@ -24,6 +27,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 throw new ArgumentNullException("material");
 
             SetMaterialKeywords(material, LitGUI.SetMaterialKeywords);
+
+            if (material.HasProperty("_SSPREnabled"))
+                CoreUtils.SetKeyword(material, "_SSPR_OFF",
+                    material.GetFloat("_SSPREnabled") == 1.0f);
         }
 
         // material main surface options
@@ -124,10 +131,64 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             MaterialChanged(material);
         }
+
         public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
         {
-            base.OnGUI(materialEditorIn, properties);
+            if (materialEditorIn == null)
+                throw new ArgumentNullException("materialEditorIn");
 
+            FindProperties(properties); // MaterialProperties can be animated so we do not cache them but fetch them every event to ensure animated values are updated correctly
+            materialEditor = materialEditorIn;
+            Material material = materialEditor.target as Material;
+
+            // Make sure that needed setup (ie keywords/renderqueue) are set up if we're switching some existing
+            // material to a lightweight shader.
+            if (m_FirstTimeApply)
+            {
+                OnOpenGUI(material, materialEditorIn);
+                m_FirstTimeApply = false;
+            }
+
+            if (material == null)
+                throw new ArgumentNullException("material");
+
+            EditorGUI.BeginChangeCheck();
+
+
+            DrawArea(Styles.SurfaceInputs.text, () =>
+            {
+                DrawSurfaceInputs(material);
+                EditorGUILayout.Space();
+            });
+
+
+            DrawArea(Styles.AdvancedLabel.text, () =>
+            {
+                DrawAdvancedOptions(material);
+                EditorGUILayout.Space();
+            });
+
+            DrawArea(Styles.SurfaceOptions.text, () =>
+            {
+                DrawSurfaceOptions(material);
+                EditorGUILayout.Space();
+            });
+
+            DrawAdditionalFoldouts(material);
+            if (material.HasProperty("_SSPREnabled"))
+            {
+                DrawArea("Screen Space Planar Reflections", () =>
+            {
+                ChangeCheckArea_Float(material, ssprEnabled, "Enabled");
+
+            }); ;
+            }
+            if (EditorGUI.EndChangeCheck())
+            {
+                foreach (var obj in materialEditor.targets)
+                    MaterialChanged((Material)obj);
+            }
+                        
         }
     }
 }

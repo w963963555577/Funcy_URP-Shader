@@ -46,7 +46,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
 
 
-        MaterialProperty color { get; set; }
+        MaterialProperty color { get; set; } 
         MaterialProperty colorFar { get; set; }
         MaterialProperty normalMap { get; set; }
         MaterialProperty refractionScale { get; set; }
@@ -63,8 +63,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty depth { get; set; }
         MaterialProperty depthArea { get; set; }
         MaterialProperty depthHard { get; set; }
-
         
+
 
         bool drawBaseMap = false;
         void FindProperties()
@@ -91,6 +91,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             depth = FindProperty("_Depth", props);
             depthArea = FindProperty("_DepthArea", props);
             depthHard = FindProperty("_DepthHard", props);
+            
         }
         public override void OnEnable()
         {            
@@ -122,7 +123,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.TexturePropertySingleLine(reflectRampMap.displayName.ToGUIContent(), reflectRampMap);
                 materialEditor.ShaderProperty(specularColor, specularColor.displayName);
                 materialEditor.ShaderProperty(specular, specular.displayName);
-
+                
             });
 
             DrawArea("Foam & Wave", () => {

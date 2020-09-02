@@ -26,6 +26,7 @@ Shader "ZDShader/LWRP/PBR Base"
         
         [ToggleOff] _SpecularHighlights ("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections ("Environment Reflections", Float) = 1.0
+        [ToggleOff] _SSPREnabled ("Screen Space Planar Reflections", Float) = 0.0
         
         _BumpScale ("Scale", Float) = 1.0
         _BumpMap ("Normal Map", 2D) = "bump" { }
@@ -82,6 +83,8 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma shader_feature _OCCLUSIONMAP
             
+            //SSPR
+            #pragma shader_feature _SSPR_OFF
             #pragma shader_feature _SPECULARHIGHLIGHTS_OFF
             #pragma shader_feature _GLOSSYREFLECTIONS_OFF
             #pragma shader_feature _SPECULAR_SETUP
@@ -97,6 +100,9 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
             
             #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
+            
+            //SSPR
+            #pragma multi_compile _MobileSSPR
             
             // -------------------------------------
             // Unity defined keywords
@@ -117,6 +123,8 @@ Shader "ZDShader/LWRP/PBR Base"
                 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
                 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
                 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+                TEXTURE2D(_MobileSSPR_ColorRT);
+                sampler LinearClampSampler;
                 
                 CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -255,6 +263,9 @@ Shader "ZDShader/LWRP/PBR Base"
                         float4 shadowCoord: TEXCOORD7;
                     #endif
                     
+                    #ifdef _SSPR_OFF
+                        float4 positionSS: TEXCOORD8;
+                    #endif
                     float4 positionCS: SV_POSITION;
                     
                     #ifdef _DrawMeshInstancedProcedural
@@ -385,8 +396,58 @@ Shader "ZDShader/LWRP/PBR Base"
                     
                     output.positionCS = vertexInput.positionCS;
                     
+                    #ifdef _SSPR_OFF
+                        output.positionSS = ComputeScreenPos(output.positionCS);
+                    #endif
+                    
                     return output;
                 }
+                
+                half3 GlobalIllumination_SSPR(BRDFData brdfData, half3 bakedGI, half occlusion, half3 normalWS, half3 viewDirectionWS, float2 screenUV)
+                {
+                    half3 reflectVector = reflect(-viewDirectionWS, normalWS);
+                    half fresnelTerm = Pow4(1.0 - saturate(dot(normalWS, viewDirectionWS)));
+                    
+                    half3 indirectDiffuse = bakedGI * occlusion;
+                    half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, brdfData.perceptualRoughness, occlusion);
+                    
+                    #ifdef _SSPR_OFF
+                        half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
+                        indirectSpecular = lerp(indirectSpecular, ssrColor.rgb, ssrColor.a);
+                    #endif
+                    
+                    return EnvironmentBRDF(brdfData, indirectDiffuse, indirectSpecular, fresnelTerm);
+                }
+                
+                half4 UniversalFragmentPBR_SSPR(InputData inputData, half3 albedo, half metallic, half3 specular,
+                half smoothness, half occlusion, half3 emission, half alpha, float2 screenUV)
+                {
+                    BRDFData brdfData;
+                    InitializeBRDFData(albedo, metallic, specular, smoothness, alpha, brdfData);
+                    
+                    Light mainLight = GetMainLight(inputData.shadowCoord);
+                    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, half4(0, 0, 0, 0));
+                    
+                    half3 color = GlobalIllumination_SSPR(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS, screenUV);
+                    color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
+                    
+                    #ifdef _ADDITIONAL_LIGHTS
+                        uint pixelLightCount = GetAdditionalLightsCount();
+                        for (uint lightIndex = 0u; lightIndex < pixelLightCount; ++ lightIndex)
+                        {
+                            Light light = GetAdditionalLight(lightIndex, inputData.positionWS);
+                            color += LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS);
+                        }
+                    #endif
+                    
+                    #ifdef _ADDITIONAL_LIGHTS_VERTEX
+                        color += inputData.vertexLighting * brdfData.diffuse;
+                    #endif
+                    
+                    color += emission;
+                    return half4(color, alpha);
+                }
+                
                 
                 // Used in Standard (Physically Based) shader
                 half4 LitPassFragment(Varyings input): SV_Target
@@ -401,10 +462,20 @@ Shader "ZDShader/LWRP/PBR Base"
                     
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
+                    float2 screenUV = 0.0;
                     
-                    half4 color = UniversalFragmentPBR(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, surfaceData.alpha);
+                    #ifdef _SSPR_OFF
+                        input.positionSS /= input.positionSS.w;
+                        input.positionSS.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? input.positionSS.z: input.positionSS.z * 0.5 + 0.5;
+                        screenUV = input.positionSS;
+                        #if defined(UNITY_SINGLE_PASS_STEREO)
+                            screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
+                        #endif
+                    #endif
                     
+                    half4 color = UniversalFragmentPBR_SSPR(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, surfaceData.alpha, screenUV);
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                    
                     return color;
                 }
                 
@@ -413,7 +484,7 @@ Shader "ZDShader/LWRP/PBR Base"
             ENDHLSL
             
         }
-        
+        /*
         // Used for rendering shadowmaps
         // Used for rendering shadowmaps
         Pass
@@ -629,7 +700,7 @@ Shader "ZDShader/LWRP/PBR Base"
             {
                 Varyings output = (Varyings)0;
                 #ifdef _DrawMeshInstancedProcedural
-                    uint id =  _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
                 #else
                     UNITY_SETUP_INSTANCE_ID(input);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
@@ -660,7 +731,8 @@ Shader "ZDShader/LWRP/PBR Base"
             ENDHLSL
             
         }
-        UsePass "Universal Render Pipeline/Lit/Meta"
+        */
+        //UsePass "Universal Render Pipeline/Lit/Meta"
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
