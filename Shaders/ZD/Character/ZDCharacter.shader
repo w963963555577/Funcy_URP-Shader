@@ -278,7 +278,7 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _SHADOWS_SOFT
-            
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
             
             
             #pragma shader_feature_local _CustomLighting
@@ -585,7 +585,7 @@ Shader "ZDShader/LWRP/Character"
                     _SelectBrow = round(_SelectBrow);
                     _SelectFace = round(_SelectFace);
                     _SelectMouth = round(_SelectMouth);
-
+                    
                     half maskBlur = 0.01;
                     #if _ExpressionFormat_FaceSheet
                         half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
@@ -757,6 +757,13 @@ Shader "ZDShader/LWRP/Character"
                 ;
                 emissive += (fresnel) * (1.0 - shadowTotal);
                 
+                
+                
+                emissive = emissive + lerp(0, smoothstep(1.0 - _EdgeLightWidth, 1, saturate(fresnel * 10.0 * (1.0 - shadowTotal))), _EdgeLightIntensity);
+                
+                //Fog
+                float fogFactor = i.positionWSAndFogFactor.w;
+                
                 // Additional lights loop
                 #ifdef _ADDITIONAL_LIGHTS
                     
@@ -777,11 +784,6 @@ Shader "ZDShader/LWRP/Character"
                     emissive += additionalLightColor * diffuseColor;
                 #endif
                 
-                
-                emissive = emissive + lerp(0, smoothstep(1.0 - _EdgeLightWidth, 1, saturate(fresnel * 10.0 * (1.0 - shadowTotal))), _EdgeLightIntensity);
-                
-                //Fog
-                float fogFactor = i.positionWSAndFogFactor.w;
                 
                 float3 finalColor = emissive.rgb;
                 

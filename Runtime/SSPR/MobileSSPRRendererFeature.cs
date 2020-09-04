@@ -12,6 +12,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
         [System.Serializable]
         public class PassSettings
         {
+            public RenderPassEvent Event = RenderPassEvent.AfterRenderingTransparents;
             [Header("Settings")]
             public bool shouldRenderSSPR = true;
             public float horizontalReflectionPlaneHeightWS = 0.01f; //default higher than ground a bit, to avoid ZFighting if user placed a ground plane at y=0
@@ -209,7 +210,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             m_ScriptablePass = new CustomRenderPass(Settings);
 
             // Configures where the render pass should be injected.
-            m_ScriptablePass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;//we must wait _CameraOpaqueTexture & _CameraDepthTexture is usable
+            m_ScriptablePass.renderPassEvent = Settings.Event;//we must wait _CameraOpaqueTexture & _CameraDepthTexture is usable
         }
 
         // Here you can inject one or multiple render passes in the renderer.

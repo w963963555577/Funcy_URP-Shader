@@ -35,7 +35,7 @@ Shader "ZDShader/LWRP/Projector/Shape"
     
     SubShader
     {
-        Tags { "RenderType" = "Overlay" "RenderPipeline" = "UniversalPipeline" "Queue" = "Transparent" "IgnoreProjector" = "True" }
+        Tags { "RenderType" = "Overlay" "Queue" = "Transparent-499" "DisableBatching" = "True" }
         
         Pass
         {
@@ -45,10 +45,9 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 Comp[_StencilComp]
             }
             
-            Cull Front
-            ZTest[_ZTest]
-            
+            Cull Front                        
             ZWrite Off
+            ZTest [_ZTest]
             Blend SrcAlpha One
             
             HLSLPROGRAM
@@ -167,12 +166,10 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 
                 float mask = (abs(decalSpaceScenePos.x) < 0.5) * (abs(decalSpaceScenePos.y) < 0.5) * (abs(decalSpaceScenePos.z) < 0.5);
                 
-                #if _ProjectionAngleDiscardEnable
-                    float3 normalized_ddx = normalize(ddx(decalSpaceScenePos));
-                    float3 normalized_ddy = normalize(ddy(decalSpaceScenePos));
-                    float3 decalSpaceHardNormal = cross(normalized_ddx, normalized_ddy);
-                    mask *= decalSpaceHardNormal.z > _ProjectionAngleDiscardThreshold;
-                #endif
+                
+                float3 decalSpaceHardNormal = normalize(cross(ddx(decalSpaceScenePos), ddy(decalSpaceScenePos)));
+                mask *= decalSpaceHardNormal.z > _ProjectionAngleDiscardThreshold ? 1.0: 0.0;//compare scene hard normal with decal projector's dir, decalSpaceHardNormal.z equals dot(decalForwardDir,sceneHardNormalDir)
+                
                 //call discard
                 clip(mask - 0.5);//if ZWrite is off, clip() is fast enough on mobile, because it won't access the DepthBuffer, so no pipeline stall.
                 //===================================================
