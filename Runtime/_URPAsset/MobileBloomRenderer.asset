@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 567e67448958ca54e90ac29f2e84aa2f, type: 3}
   m_Name: MobileBloomPass
   m_EditorClassIdentifier: 
+  m_Active: 1
   settings:
-    Event: 1000
+    Event: 550
     blitMaterial: {fileID: 2100000, guid: 72af3f7302ef4f94eb9e46bc820b8df0, type: 2}
     BlurAmount: 1
     BloomAmount: 1.5
@@ -35,6 +36,7 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -6529504306141599248}
   - {fileID: 6983396807854424833}
+  m_RendererFeatureMap: 
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   shaders:
     blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
@@ -69,6 +71,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaad5c85f2c809042933d794a0ae6d8c, type: 3}
   m_Name: MobileSSPR
   m_EditorClassIdentifier: 
+  m_Active: 1
   Settings:
     shouldRenderSSPR: 1
     horizontalReflectionPlaneHeightWS: 0.01
