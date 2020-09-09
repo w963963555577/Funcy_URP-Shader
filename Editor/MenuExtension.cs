@@ -155,17 +155,56 @@ public class MenuExtension
     }
     public class CreateAssetMenu
     {
-        [MenuItem("Assets/ZD/Update Material Property to Google Sheets",true)]
-        public static bool UpdateMaterialPropertyToGoogleSheets_Validator()
+        [MenuItem("Assets/ZD/複製變色RGB", true)]
+        public static bool CopyDiscolorationInfo_Validator()
         {           
             return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/LWRP/Character";
         }
-        [MenuItem("Assets/ZD/Update Material Property to Google Sheets", false, 1001)]
-        public static void UpdateMaterialPropertyToGoogleSheets()
+        [MenuItem("Assets/ZD/複製變色RGB", false, 1001)]
+        public static void CopyDiscolorationInfo()
         {
-            string url = "https://script.google.com/macros/s/AKfycbzO4imjFLeMWQ-e-mYGbt3hXk96_-hBUHRQQiiL6nN4hhvCL5Q/exec";
-            WWWForm form = new WWWForm();
-            form.AddField("sheetName", "Skin-Eyes-Hair");
+            Material referenceMaterial = Selection.activeObject as Material;
+            Color skinColor, eyesColor, hairColor, headressColor1, headressColor2, color1, color2, color3, color4;
+            Color emissionColor, specularColor;
+            Color shadowColor1, shadowColor2, shadowColor3;
+            skinColor      = referenceMaterial.GetColor("_DiscolorationColor_1");
+            eyesColor      = referenceMaterial.GetColor("_DiscolorationColor_2");
+            hairColor      = referenceMaterial.GetColor("_DiscolorationColor_7");
+            headressColor1 = referenceMaterial.GetColor("_DiscolorationColor_8");
+            headressColor2 = referenceMaterial.GetColor("_DiscolorationColor_9");
+            color1         = referenceMaterial.GetColor("_DiscolorationColor_3");
+            color2         = referenceMaterial.GetColor("_DiscolorationColor_4");
+            color3         = referenceMaterial.GetColor("_DiscolorationColor_5");
+            color4         = referenceMaterial.GetColor("_DiscolorationColor_6");
+            emissionColor  = referenceMaterial.GetColor("_EmissionColor");
+            specularColor  = referenceMaterial.GetColor("_SpecularColor");
+            shadowColor1   = referenceMaterial.GetColor("_ShadowColor0");
+            shadowColor2   = referenceMaterial.GetColor("_ShadowColor1");
+            shadowColor3   = referenceMaterial.GetColor("_ShadowColorElse");
+            char tab = '	';
+
+            GUIUtility.systemCopyBuffer = string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}", tab,
+                 ColorToSheetString(skinColor),
+                 ColorToSheetString(eyesColor),
+                 ColorToSheetString(hairColor),
+                 ColorToSheetString(headressColor1),
+                 ColorToSheetString(headressColor2),
+                 ColorToSheetString(color1),
+                 ColorToSheetString(color2),
+                 ColorToSheetString(color3),
+                 ColorToSheetString(color4),
+                 ColorToSheetString(emissionColor),
+                 ColorToSheetString(specularColor),
+                 ColorToSheetString(shadowColor1),
+                 ColorToSheetString(shadowColor2),
+                 ColorToSheetString(shadowColor3)
+                );
+        }
+
+        static string ColorToSheetString(Color c)
+        {
+            char tab = '	';
+            return string.Format("{1}{0}{2}{0}{3}", tab, c.r.ToString("0.00"), c.g.ToString("0.00"), c.b.ToString("0.00"));
         }
     }
 
