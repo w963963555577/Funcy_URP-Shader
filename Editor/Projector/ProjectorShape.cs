@@ -8,6 +8,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     internal class ProjectorShape : BaseFuncyShaderGUI
     {
         MaterialProperty color { get; set; }
+        MaterialProperty amount { get; set; }
         MaterialProperty circleSector { get; set; }
         MaterialProperty rectangle { get; set; }
 
@@ -28,6 +29,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         void FindProperties()
         {
             color = FindProperty("_Color", props);
+            amount = FindProperty("_Amount", props);
             circleSector = FindProperty("_CircleSector", props);
             rectangle = FindProperty("_Rectangle", props);
 
@@ -103,6 +105,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             DrawArea("Base", () => {
                 materialEditor.ShaderProperty(color, color.displayName);
                 materialEditor.ShaderProperty(falloff, falloff.displayName);
+                materialEditor.ShaderProperty(amount, amount.displayName);
+                
                 materialEditor.EnableInstancingField();
             });
 

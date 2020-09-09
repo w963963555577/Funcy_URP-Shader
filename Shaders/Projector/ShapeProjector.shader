@@ -6,7 +6,9 @@ Shader "ZDShader/LWRP/Projector/Shape"
     Properties
     {
         [Header(Please use a cube to render)]
-        _Color ("Color", color) = (1, 1, 1, 1)
+        [HDR]_Color ("Color", color) = (1, 1, 1, 1)
+        
+        _Amount ("Amount", range(0, 1)) = 0.0
         
         [Toggle(_CircleSector)] _CircleSector ("Circle And Sector Mode", float) = 0
         [Toggle(_Rectangle)] _Rectangle ("Rectangle Mode", float) = 0
@@ -21,7 +23,6 @@ Shader "ZDShader/LWRP/Projector/Shape"
         _RectanglePivot ("Pivot", Vector) = (0.0, 0.0, 0, 0)
         
         _Falloff ("Fall Off", Float) = 4
-        
         
         
         [HideInInspector][Toggle(_ProjectionAngleDiscardEnable)] _ProjectionAngleDiscardEnable ("_ProjectionAngleDiscardEnable (default = on)", float) = 1
@@ -39,13 +40,7 @@ Shader "ZDShader/LWRP/Projector/Shape"
         
         Pass
         {
-            Stencil
-            {
-                Ref 0
-                Comp[_StencilComp]
-            }
-            
-            Cull Front                        
+            Cull Front
             ZWrite Off
             ZTest [_ZTest]
             Blend SrcAlpha One
@@ -95,6 +90,7 @@ Shader "ZDShader/LWRP/Projector/Shape"
             CBUFFER_START(UnityPerMaterial)
             float _ProjectionAngleDiscardThreshold;
             half4 _Color;
+            half _Amount;
             
             //Circle Projector
             float _CircleAngle;
@@ -205,7 +201,9 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 areaPart = saturate(((areaPart1 + areaPart2) * (1.0 - circle)));
                 
                 float alpha = (1.0 - step(areaPart, 0.0)) * (1.0 - areaPart) * step(1.0 - circle, _Thickness);
-                result.a = alpha;
+                result.a = alpha * 0.35;
+                _Amount = Remap(_Amount, 0.0, 1, 1.0 - _Thickness, 1.0);
+                result.a += alpha * 0.65 * smoothstep(1.0 - _Amount - 0.005, 1.0 - _Amount + 0.005, (1.0 - circle));
                 return result;
             }
             
@@ -215,21 +213,15 @@ Shader "ZDShader/LWRP/Projector/Shape"
                 float2 scaleRect = float2(_RectangleWidth, _RectangleHeight);
                 _RectanglePivot += float2(0.5h, 0.5h);
                 float2 uvS = (uv - _RectanglePivot) / scaleRect + _RectanglePivot;
-                if (uvS.x > 1.0h || uvS.x < 0.0h || uvS.y > 1.0h || uvS.y < 0.0h)
-                {
-                    uvS = 0.0h.rr;
-                }
-                else
-                {
-                    uvS = RotateUV(uvS, float2(0.5h, 0.5h), PI / 4.0h);
-                }
                 
+                uvS = RotateUV(uvS, float2(0.5h, 0.5h), PI / 4.0h);
                 float2 absUV = abs(uvS - 0.5h) * 1.4141414h ;
                 
                 float area = pow((saturate(absUV.r + absUV.g)), pow(_Falloff, 0.5h));
                 result.rgb = area.rrr * _Color;
-                result.a = (1.0h - step(1.0h, area)) * area;
-                
+                float alpha = (1.0h - step(1.0h, area)) * area;
+                result.a = alpha * 0.35;
+                result.a += alpha * 0.65 * smoothstep(1.0 - _Amount - 0.005, 1.0 - _Amount + 0.005, uv.y);
                 return result;
             }
             
