@@ -658,7 +658,7 @@ Shader "ZDShader/LWRP/Character"
                 //i.normalDir = normalize(i.normalDir);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
                 float3 normalDirection = i.normalWS;
-                float fresnel = pow(1.0 - saturate(dot(viewDirection, normalDirection)), 8);
+                float fresnel = 1.0 - dot(viewDirection, normalDirection);
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 ////// Lighting:
@@ -760,12 +760,9 @@ Shader "ZDShader/LWRP/Character"
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
                 
-                float3 fresnelColor = clamp(fresnel.xxx, 0.0.xxxx, diffuseColor * (0.0 + min(i.vertexDist * 0.2, 0.5)));
-                emissive += (fresnelColor) * (1.0 - shadowTotal);
                 
-                
-                
-                emissive = emissive + lerp(0, smoothstep(1.0 - _EdgeLightWidth, 1, saturate(fresnel * 10.0 * (1.0 - shadowTotal))), _EdgeLightIntensity);
+                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1, fresnel);
+                emissive = lerp(emissive, emissive * 1.2, fresnelArea);
                 
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w;
