@@ -756,7 +756,7 @@ Shader "ZDShader/LWRP/Character"
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
                 emissive += (fresnel) * (1.0 - shadowTotal);
-                
+                emissive.rgb = clamp(emissive.rgb, 0.0.xxxx, diffuseColor * 2.0);
                 
                 
                 emissive = emissive + lerp(0, smoothstep(1.0 - _EdgeLightWidth, 1, saturate(fresnel * 10.0 * (1.0 - shadowTotal))), _EdgeLightIntensity);
@@ -787,6 +787,8 @@ Shader "ZDShader/LWRP/Character"
                 
                 float3 finalColor = emissive.rgb;
                 
+                
+
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 float4 finalRGBA = float4(finalColor, 1);
