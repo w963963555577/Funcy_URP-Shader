@@ -379,7 +379,7 @@ Shader "ZDShader/LWRP/Character"
             {
                 float4 uv01: TEXCOORD0;
                 float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
-                half3 normalWS: TEXCOORD3;
+                float3 normalWS: TEXCOORD3;
                 
                 
                 #ifdef _SelfMaskEnable
@@ -387,6 +387,8 @@ Shader "ZDShader/LWRP/Character"
                     float3 lightXZDirection: TEXCOORD5;
                     float3 objectUp: TEXCOORD6;
                 #endif
+                
+                float vertexDist: TEXCOORD7;
                 
                 float4 positionCS: SV_POSITION;
                 
@@ -438,6 +440,8 @@ Shader "ZDShader/LWRP/Character"
                     
                     output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 #endif
+                
+                output.vertexDist = distance(input.positionOS.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
                 output.positionCS = vertexInput.positionCS;
                 
@@ -755,8 +759,10 @@ Shader "ZDShader/LWRP/Character"
                 (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var) +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
-                emissive += (fresnel) * (1.0 - shadowTotal);
-                emissive.rgb = clamp(emissive.rgb, 0.0.xxxx, diffuseColor * 2.0);
+                
+                float3 fresnelColor = clamp(fresnel.xxx, 0.0.xxxx, diffuseColor * (0.0 + min(i.vertexDist * 0.2, 0.5)));
+                emissive += (fresnelColor) * (1.0 - shadowTotal);
+                
                 
                 
                 emissive = emissive + lerp(0, smoothstep(1.0 - _EdgeLightWidth, 1, saturate(fresnel * 10.0 * (1.0 - shadowTotal))), _EdgeLightIntensity);
@@ -788,7 +794,7 @@ Shader "ZDShader/LWRP/Character"
                 float3 finalColor = emissive.rgb;
                 
                 
-
+                
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 float4 finalRGBA = float4(finalColor, 1);
