@@ -83,7 +83,7 @@ Shader "ZDShader/LWRP/Character"
         [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
         [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
         
-        /*[IntRange]*/_SelectBrow ("Select Brow", Range(1, 4)) = 1
+        [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
         _BrowRect ("Brow UV Rect", Vector) = (0, 0.45, 0.855, 0.3)
         [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
         _FaceRect ("Eyes UV Rect", Vector) = (0, -0.02, 0.855, 0.37)
@@ -258,9 +258,6 @@ Shader "ZDShader/LWRP/Character"
             Name "StandardLit"
             Tags { "LightMode" = "UniversalForward" }
             
-            Blend[_SrcBlend][_DstBlend]
-            ZWrite[_ZWrite]
-            ZTest [_ZTest]
             Cull Back
             
             Stencil
@@ -762,7 +759,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 
                 half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1, fresnel);
-                emissive = lerp(emissive, emissive * 1.2, fresnelArea);
+                emissive = lerp(emissive, lerp(emissive, float3(1, 1, 1), _EdgeLightIntensity), fresnelArea);
                 
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w;
