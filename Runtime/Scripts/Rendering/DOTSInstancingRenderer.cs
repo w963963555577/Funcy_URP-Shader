@@ -14,15 +14,11 @@ using System.Linq;
 
 
 public class DOTSInstancingRenderer : MonoBehaviour
-{    
+{
+    World world;
     private void Awake()
-    {        
-
-    }
-    // Start is called before the first frame update
-    private void OnEnable()
     {
-        World world = World.DefaultGameObjectInjectionWorld;
+        world = World.DefaultGameObjectInjectionWorld;
         var entityManager = world.EntityManager;
         foreach (var ren in GetComponentsInChildren<MeshRenderer>())
         {
@@ -49,6 +45,15 @@ public class DOTSInstancingRenderer : MonoBehaviour
             });
             ren.enabled = false;
         }
+    }
+    private void OnEnable()
+    {
+        
+    }
+    // Start is called before the first frame update
+    private void Start()
+    {        
+        
 
     }
 
