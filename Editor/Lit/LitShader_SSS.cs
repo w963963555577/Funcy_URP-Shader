@@ -17,7 +17,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty maxHDR { get; set; }
 
         MaterialProperty wireframeViewSplit { get; set; }
-
+        MaterialProperty rimLightSoftness { get; set; }
+        
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
@@ -30,6 +31,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             sssMap = FindProperty("_SubsurfaceMap", properties);
 
             rimLightColor = FindProperty("_RimLightColor", properties);
+            rimLightSoftness = FindProperty("_RimLightSoftness", properties);
             maxHDR = FindProperty("_MaxHDR", properties);
 
             wireframeViewSplit = FindProperty("_WireframeViewSplit", properties);
@@ -151,7 +153,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawArea("Rim Lighting", () => {
-                materialEditor.ShaderProperty(rimLightColor, rimLightColor.displayName);                
+                materialEditor.ShaderProperty(rimLightColor, rimLightColor.displayName);
+                materialEditor.ShaderProperty(rimLightSoftness, rimLightSoftness.displayName);
                 materialEditor.ShaderProperty(maxHDR, maxHDR.displayName);                 
 
                 //materialEditor.TexturePropertySingleLine(sssMap.displayName.ToGUIContent(), sssMap, sssColor, sssRadius);

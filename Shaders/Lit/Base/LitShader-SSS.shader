@@ -42,8 +42,9 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
         _SubsurfaceMap ("SSS Map", 2D) = "White" { }
         
         [HDR]_RimLightColor ("Color", Color) = (.7, .85, 1.0)
-        
+        _RimLightSoftness ("Softness", Range(0.0, 1.0)) = 0.6
         _MaxHDR ("Max HDR", Range(0.0, 10.0)) = 10.0
+        
         
         _WireframeViewSplit ("Wireframe Map", Range(0, 1)) = 0.0
         
@@ -146,6 +147,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                 half _SubsurfaceScattering;
                 half _SubsurfaceRadius;
                 half4 _RimLightColor;
+                half _RimLightSoftness;
                 half _MaxHDR;
                 
                 half _WireframeViewSplit;
@@ -432,11 +434,11 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     
                     color += emission;
                     
-                    half fresnel = smoothstep(0.6, 1.0, 1.0 - saturate(dot(inputData.normalWS, inputData.viewDirectionWS)));
+                    half fresnel = smoothstep(_RimLightSoftness, 1.0, 1.0 - saturate(dot(inputData.normalWS, inputData.viewDirectionWS)));
                     half3 rimLighting = albedo * NdotLTutorial * fresnel * 1.0 * _RimLightColor;
                     
                     color += rimLighting;
-                    
+                    alpha = max(fresnel * _RimLightColor.a, alpha);
                     color.rgb = clamp(color, 0.0.xxxx, (max(albedo, GI)) * _MaxHDR);
                     return half4(color, alpha);
                 }
@@ -454,7 +456,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     input.srcPos.xyz = input.srcPos.xyz / input.srcPos.w;
                     #if _MobileSSPR
-                    half4 SSPR = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, input.srcPos.xy); //use LinearClampSampler to make it blurry
+                        half4 SSPR = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, input.srcPos.xy); //use LinearClampSampler to make it blurry
                     #endif
                     //_MainLightShadowParams.x *= inputData.shadowCoord.x;
                     half3 sssColor = SAMPLE_TEXTURE2D(_SubsurfaceMap, sampler_SubsurfaceMap, input.uv).rgb * _SubsurfaceColor.rgb;
@@ -529,6 +531,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
             half4 _RimLightColor;
+            half _RimLightSoftness;
             half _MaxHDR;
             
             half _WireframeViewSplit;
@@ -636,6 +639,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
             half4 _RimLightColor;
+            half _RimLightSoftness;
             half _MaxHDR;
             
             half _WireframeViewSplit;
