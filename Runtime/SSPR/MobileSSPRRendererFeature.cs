@@ -113,6 +113,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 int dispatchThreadGroupYCount = GetRTHeight() / SHADER_NUMTHREAD_Y; //divide by shader's numthreads.y
                 int dispatchThreadGroupZCount = 1; //divide by shader's numthreads.z
 
+
                 if (settings.shouldRenderSSPR)
                 {
                     cb.SetComputeVectorParam(settings.SSPR_computeShader, Shader.PropertyToID("_RTSize"), new Vector2(GetRTWidth(), GetRTHeight()));
@@ -122,9 +123,11 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                     if (!ShouldUseVulkanFastPath())
                     {
                         //draw RT (kernel #0) 
+                        var Identifier = new RenderTargetIdentifier("_CameraOpaqueTexture");
                         cb.SetComputeTextureParam(settings.SSPR_computeShader, 0, "ColorRT", _SSPR_ColorRT_rti);
                         cb.SetComputeTextureParam(settings.SSPR_computeShader, 0, "PackedDataRT", _SSPR_PackedDataRT_rti);
-                        cb.SetComputeTextureParam(settings.SSPR_computeShader, 0, "_CameraOpaqueTexture", new RenderTargetIdentifier("_CameraOpaqueTexture"));
+                        cb.SetComputeTextureParam(settings.SSPR_computeShader, 0, "_CameraOpaqueTexture", Identifier);
+                        //cb.SetComputeTextureParam(settings.SSPR_computeShader, 2, "_CameraOpaqueTexture", Identifier);
                         cb.SetComputeTextureParam(settings.SSPR_computeShader, 0, "_CameraDepthTexture", new RenderTargetIdentifier("_CameraDepthTexture"));
                         cb.DispatchCompute(settings.SSPR_computeShader, 0, dispatchThreadGroupXCount, dispatchThreadGroupYCount, dispatchThreadGroupZCount);
 
