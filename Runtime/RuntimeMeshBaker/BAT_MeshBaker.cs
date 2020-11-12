@@ -10,7 +10,7 @@ namespace bat.opt.bake
     /// </summary>
 	public class BAT_MeshBaker : BAT_BakerBase
 	{
-
+        public Material shadowMaterial;
         /// <summary>
         /// Bake all game objects under current GameObject,including meshes and materials.
         /// By default, baking will group the meshes by diffrent material(ShareMaterial).
@@ -69,7 +69,7 @@ namespace bat.opt.bake
                     }
                     //create new child node for casting shadow
                     var shadowObj = BAT_NodeUtil.CreateChild(allBakedTo, "shadowOnly");
-		            var shadowMaterial = Resources.Load<Material>("ShadowOnly");
+		            
                     CombineList(shadowObj, _combinedObjs, shadowMaterial,false, null,null);
 		            var _shadowRenderers = shadowObj.GetComponentsInChildren<MeshRenderer>();
 		            foreach (var _render in _shadowRenderers)

@@ -8,6 +8,7 @@ using UnityEngine.Networking;
 using System.IO;
 using UnityEngine.U2D;
 using System.Reflection;
+
 public class MenuExtension
 {
     public class CreateGameObjectMenu
@@ -253,6 +254,7 @@ public class MenuExtension
                 }
             }
         }
+
 
         private static Texture2D DuplicateTexture(Texture2D source)
         {

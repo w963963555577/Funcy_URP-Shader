@@ -1,7 +1,3 @@
-// When creating shaders for Lightweight Render Pipeline you can you the ShaderGraph which is super AWESOME!
-// However, if you want to author shaders in shading language you can use this teamplate as a base.
-// Please note, this shader does not match perfomance of the built-in LWRP Lit shader.
-// This shader works with LWRP 5.7.2 version and above
 Shader "ZDShader/LWRP/PBR Base"
 {
     Properties

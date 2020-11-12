@@ -427,7 +427,7 @@ Shader "ZDShader/LWRP/PBR Base(SSS)"
                             color += lerp(mainLightContribution, subsurfaceContribution, _SubsurfaceScattering * (1.0 - metallic));
                         }
                     #endif
-                    
+                    NdotLTutorial = saturate(NdotLTutorial);
                     #ifdef _ADDITIONAL_LIGHTS_VERTEX
                         color += inputData.vertexLighting * brdfData.diffuse;
                     #endif
