@@ -789,7 +789,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 
                 
-                finalColor = MixFog(finalColor, fogFactor);
+                finalColor = MixFog(finalColor, pow(fogFactor, 4.0));
                 
                 float4 finalRGBA = float4(finalColor, 1);
                 
