@@ -12,7 +12,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:Unity-Technologies/ScriptableRenderPipeline.git",
-    "revision": "c674503aa3fdb4e9460c7dbf4bcf3696eced19da"
+    "url": "https://github.com/w963963555577/Funcy_URP-Shader.git"
+  },
+  "author": {
+    "name": "FuncyLi",
+    "email": "w963963555577@gmail.com",
+    "url": "https://github.com/w963963555577"
   }
 }

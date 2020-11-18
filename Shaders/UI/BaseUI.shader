@@ -3,6 +3,7 @@
     Properties
     {
         [PerRendererData]_MainTex ("Base (RGB)", 2D) = "white" { }
+        _Color ("Tint", Color) = (1, 1, 1, 1)
         
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -37,31 +38,41 @@
         
         Pass
         {
-            HLSLPROGRAM
+            Name "Default"
+            CGPROGRAM
             
             #pragma vertex vert
             #pragma fragment frag
             #pragma target 2.0
             
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "UnityCG.cginc"
+            #include "UnityUI.cginc"
+            
+            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
+            
             struct appdata
             {
                 float4 vertex: POSITION;
                 float2 uv: TEXCOORD0;
-                float4 color: Color0;
+                float4 color: COLOR;
+                
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             struct v2f
             {
                 float2 uv: TEXCOORD0;
-                float4 color: TEXCOORD1;
-                
+                float4 worldPosition: TEXCOORD1;
+                float4 color: COLOR;
                 float4 vertex: SV_POSITION;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
-
-            TEXTURE2D(_MainTex);                SAMPLER(sampler_MainTex);
-            TEXTURE2D(_CameraOpaqueTexture);    SAMPLER(sampler_CameraOpaqueTexture);
+            
+            sampler2D _MainTex;
+            fixed4 _Color;
+            fixed4 _TextureSampleAdd;
+            float4 _ClipRect;
+            float4 _MainTex_ST;
             
             
             v2f vert(appdata v)
@@ -69,18 +80,27 @@
                 v2f o;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                
-                o.vertex = TransformObjectToHClip(v.vertex.xyz);
-                o.uv = v.uv;
-                o.color = v.color;
+                o.worldPosition = v.vertex;
+                o.vertex = UnityObjectToClipPos(o.worldPosition);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.color = v.color * _Color;
                 return o;
             }
-            half4 frag(v2f i): SV_Target
+            fixed4 frag(v2f i): SV_Target
             {
-                half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);                               
+                half4 col = (tex2D(_MainTex, i.uv) + _TextureSampleAdd) * i.color;                
+                
+                #ifdef UNITY_UI_CLIP_RECT
+                    col.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
+                #endif
+                
+                #ifdef UNITY_UI_ALPHACLIP
+                    clip(col.a - 0.001);
+                #endif
+
                 return col;
             }
-            ENDHLSL
+            ENDCG
             
         }
     }

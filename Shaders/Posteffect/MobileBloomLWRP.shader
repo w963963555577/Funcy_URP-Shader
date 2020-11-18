@@ -1,4 +1,4 @@
-﻿Shader "SupGames/Mobile/BloomLwrp"
+﻿Shader "Hidden/Renderfeature/Bloom"
 {
     Properties
     {

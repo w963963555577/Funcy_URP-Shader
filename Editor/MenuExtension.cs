@@ -49,6 +49,8 @@ public class MenuExtension
             }
         }
 
+
+
         static List<Material> SelectionMaterials
         {
             get
@@ -67,6 +69,22 @@ public class MenuExtension
                 return mats;
             }
         }
+
+        [MenuItem("GameObject/Select Child MeshRenderer", false, 47)]
+        public static void SelectChildMeshRenderer()
+        {
+            List<GameObject> rens = new List<GameObject>();
+            foreach (var go in Selection.gameObjects)
+            {
+                foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
+                {
+                    if (!rens.Contains(r.gameObject)) rens.Add(r.gameObject);
+                }
+            }
+
+            Selection.objects = rens.ToArray();
+        }       
+
         [MenuItem("GameObject/Select Dependencies Materials", false, 47)]
         public static void SelectDependenciesMaterials()
         {
@@ -76,6 +94,8 @@ public class MenuExtension
                 EditorGUIUtility.PingObject(o);
             }
         }
+
+
         [MenuItem("GameObject/Select Dependencies Textures", false, 48)]
         public static void SelectDependenciesTextures()
         {
