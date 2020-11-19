@@ -88,7 +88,8 @@
             }
             fixed4 frag(v2f i): SV_Target
             {
-                half4 col = (tex2D(_MainTex, i.uv) + _TextureSampleAdd) * i.color;                
+                half4 col = (tex2D(_MainTex, i.uv) + _TextureSampleAdd);
+                col *= i.color;
                 
                 #ifdef UNITY_UI_CLIP_RECT
                     col.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
@@ -97,7 +98,7 @@
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(col.a - 0.001);
                 #endif
-
+                
                 return col;
             }
             ENDCG
