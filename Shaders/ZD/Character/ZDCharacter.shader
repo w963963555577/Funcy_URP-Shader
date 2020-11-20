@@ -5,6 +5,9 @@ Shader "ZDShader/LWRP/Character"
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (1.0, 1.0, 1.0, 1)
         
+        _SubsurfaceScattering ("Scatter", Range(0, 1)) = 0.2
+        _SubsurfaceRadius ("Radius", Range(0, 5.0)) = 2.0
+        
         _EdgeLightWidth ("Edge Light Width", Range(0, 1)) = 1
         _EdgeLightIntensity ("Edge Light Intensity", Range(0, 1)) = 1
         
@@ -147,6 +150,8 @@ Shader "ZDShader/LWRP/Character"
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
             half4 _SelfMask_ST;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
             half _SelfMaskDirection;
             
             half4 _mask_ST;
@@ -302,6 +307,8 @@ Shader "ZDShader/LWRP/Character"
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
             half4 _SelfMask_ST;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
             half _SelfMaskDirection;
             
             half4 _mask_ST;
@@ -565,6 +572,7 @@ Shader "ZDShader/LWRP/Character"
                 
             #endif
             
+            
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
@@ -576,10 +584,21 @@ Shader "ZDShader/LWRP/Character"
                 mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
                 float4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
-                
+                float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
+                
+                float3 positionWS = i.positionWSAndFogFactor.xyz;
+                float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
+                float3 normalDirection = i.normalWS;
+                
+                float glossMask = _ESSGMask_var.a;
+                
                 half NdotL = dot(i.normalWS, mainLight.direction);
-                half pbr = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
+                half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
+                float fresnel = max(1.0 - dot(viewDirection, normalDirection), saturate(dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
+                half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
+                
+                //NdotL = max(NdotL, SSS * _SubsurfaceScattering);
                 
                 #if _ExpressionEnable
                     
@@ -651,21 +670,17 @@ Shader "ZDShader/LWRP/Character"
                 //Prepare Property....
                 //......................
                 
-                float3 positionWS = i.positionWSAndFogFactor.xyz;
-                //i.normalDir = normalize(i.normalDir);
-                float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
-                float3 normalDirection = i.normalWS;
-                float fresnel = 1.0 - dot(viewDirection, normalDirection);
+                
+                
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 ////// Lighting:
                 float attenuation = 1;
                 ////// Emissive:
-                float _Gloss_var = _Gloss;
-                float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
-                float glossMask = _ESSGMask_var.a;
+                
+                
                 float specStep = 2.0;
-                float specularArea = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss_var * glossMask)))) * specStep) / (specStep - 1);
+                float specularArea = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
@@ -710,7 +725,8 @@ Shader "ZDShader/LWRP/Character"
                     
                 #endif
                 
-                pbr = saturate(pbr);
+                
+                selfShadow = saturate(selfShadow);
                 
                 //PBRShadowArea
                 float refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
@@ -726,10 +742,11 @@ Shader "ZDShader/LWRP/Character"
                 refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp), saturate(1.0 - refractionShadowArea));
                 refractionShadowArea = saturate((1.0 - refractionShadowArea)) ;
                 
-                pbr = smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - pbr);
-                pbr = 1.0 - pbr;
+                selfShadow = smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
+                selfShadow = 1.0 - selfShadow;
                 
-                float PBRShadowArea = refractionShadowArea * (_ReceiveShadow == 1.0 ? pbr: 1.0) ;
+                float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
+                PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
                 
                 float node_8468 = 2.0;
                 float shadowArea0 = saturate(((1.0 - shadowPow1) * shadowPow0 * node_8468)) ;
@@ -758,7 +775,7 @@ Shader "ZDShader/LWRP/Character"
                 ;
                 
                 
-                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1, fresnel);
+                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1 + _EdgeLightWidth * 0.2, fresnel);
                 emissive = lerp(emissive, lerp(emissive, float3(1, 1, 1), _EdgeLightIntensity), fresnelArea);
                 
                 //Fog
