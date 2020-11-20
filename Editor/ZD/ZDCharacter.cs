@@ -23,7 +23,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         public MaterialProperty baseMap { get; set; }
         public MaterialProperty baseColor { get; set; }
+
+        MaterialProperty sss { get; set; }
+        MaterialProperty sssRadius { get; set; }
         
+
         public MaterialProperty selfMaskDirection { get; set; }
 
         public MaterialProperty maskMap { get; set; }
@@ -99,6 +103,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {
             baseMap = FindProperty("_diffuse", props);
             baseColor = FindProperty("_Color", props);
+
+            sss = FindProperty("_SubsurfaceScattering", props);
+            sssRadius = FindProperty("_SubsurfaceRadius", props);
 
             selfMaskDirection = FindProperty("_SelfMaskDirection", props);
 
@@ -225,7 +232,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             
             DrawArea("Base", () => {
                 BaseArea(mat);
-            });            
+            });
+
+            DrawArea("Subsurface Scattering", () => {
+                materialEditor.ShaderProperty(sss, sss.displayName);                
+                materialEditor.ShaderProperty(sssRadius, sssRadius.displayName);
+            });
 
             DrawArea("Effective", () =>
             {
@@ -449,6 +461,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
                 materialEditor.ShaderProperty(selfShadowRemap, selfShadowRemap.displayName);
+                materialEditor.RenderQueueField();
             });
 
             MaterialChangeCheck();
