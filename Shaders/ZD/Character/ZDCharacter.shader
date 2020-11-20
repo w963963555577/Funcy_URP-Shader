@@ -775,7 +775,7 @@ Shader "ZDShader/LWRP/Character"
                 ;
                 
                 
-                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1 + _EdgeLightWidth * 0.2, fresnel);
+                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1 - _EdgeLightWidth * 0.7, fresnel);
                 emissive = lerp(emissive, lerp(emissive, float3(1, 1, 1), _EdgeLightIntensity), fresnelArea);
                 
                 //Fog
