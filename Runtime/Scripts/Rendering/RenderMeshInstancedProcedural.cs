@@ -179,6 +179,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     }
     void LateUpdate()
     {
+        if (Camera.main == null) return;
         Matrix4x4 v = Camera.main.worldToCameraMatrix;
         Matrix4x4 p = Camera.main.projectionMatrix;
         Matrix4x4 vp = p * v;
@@ -195,7 +196,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             rg.UpdateBuffer();            
         }
     }
-
+    /*
     void Start()
     {
         
@@ -205,7 +206,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     {
  
     }
-    
+    */
 
     public void DisposeAllBuffer()
     {
