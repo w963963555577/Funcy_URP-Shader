@@ -14,6 +14,8 @@ Shader "ZDShader/LWRP/Character"
         _Flash ("Flash", Float) = 0
         _mask ("ESSGMask", 2D) = "(0,0.5,0,0)" { }
         _SelfMask ("Self Mask", 2D) = "black" { }
+        
+        
         [Toggle(_SelfMaskEnable)] _SelfMaskEnable ("Self Mask Enable", float) = 0
         
         [Enum(positiveZ positiveY, 0, positiveY negativeX, 1)]_SelfMaskDirection ("Self Mask Direction", Float) = 0
@@ -53,9 +55,9 @@ Shader "ZDShader/LWRP/Character"
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
         [HideInInspector] _Blend ("__blend", Float) = 0.0
-        [HideInInspector] _AlphaClip ("__clip", Float) = 0.0
-        [HideInInspector] _SrcBlend ("__src", Float) = 1.0
-        [HideInInspector] _DstBlend ("__dst", Float) = 0.0
+        
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src", Float) = 1.0
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst", Float) = 0.0
         [Enum(Off, 0, On, 1)]  _ZWrite ("ZWrite", Float) = 1.0
         [Enum(UnityEngine.Rendering.CompareFunction)]  _ZTest ("ZTest", Float) = 4
         
@@ -92,6 +94,11 @@ Shader "ZDShader/LWRP/Character"
         _FaceRect ("Eyes UV Rect", Vector) = (0, -0.02, 0.855, 0.37)
         [IntRange]_SelectMouth ("Select Mouth ", Range(1, 8)) = 1
         _MouthRect ("Mouth UV Rect", Vector) = (0, -0.97, 0.427, 0.28)
+        
+        
+        //Effective Disslove
+        _EffectiveMap ("Effective Map", 2D) = "white" { }
+        [HDR]_EffectiveColor ("_EffectiveColor", Color) = (1.0, 1.0, 1.0, 1.0)
     }
     
     SubShader
@@ -111,7 +118,7 @@ Shader "ZDShader/LWRP/Character"
             ZWrite On
             ZTest LEqual
             Cull Front
-            Blend Off
+            Blend [_SrcBlend][_DstBlend]
             
             HLSLPROGRAM
             
@@ -119,6 +126,7 @@ Shader "ZDShader/LWRP/Character"
             #pragma fragment frag
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _AlphaClip
             
             #pragma shader_feature_local _OutlineEnable
             
@@ -145,7 +153,6 @@ Shader "ZDShader/LWRP/Character"
             };
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
-            sampler2D _ExpressionMap;
             
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
@@ -204,8 +211,11 @@ Shader "ZDShader/LWRP/Character"
             half4 _BrowRect;
             half4 _FaceRect;
             half4 _MouthRect;
+            
+            half4 _EffectiveColor;
             CBUFFER_END
             
+            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
             
             v2f vert(appdata v)
             {
@@ -247,8 +257,15 @@ Shader "ZDShader/LWRP/Character"
                 #else
                     discard;
                 #endif
+                
+                half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
+                half4 effectiveDisslive = _EffectiveColor;
+                
+                half alphaMinus = 1.0 - _EffectiveColor.a;
+                effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                
                 float4 _diffuse_var = tex2D(_diffuse, i.uv);
-                half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _OutlineColor.a);
+                half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _Color.a * effectiveDisslive.a);
                 //half4 col = float4(0.05.rrr, 1.0);
                 return col;
             }
@@ -264,6 +281,7 @@ Shader "ZDShader/LWRP/Character"
             Tags { "LightMode" = "UniversalForward" }
             
             Cull Back
+            Blend [_SrcBlend][_DstBlend]
             
             Stencil
             {
@@ -281,12 +299,14 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _SHADOWS_SOFT
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
-            
+            #pragma multi_compile _ _AlphaClip
             
             #pragma shader_feature_local _CustomLighting
             #pragma shader_feature_local _SelfMaskEnable
             #pragma shader_feature_local _DiscolorationSystem
             #pragma shader_feature_local _ExpressionEnable
+            
+            
             #if _ExpressionEnable
                 #pragma shader_feature_local _ExpressionFormat_Wink
                 #pragma shader_feature_local _ExpressionFormat_FaceSheet
@@ -304,6 +324,7 @@ Shader "ZDShader/LWRP/Character"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             
             sampler2D _diffuse;
+            
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
             half4 _SelfMask_ST;
@@ -361,6 +382,8 @@ Shader "ZDShader/LWRP/Character"
             half4 _BrowRect;
             half4 _FaceRect;
             half4 _MouthRect;
+            
+            half4 _EffectiveColor;
             CBUFFER_END
             
             
@@ -368,6 +391,7 @@ Shader "ZDShader/LWRP/Character"
             TEXTURE2D(_NormalMap);                  SAMPLER(sampler_NormalMap);
             TEXTURE2D(_SelfMask);                   SAMPLER(sampler_SelfMask);
             TEXTURE2D(_ExpressionMap);              SAMPLER(sampler_ExpressionMap);
+            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
             
             struct Attributes
             {
@@ -394,15 +418,45 @@ Shader "ZDShader/LWRP/Character"
                 
                 float vertexDist: TEXCOORD7;
                 
+                #if _ExpressionEnable
+                    float4 expressionUV01: TEXCOORD8;
+                    #if _ExpressionFormat_FaceSheet
+                        float4 expressionUV23: TEXCOORD9;
+                    #endif
+                #endif
+                
                 float4 positionCS: SV_POSITION;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
+            
+            #if _ExpressionEnable
+                
+                float2 GetBrowArea(float2 uv, float browCount, float selectBrow, half2 offsetScale)
+                {
+                    return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + ((browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0)));
+                }
+                
+                float2 GetEyesArea(float2 uv, float eyesCount, float selectFace, half2 offsetScale)
+                {
+                    return float2(uv.x * offsetScale.x, uv.y * offsetScale.y + ((eyesCount - (selectFace)) / eyesCount));
+                }
+                
+                float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth, half2 offsetScale)
+                {
+                    float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
+                    float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                    return float2(pX, pY);
+                }
+                
+            #endif
+            
             Varyings LitPassVertex(Attributes input)
             {
-                Varyings output;
+                Varyings output = (Varyings)0;
+                
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
@@ -448,6 +502,54 @@ Shader "ZDShader/LWRP/Character"
                 output.vertexDist = distance(input.positionOS.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
                 output.positionCS = vertexInput.positionCS;
+                
+                #if _ExpressionEnable
+                    
+                    _SelectBrow = round(_SelectBrow);
+                    _SelectFace = round(_SelectFace);
+                    _SelectMouth = round(_SelectMouth);
+                    
+                    half maskBlur = 0.01;
+                    #if _ExpressionFormat_FaceSheet
+                        half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
+                        half2 browOffset = half2(0.5, 1.0 / 8.0);
+                        half2 browArea = GetBrowArea(output.uv01.zw, 8.0, _SelectBrow, browOffset);
+                        half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0,
+                        _SelectBrow, browOffset);
+                        half2 browUV = ((browArea - browPivot) * _BrowTRS.xy) + browPivot + half2(_BrowTRS.z * browOffset.x, _BrowTRS.w * browOffset.y);
+                        output.expressionUV23.xy = browUV;
+                    #endif
+                    
+                    #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
+                        half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
+                        
+                        #if _ExpressionFormat_FaceSheet
+                            half2 eyeOffset = half2(0.5, 0.125);
+                            half2 eyesArea = GetEyesArea(output.uv01.zw, 8.0, _SelectFace, eyeOffset);
+                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 8.0, _SelectFace, eyeOffset);
+                        #endif
+                        #if _ExpressionFormat_Wink
+                            half2 eyeOffset = half2(1.0, 0.5);
+                            half2 eyesArea = GetEyesArea(output.uv01.zw, 2.0, _SelectFace, eyeOffset);
+                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 2.0, _SelectFace, eyeOffset);
+                        #endif
+                        
+                        half2 eyesUV = ((eyesArea - eyesPivot) * _EyesTRS.xy) + eyesPivot + half2(_EyesTRS.z * eyeOffset.x, _EyesTRS.w * eyeOffset.y);
+                        output.expressionUV01.xy = eyesUV;
+                        
+                    #endif
+                    
+                    #if _ExpressionFormat_FaceSheet
+                        half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
+                        half2 mouthOffset = half2(0.25, 0.125);
+                        half2 mouthArea = GetMouthArea(output.uv01.zw, 8.0, _SelectMouth, mouthOffset);
+                        half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth, mouthOffset);
+                        half2 mouthUV = ((mouthArea - mouthPivot) * _MouthsTRS.xy) + mouthPivot + half2(_MouthsTRS.z * mouthOffset.x, _MouthsTRS.w * mouthOffset.y);
+                        output.expressionUV23.zw = mouthUV;
+                    #endif
+                    
+                    
+                #endif
                 
                 return output;
             }
@@ -551,28 +653,6 @@ Shader "ZDShader/LWRP/Character"
                 }
             #endif
             
-            #if _ExpressionEnable
-                
-                float2 GetBrowArea(float2 uv, float browCount, float selectBrow, half2 offsetScale)
-                {
-                    return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + ((browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0)));
-                }
-                
-                float2 GetEyesArea(float2 uv, float eyesCount, float selectFace, half2 offsetScale)
-                {
-                    return float2(uv.x * offsetScale.x, uv.y * offsetScale.y + ((eyesCount - (selectFace)) / eyesCount));
-                }
-                
-                float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth, half2 offsetScale)
-                {
-                    float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
-                    float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
-                    return float2(pX, pY);
-                }
-                
-            #endif
-            
-            
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
@@ -598,22 +678,12 @@ Shader "ZDShader/LWRP/Character"
                 float fresnel = max(1.0 - dot(viewDirection, normalDirection), saturate(dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
                 
-                //NdotL = max(NdotL, SSS * _SubsurfaceScattering);
-                
                 #if _ExpressionEnable
-                    
-                    _SelectBrow = round(_SelectBrow);
-                    _SelectFace = round(_SelectFace);
-                    _SelectMouth = round(_SelectMouth);
                     
                     half maskBlur = 0.01;
                     #if _ExpressionFormat_FaceSheet
                         half4 _BrowTRS = half4(1.0 / _BrowRect.zw, -_BrowRect.xy);
-                        half2 browOffset = half2(0.5, 1.0 / 8.0);
-                        half2 browArea = GetBrowArea(i.uv01.zw, 8.0, _SelectBrow, browOffset);
-                        half2 browPivot = GetBrowArea(half2(0.5, 0.5), 8.0,
-                        _SelectBrow, browOffset);
-                        half2 browUV = ((browArea - browPivot) * _BrowTRS.xy) + browPivot + half2(_BrowTRS.z * browOffset.x, _BrowTRS.w * browOffset.y);
+                        half2 browUV = i.expressionUV23.xy;
                         half2 browMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _BrowTRS.xy + half2(0.5, 0.5) + _BrowTRS.zw;
                         half2 browMaskRect = abs(((browMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half browMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _BrowTRS.x, 1.0, browMaskRect.x), smoothstep(0.5 - maskBlur * _BrowTRS.y, 0.5, browMaskRect.y)));
@@ -622,19 +692,7 @@ Shader "ZDShader/LWRP/Character"
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
                         half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
-                        
-                        #if _ExpressionFormat_FaceSheet
-                            half2 eyeOffset = half2(0.5, 0.125);
-                            half2 eyesArea = GetEyesArea(i.uv01.zw, 8.0, _SelectFace, eyeOffset);
-                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 8.0, _SelectFace, eyeOffset);
-                        #endif
-                        #if _ExpressionFormat_Wink
-                            half2 eyeOffset = half2(1.0, 0.5);
-                            half2 eyesArea = GetEyesArea(i.uv01.zw, 2.0, _SelectFace, eyeOffset);
-                            half2 eyesPivot = GetEyesArea(half2(0.5, 0.5), 2.0, _SelectFace, eyeOffset);
-                        #endif
-                        
-                        half2 eyesUV = ((eyesArea - eyesPivot) * _EyesTRS.xy) + eyesPivot + half2(_EyesTRS.z * eyeOffset.x, _EyesTRS.w * eyeOffset.y);
+                        half2 eyesUV = i.expressionUV01.xy;
                         half2 eyesMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _EyesTRS.xy + half2(0.5, 0.5) + _EyesTRS.zw;
                         half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
@@ -643,18 +701,15 @@ Shader "ZDShader/LWRP/Character"
                     
                     #if _ExpressionFormat_FaceSheet
                         half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
-                        half2 mouthOffset = half2(0.25, 0.125);
-                        half2 mouthArea = GetMouthArea(i.uv01.zw, 8.0, _SelectMouth, mouthOffset);
-                        half2 mouthPivot = GetMouthArea(half2(0.5, 0.5), 8.0, _SelectMouth, mouthOffset);
-                        half2 mouthUV = ((mouthArea - mouthPivot) * _MouthsTRS.xy) + mouthPivot + half2(_MouthsTRS.z * mouthOffset.x, _MouthsTRS.w * mouthOffset.y);
+                        half2 mouthUV = i.expressionUV23.zw;
                         half2 mouthMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _MouthsTRS.xy + half2(0.5, 0.5) + _MouthsTRS.zw;
                         half2 mouthMaskRect = abs(((mouthMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half mouthMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _MouthsTRS.x, 1.0, mouthMaskRect.x), smoothstep(1.0 - maskBlur * _MouthsTRS.y, 1.0, mouthMaskRect.y)));
                         half4 Mouth = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, mouthUV);
                     #endif
-                    half alpha = 0.0;
+                    
                     #if _ExpressionFormat_FaceSheet
-                        alpha = _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
@@ -669,7 +724,6 @@ Shader "ZDShader/LWRP/Character"
                 
                 //Prepare Property....
                 //......................
-                
                 
                 
                 float3 lightColor = mainLight.color.rgb;
@@ -724,7 +778,6 @@ Shader "ZDShader/LWRP/Character"
                     _diffuse_var.rgb = lerp(HSV2RGB(half3(colorHSV_A.rg, colorHSV_B.b * (step_var.a + 1.0) + max(0, step_var.a))), mupArea, skinArea + eyeArea + blackArea);
                     
                 #endif
-                
                 
                 selfShadow = saturate(selfShadow);
                 
@@ -804,11 +857,15 @@ Shader "ZDShader/LWRP/Character"
                 
                 float3 finalColor = emissive.rgb;
                 
-                
-                
                 finalColor = MixFog(finalColor, pow(fogFactor, 4.0));
                 
-                float4 finalRGBA = float4(finalColor, 1);
+                half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv01.xy * 0.5);
+                half4 effectiveDisslive = _EffectiveColor;
+                
+                half alphaMinus = 1.0 - _EffectiveColor.a;
+                effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                
+                float4 finalRGBA = float4(finalColor, _Color.a * effectiveDisslive.a);
                 
                 return finalRGBA;
             }
@@ -823,103 +880,170 @@ Shader "ZDShader/LWRP/Character"
             
             ZWrite On
             ZTest LEqual
+            Cull[_Cull]
             
             HLSLPROGRAM
             
-            #pragma multi_compile _ LOD_FADE_CROSSFADE
-            #pragma multi_compile_fog
-            #define ASE_FOG 1
-            #define ASE_SRP_VERSION 60902
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
             
+            #pragma multi_compile _ _AlphaClip
+            // -------------------------------------
+            // Material Keywords
             #pragma shader_feature_local _SelfMaskEnable
             
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
             
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
             
             
+            //#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
+            sampler2D _SelfMask;
+            CBUFFER_START(UnityPerMaterial)
+            half4 _diffuse_ST;
+            half4 _SelfMask_ST;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
+            half _SelfMaskDirection;
             
+            half4 _mask_ST;
+            half4 _Color;
+            half4 _EmissionColor;
+            half4 _SpecularColor;
+            half4 _Picker_0;
+            half4 _Picker_1;
+            half4 _ShadowColor0;
+            half4 _ShadowColor1;
+            half4 _ShadowColorElse;
+            half _Cutoff;
+            half _Gloss;
+            half _EmissionxBase;
+            half _EmissionOn;
+            half _Flash;
+            half _EdgeLightWidth;
+            half _EdgeLightIntensity;
+            half _NormalScale;
+            half _ShadowRamp;
+            half _SelfShadowRamp;
+            half _ReceiveShadow;
+            half _ShadowRefraction;
+            half _ShadowOffset;
             
-            struct GraphVertexInput
+            half4 _CustomLightColor;
+            half4 _CustomLightDirection;
+            half _CustomLightIntensity;
+            
+            float4 _DiscolorationColor_0;
+            float4 _DiscolorationColor_1;
+            float4 _DiscolorationColor_2;
+            float4 _DiscolorationColor_3;
+            float4 _DiscolorationColor_4;
+            float4 _DiscolorationColor_5;
+            float4 _DiscolorationColor_6;
+            float4 _DiscolorationColor_7;
+            float4 _DiscolorationColor_8;
+            float4 _DiscolorationColor_9;
+            
+            float4 _OutlineColor;
+            float _DiffuseBlend;
+            
+            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+            
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            
+            half4 _BrowRect;
+            half4 _FaceRect;
+            half4 _MouthRect;
+            
+            half4 _EffectiveColor;
+            CBUFFER_END
+            
+            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            
+            float3 _LightDirection;
+            
+            struct Attributes
             {
-                float4 vertex: POSITION;
-                float2 uv: TEXCOORD0;
-                float3 ase_normal: NORMAL;
+                float4 positionOS: POSITION;
+                float3 normalOS: NORMAL;
+                float2 texcoord: TEXCOORD0;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
-            struct VertexOutput
+            struct Varyings
             {
-                float4 clipPos: SV_POSITION;
                 float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+                
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
-            
-            
-            // x: global clip space bias, y: normal world space bias
-            float3 _LightDirection;
-            sampler2D _SelfMask;
-            VertexOutput ShadowPassVertex(GraphVertexInput v)
+            float4 GetShadowPositionHClip(Attributes input)
             {
-                VertexOutput o;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                o.uv = v.uv;
-                float4 _SelfMask_var = tex2Dlod(_SelfMask, float4(v.uv, 0, 0));
-                float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
-                float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
                 
-                float invNdotL = 1.0 - saturate(dot(_LightDirection, normalWS));
-                float scale = invNdotL * _ShadowBias.y;
-                //invNdotL=smoothstep(0.5,0.6,invNdotL);
-                // normal bias is negative since we want to apply an inset normal offset
-                positionWS = _LightDirection * _ShadowBias.xxx + positionWS;
-                positionWS = normalWS * scale.xxx + positionWS;
-                float4 clipPos = TransformWorldToHClip(positionWS);
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 
-                // _ShadowBias.x sign depens on if platform has reversed z buffer
-                //clipPos.z += _ShadowBias.x;
+                float4 _SelfMask_var = tex2Dlod(_SelfMask, float4(input.texcoord, 0, 0));
                 
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 #if UNITY_REVERSED_Z
-                    clipPos.z = min(clipPos.z, clipPos.w * (UNITY_NEAR_CLIP_VALUE
+                    positionCS.z = min(positionCS.z, positionCS.w * (UNITY_NEAR_CLIP_VALUE
                     #if _SelfMaskEnable
                         * _SelfMask_var.b
                     #endif
                     ));
                 #else
-                    clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
+                    positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
-                o.clipPos = clipPos;
                 
-                return o;
+                
+                return positionCS;
             }
             
-            half4 ShadowPassFragment(VertexOutput IN): SV_TARGET
+            Varyings ShadowPassVertex(Attributes input)
             {
-                UNITY_SETUP_INSTANCE_ID(IN);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                Varyings output = (Varyings)0;
                 
-                float Alpha = 1;
-                float AlphaClipThreshold = AlphaClipThreshold;
-                
+                output.uv = input.texcoord;
+                output.positionCS = GetShadowPositionHClip(input);
+                return output;
+            }
+            
+            half4 ShadowPassFragment(Varyings input): SV_TARGET
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 #if _AlphaClip
-                    clip(Alpha - AlphaClipThreshold);
+                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
+                    half4 effectiveDisslive = _EffectiveColor;
+                    half alphaMinus = 1.0 - _EffectiveColor.a;
+                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                    
+                    clip(effectiveDisslive.a - 0.5);
                 #endif
                 
                 return 0;
             }
+            
             
             ENDHLSL
             
@@ -928,80 +1052,151 @@ Shader "ZDShader/LWRP/Character"
         
         Pass
         {
-            
             Name "DepthOnly"
             Tags { "LightMode" = "DepthOnly" }
             
             ZWrite On
             ColorMask 0
+            Cull[_Cull]
             
             HLSLPROGRAM
             
-            #pragma multi_compile _ LOD_FADE_CROSSFADE
-            #pragma multi_compile_fog
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
             
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma multi_compile _ _AlphaClip
             
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
             
-            #pragma vertex vert
-            #pragma fragment frag
-            
-            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            struct GraphVertexInput
+            CBUFFER_START(UnityPerMaterial)
+            half4 _diffuse_ST;
+            half4 _SelfMask_ST;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
+            half _SelfMaskDirection;
+            
+            half4 _mask_ST;
+            half4 _Color;
+            half4 _EmissionColor;
+            half4 _SpecularColor;
+            half4 _Picker_0;
+            half4 _Picker_1;
+            half4 _ShadowColor0;
+            half4 _ShadowColor1;
+            half4 _ShadowColorElse;
+            half _Cutoff;
+            half _Gloss;
+            half _EmissionxBase;
+            half _EmissionOn;
+            half _Flash;
+            half _EdgeLightWidth;
+            half _EdgeLightIntensity;
+            half _NormalScale;
+            half _ShadowRamp;
+            half _SelfShadowRamp;
+            half _ReceiveShadow;
+            half _ShadowRefraction;
+            half _ShadowOffset;
+            
+            half4 _CustomLightColor;
+            half4 _CustomLightDirection;
+            half _CustomLightIntensity;
+            
+            float4 _DiscolorationColor_0;
+            float4 _DiscolorationColor_1;
+            float4 _DiscolorationColor_2;
+            float4 _DiscolorationColor_3;
+            float4 _DiscolorationColor_4;
+            float4 _DiscolorationColor_5;
+            float4 _DiscolorationColor_6;
+            float4 _DiscolorationColor_7;
+            float4 _DiscolorationColor_8;
+            float4 _DiscolorationColor_9;
+            
+            float4 _OutlineColor;
+            float _DiffuseBlend;
+            
+            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+            
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            
+            half4 _BrowRect;
+            half4 _FaceRect;
+            half4 _MouthRect;
+            
+            half4 _EffectiveColor;
+            CBUFFER_END
+            
+            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            
+            
+            struct Attributes
             {
-                float4 vertex: POSITION;
-                float3 ase_normal: NORMAL;
-                float2 uv: TEXCOORD0;
+                float4 position: POSITION;
+                float2 texcoord: TEXCOORD0;
+                
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
-            struct VertexOutput
+            struct Varyings
             {
-                float4 clipPos: SV_POSITION;
                 float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+                
+                
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
-            VertexOutput vert(GraphVertexInput v)
+            Varyings DepthOnlyVertex(Attributes input)
             {
-                VertexOutput o = (VertexOutput)0;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                Varyings output = (Varyings)0;
                 
-                o.uv = v.uv;
-                v.ase_normal = v.ase_normal ;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 
-                if (v.vertex.y < 0.5)
-                {
-                    v.vertex.y = 0.5;
-                }
-                o.clipPos = TransformObjectToHClip(v.vertex.xyz);
-                return o;
+                
+                output.uv = input.texcoord;
+                
+                float3 positionWS = mul(GetObjectToWorldMatrix(), float4(input.position.xyz, 0.0)).xyz;
+                positionWS.y = lerp(positionWS.y, -0.99, step(positionWS.y, -0.99));
+                input.position.xyz = mul(GetWorldToObjectMatrix(), float4(positionWS, 0.0)).xyz;
+                output.positionCS = TransformObjectToHClip(input.position.xyz);
+                
+                return output;
             }
             
-            half4 frag(VertexOutput IN): SV_TARGET
+            half4 DepthOnlyFragment(Varyings input): SV_TARGET
             {
-                UNITY_SETUP_INSTANCE_ID(IN);
-                
-                float Alpha = 1;
-                float AlphaClipThreshold = AlphaClipThreshold;
-                
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 #if _AlphaClip
-                    clip(Alpha - AlphaClipThreshold);
+                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
+                    half4 effectiveDisslive = _EffectiveColor;
+                    half alphaMinus = 1.0 - _EffectiveColor.a;
+                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                    
+                    clip(effectiveDisslive.a - 0.5);
                 #endif
-                
                 return 0;
             }
+            
+            
             ENDHLSL
             
         }

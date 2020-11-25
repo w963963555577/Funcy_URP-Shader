@@ -98,6 +98,14 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public MaterialProperty faceRect { get; set; }
         public MaterialProperty mouthRect { get; set; }
 
+
+        public MaterialProperty effectiveMap { get; set; }
+        public MaterialProperty effectiveColor { get; set; }
+
+
+        public MaterialProperty srcblend { get; set; }
+        public MaterialProperty dstblend { get; set; }
+
         bool drawBaseMap = false;
         public virtual void FindProperties()
         {
@@ -171,6 +179,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             browRect = FindProperty("_BrowRect", props);
             faceRect = FindProperty("_FaceRect", props);
             mouthRect = FindProperty("_MouthRect", props);
+
+            effectiveMap = FindProperty("_EffectiveMap", props);
+            effectiveColor = FindProperty("_EffectiveColor", props);
+
+            srcblend = FindProperty("_SrcBlend", props);
+            dstblend = FindProperty("_DstBlend", props);
         }
 
         
@@ -241,34 +255,77 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Effective", () =>
             {
-                materialEditor.ShaderProperty(emissionxOn, "Emission");
-                Rect baseRect = GUILayoutUtility.GetLastRect();
-                var current = baseRect;
+                GUILayout.BeginVertical("Box");
+                { 
+                GUILayout.Label("Base Effective", EditorStyles.boldLabel);
+                GUILayout.BeginVertical("Box");
+                                    
+                    materialEditor.ShaderProperty(emissionxOn, "Emission");
+                    Rect baseRect = GUILayoutUtility.GetLastRect();
+                    var current = baseRect;
 
-                EditorGUI.BeginDisabledGroup(emissionxOn.floatValue == 0.0f);
-                {
-                    GUILayout.Space(10);
-                    GUILayout.Space(10);
-                    current.x += 5; current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
-                    materialEditor.ColorProperty(current, emissionColor, "");
+                    EditorGUI.BeginDisabledGroup(emissionxOn.floatValue == 0.0f);
+                    {
+                        GUILayout.Space(10);
+                        GUILayout.Space(10);
+                        current.x += 5; current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
+                        materialEditor.ColorProperty(current, emissionColor, "");
+                        current = baseRect;
+
+                        materialEditor.ShaderProperty(emissionxBase, "Mup Base");
+
+                    }
+                    EditorGUI.EndDisabledGroup();
+
+
                     current = baseRect;
+                    current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
 
-                    materialEditor.ShaderProperty(emissionxBase, "Mup Base");
-
+                    materialEditor.ShaderProperty(specularColor, specularColor.displayName);
+                    materialEditor.ShaderProperty(gloss, gloss.displayName);
+                    GUILayout.Space(10);
                 }
-                EditorGUI.EndDisabledGroup();
+                GUILayout.EndVertical();
+                GUILayout.EndVertical();
 
 
-                current = baseRect;
-                current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
-
-                materialEditor.ShaderProperty(specularColor, specularColor.displayName);
-                materialEditor.ShaderProperty(gloss, gloss.displayName);
-
+                GUILayout.BeginVertical("Box");
                 GUILayout.Label("Edge Light", EditorStyles.boldLabel);
-                materialEditor.ShaderProperty(edgeLightWidth, "Width");
-                materialEditor.ShaderProperty(edgeLightIntensity, "Intensity");
-                GUILayout.Space(10);                
+                GUILayout.BeginVertical("Box");
+                {                    
+                    materialEditor.ShaderProperty(edgeLightWidth, "Width");
+                    materialEditor.ShaderProperty(edgeLightIntensity, "Intensity");
+                    GUILayout.Space(10);
+                }
+                GUILayout.EndVertical();
+                GUILayout.EndVertical();
+
+                GUILayout.BeginVertical("Box");
+                GUILayout.Label("Effective Disslove", EditorStyles.boldLabel);
+                GUILayout.BeginVertical("Box");
+                {
+                    materialEditor.TexturePropertySingleLine(effectiveMap.displayName.ToGUIContent(), effectiveMap, effectiveColor);
+                    GUILayout.Space(10);
+                }
+                GUILayout.EndVertical();
+                GUILayout.Space(10);
+                GUILayout.EndVertical();
+
+                GUILayout.BeginVertical("Box");
+                GUILayout.Label("Blend Mode", EditorStyles.boldLabel);
+                GUILayout.BeginVertical("Box");
+                {
+                    materialEditor.ShaderProperty(srcblend, "");
+                    materialEditor.ShaderProperty(dstblend, "");                    
+                }
+                GUILayout.EndVertical();
+                GUILayout.Space(10);
+                GUILayout.EndVertical();
+
+
+
+
+
 
                 materialEditor.ShaderProperty(flash, flash.displayName);
             });

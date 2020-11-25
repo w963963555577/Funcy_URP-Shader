@@ -11,6 +11,7 @@ Shader "ZDShader/LWRP/Particles/Alpha Blended"
         _Soft ("Soft", Range(0, 5)) = 1
         
         [IntRange] _StencilRef ("Stencil Reference Value", Range(0, 255)) = 0
+        [Enum(UnityEngine.Rendering.CompareFunction)]_StencilComp ("Stencil Compare Value", Range(0, 255)) = 4
         //[Enum(UnityEngine.Rendering.CompareFunction)] _StencilComp ("Stencil Compare", Float) = 0
         [HideInInspector] _texcoord ("", 2D) = "white" { }
     }
@@ -25,7 +26,7 @@ Shader "ZDShader/LWRP/Particles/Alpha Blended"
         Stencil
         {
             Ref [_StencilRef]
-            Comp Equal
+            Comp [_StencilComp]
         }
         
         Cull Back
