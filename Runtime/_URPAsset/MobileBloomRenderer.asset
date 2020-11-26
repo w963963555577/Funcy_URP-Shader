@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MobileBloomPass
   m_EditorClassIdentifier: 
   settings:
-    Event: 550
+    Event: 500
     blitMaterial: {fileID: 2100000, guid: 72af3f7302ef4f94eb9e46bc820b8df0, type: 2}
     BlurAmount: 1
     BloomAmount: 1.5
