@@ -179,50 +179,94 @@ public class MenuExtension
     }
     public class CreateAssetMenu
     {
-        [MenuItem("Assets/ZD/複製變色RGB", true)]
-        public static bool CopyDiscolorationInfo_Validator()
-        {           
-            return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/LWRP/Character";
-        }
-        [MenuItem("Assets/ZD/複製變色RGB", false, 1001)]
-        public static void CopyDiscolorationInfo()
+        static string CopyCharacterShaderInfo(Material referenceMaterial)
         {
-            Material referenceMaterial = Selection.activeObject as Material;
             Color skinColor, eyesColor, hairColor, headressColor1, headressColor2, color1, color2, color3, color4;
             Color emissionColor, specularColor;
             Color shadowColor1, shadowColor2, shadowColor3;
-            skinColor      = referenceMaterial.GetColor("_DiscolorationColor_1");
-            eyesColor      = referenceMaterial.GetColor("_DiscolorationColor_2");
-            hairColor      = referenceMaterial.GetColor("_DiscolorationColor_7");
+            skinColor = referenceMaterial.GetColor("_DiscolorationColor_1");
+            eyesColor = referenceMaterial.GetColor("_DiscolorationColor_2");
+            color1 = referenceMaterial.GetColor("_DiscolorationColor_3");
+            color2 = referenceMaterial.GetColor("_DiscolorationColor_4");
+            color3 = referenceMaterial.GetColor("_DiscolorationColor_5");
+            color4 = referenceMaterial.GetColor("_DiscolorationColor_6");
+            hairColor = referenceMaterial.GetColor("_DiscolorationColor_7");
             headressColor1 = referenceMaterial.GetColor("_DiscolorationColor_8");
             headressColor2 = referenceMaterial.GetColor("_DiscolorationColor_9");
-            color1         = referenceMaterial.GetColor("_DiscolorationColor_3");
-            color2         = referenceMaterial.GetColor("_DiscolorationColor_4");
-            color3         = referenceMaterial.GetColor("_DiscolorationColor_5");
-            color4         = referenceMaterial.GetColor("_DiscolorationColor_6");
-            emissionColor  = referenceMaterial.GetColor("_EmissionColor");
-            specularColor  = referenceMaterial.GetColor("_SpecularColor");
-            shadowColor1   = referenceMaterial.GetColor("_ShadowColor0");
-            shadowColor2   = referenceMaterial.GetColor("_ShadowColor1");
-            shadowColor3   = referenceMaterial.GetColor("_ShadowColorElse");
+
+            emissionColor = referenceMaterial.GetColor("_EmissionColor");
+            specularColor = referenceMaterial.GetColor("_SpecularColor");
+            shadowColor1 = referenceMaterial.GetColor("_ShadowColor0");
+            shadowColor2 = referenceMaterial.GetColor("_ShadowColor1");
+            shadowColor3 = referenceMaterial.GetColor("_ShadowColorElse");
             char tab = '	';
 
-            GUIUtility.systemCopyBuffer = string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}", tab,
+            return string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}", tab,
                  ColorToSheetString(skinColor),
                  ColorToSheetString(eyesColor),
-                 ColorToSheetString(hairColor),
-                 ColorToSheetString(headressColor1),
-                 ColorToSheetString(headressColor2),
                  ColorToSheetString(color1),
                  ColorToSheetString(color2),
                  ColorToSheetString(color3),
                  ColorToSheetString(color4),
+                 ColorToSheetString(hairColor),
+                 ColorToSheetString(headressColor1),
+                 ColorToSheetString(headressColor2),
                  ColorToSheetString(emissionColor),
                  ColorToSheetString(specularColor),
                  ColorToSheetString(shadowColor1),
                  ColorToSheetString(shadowColor2),
                  ColorToSheetString(shadowColor3)
                 );
+        }
+        [MenuItem("Assets/ZD/複製角色RGB", true)]
+        public static bool CopyDiscolorationInfo_Validator()
+        {           
+            return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/LWRP/Character";
+        }
+        [MenuItem("Assets/ZD/複製角色RGB", false, 1001)]
+        public static void CopyDiscolorationInfo()
+        {
+            Material referenceMaterial = Selection.activeObject as Material;
+            GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial);
+        }
+
+        [MenuItem("Assets/ZD/複製所有角色RGB", true)]
+        public static bool CopyAllDiscolorationInfo_Validator()
+        {
+            return Selection.activeObject is DefaultAsset && AssetDatabase.GetAssetPath(Selection.activeObject) == "Assets/02.Arts/Models/Combines";
+        }
+        [MenuItem("Assets/ZD/複製所有角色RGB", false, 1001)]
+        public static void CopyAllDiscolorationInfo()
+        {
+            var fbxs = Directory.GetFiles(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"), "*", SearchOption.AllDirectories)
+                .ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".fbx");
+
+            string result = "";
+            char tab = '	';
+
+            foreach (var f in fbxs)
+            {
+                string path = f.toAssetsPath();
+
+                string s = "";
+                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+
+                var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(path);                                
+                var mat = importer.GetExternalObjectMap().ToList()[0].Value as Material;
+                string[] split = Path.GetFileName(Path.GetDirectoryName(path)).Split('_');
+
+                var avatarID = importer.sourceAvatar == null ? "-1" : importer.sourceAvatar.name.Split('_')[1];
+                var modelID = split[1];
+                var modelName = split[2];
+
+                s = string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}",
+                    tab, modelName, avatarID, "", "", modelID, 1, 0, 0, 0, 0, 0, 0, 0, CopyCharacterShaderInfo(mat));
+
+                result += s + "\n";
+            }
+            GUIUtility.systemCopyBuffer = result;
+            //Material referenceMaterial = Selection.activeObject as Material;
+            //GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial);
         }
 
         static string ColorToSheetString(Color c)
@@ -252,6 +296,7 @@ public class MenuExtension
                     Debug.LogWarning("Failed to get UnityEditor.U2D.SpriteAtlasExtensions");
                     return;
                 }
+
                 Texture2D[] textures = (Texture2D[])methodInfo.Invoke(null, new object[] { atlas });
                 if (textures == null)
                 {
