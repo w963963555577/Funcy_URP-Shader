@@ -24,9 +24,9 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
     }
     
     SubShader
-    {                
+    {
         Tags { "RenderPipeline" = "UniversalPipeline" }
-
+        
         
         Pass
         {
@@ -86,9 +86,10 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
             
+            //textures
             TEXTURE2D(_MobileSSPR_ColorRT);
             sampler LinearClampSampler;
-
+            
             CBUFFER_START(UnityPerMaterial)
             float _WaveDirection;
             float _WaveSpeed;
@@ -238,11 +239,13 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
                 #endif
                 
                 
-                half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV + temp_output_35_0 * _RefractionIntensity);
+                half4 ssrColor = 0.0;
                 
+                #if _MobileSSPR                                      
+                    ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV + temp_output_35_0 * _RefractionIntensity);
+                #endif
                 
-                
-                
+                                                
                 float2 uv_Foam0134 = (panner11 / _FoamScale);
                 float2 uv_Foam1135 = (panner23 / _FoamScale);
                 float screenDepth52 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
