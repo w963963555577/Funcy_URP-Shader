@@ -8,7 +8,7 @@ ShaderImporter:
   - _SelfMask: {instanceID: 0}
   - _OutlineWidthControl: {instanceID: 0}
   - _ExpressionMap: {instanceID: 0}
-  - _EffectiveMap: {fileID: 2800000, guid: cec68983e3a915f48a8c454acb74d8fd, type: 3}
+  - _EffectiveMap: {fileID: 2800000, guid: 6a1fffff897d00e459ab3c9226cbedc6, type: 3}
   nonModifiableTextures: []
   userData: 
   assetBundleName: 
