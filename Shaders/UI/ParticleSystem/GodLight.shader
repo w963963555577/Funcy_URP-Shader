@@ -109,7 +109,7 @@
                 
                 half alphaMinus = 1.0 - i.color.a;
                 i.uv0.x *= 8.0;
-                col.a = i.color.a * smoothstep(0.0, 0.5, 1.0 - i.uv0.y) * smoothstep(0.45, 0.55, sin(atan2(i.uv0.y, i.uv0.x))) / (length(i.uv0.xy) );
+                col.a = i.color.a * smoothstep(0.0, 0.5, 1.0 - i.uv0.y) * smoothstep(0.45, 0.55, sin(atan2(i.uv0.y, i.uv0.x))) / (length(i.uv0.xy+0.01) );
                 return col;
             }
             ENDCG

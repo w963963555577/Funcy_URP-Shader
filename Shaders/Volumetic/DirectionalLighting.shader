@@ -48,7 +48,7 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)                        
+            CBUFFER_START(UnityPerMaterial)
             half _SampleNum;
             half _SampleDensity;
             
@@ -109,7 +109,7 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
                 return SAMPLE_TEXTURE2D(_ShadowRamp, sampler_ShadowRamp, TRANSFORM_TEX(uv.xy, _ShadowRamp)).r;
             }
             
-            half VolumetricShadow(float2 lightViewPosition, float2 viewPos)
+            half VolumetricShadow(float2 lightViewPosition, float2 viewPos, float viewFading)
             {
                 half finalShadow = 0.0;
                 
@@ -118,8 +118,12 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
                 uvDelta *= 1.0h * ramp / _SampleNum * _SampleDensity  ;
                 
                 half shadow = 1.0;
-                
-                for (int iter = 0; iter < _SampleNum; iter ++)
+                #if defined(SHADER_API_OPENGL) || defined(SHADER_API_D3D11) || defined(SHADER_API_D3D12)
+                    [unroll(64)]
+                #else
+                    UNITY_LOOP
+                #endif
+                for (int iter = 0; iter < _SampleNum ; iter ++)
                 {
                     viewPos -= uvDelta;
                     
@@ -160,6 +164,10 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
                 i.mainLightViewPosition.xyz /= i.mainLightViewPosition.w;
                 Light mainLight = GetMainLight();
                 
+                float3 viewDirXZ = normalize(float3(i.viewDirection.x, i.viewDirection.y, i.viewDirection.z));
+                float3 lightDirXZ = normalize(float3(mainLight.direction.x, mainLight.direction.y, mainLight.direction.z));
+                half viewFading = saturate(dot(viewDirXZ, lightDirXZ));
+                
                 // depth
                 float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r ;
                 depth = Linear01Depth(depth, _ZBufferParams) / 2.0;
@@ -169,7 +177,7 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
                 float distanceDecay = saturate(_LightingRadius - length(distance));
                 depth *= distanceDecay;
                 
-                half finalShadow = VolumetricShadow(i.mainLightViewPosition.xy, uv);
+                half finalShadow = VolumetricShadow(i.mainLightViewPosition.xy, uv, viewFading);
                 
                 float3 mainColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, uv).rgb;
                 finalShadow *= finalShadow;
@@ -185,9 +193,7 @@ Shader "ZDShader/LWRP/Volume/Directional Lighting"
                 sa.y += _ShadowSaturation;
                 sa = HSV2RGB(sa);
                 
-                float3 viewDirXZ = normalize(float3(i.viewDirection.x, i.viewDirection.y, i.viewDirection.z));
-                float3 lightDirXZ = normalize(float3(mainLight.direction.x, mainLight.direction.y, mainLight.direction.z));
-                half viewFading = saturate(dot(viewDirXZ, lightDirXZ));
+                
                 half3 b = finalShadow * _LightingColor.rgb + (1.0 - finalShadow) * _ShadowColor.rgb * sa.rgb;
                 //return float4(viewFading.rrr, 1.0);
                 return half4(lerp(a, b, _ShadowIntensity) + f_Shadow.rrr * _LightingColor.rgb, viewFading);

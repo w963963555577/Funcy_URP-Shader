@@ -1,6 +1,5 @@
 
 using UnityEngine;
-using UnityEngine.Funcy.LWRP.Runtime;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -100,9 +99,7 @@ public class MobileBloom : ScriptableRendererFeature
             Blit(cmd, blurTemp1, blurTex, material, 1);
             cmd.Blit(tempCopy, source, material, 2);
 
-            context.ExecuteCommandBuffer(cmd);
-
-            cmd.SetGlobalTexture("_ResultTex", tempCopy);
+            context.ExecuteCommandBuffer(cmd);            
 
             CommandBufferPool.Release(cmd);
         }
