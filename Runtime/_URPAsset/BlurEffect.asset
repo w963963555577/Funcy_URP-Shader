@@ -47,7 +47,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 567e67448958ca54e90ac29f2e84aa2f, type: 3}
-  m_Name: NewMobileBloom
+  m_Name: MobileBloom
   m_EditorClassIdentifier: 
   m_Active: 1
   settings:
