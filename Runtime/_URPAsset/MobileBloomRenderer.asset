@@ -15,7 +15,7 @@ MonoBehaviour:
   m_Active: 1
   settings:
     Event: 500
-    blitMaterial: {fileID: 2100000, guid: 72af3f7302ef4f94eb9e46bc820b8df0, type: 2}
+    blitMaterial: {fileID: 2100000, guid: 0e066e459ecbbad46949bc6bd440ca75, type: 2}
     BlurAmount: 1
     BloomAmount: 1.5
     BloomThreshold: 0.85
@@ -56,9 +56,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 6983396807854424833}
   - {fileID: -6529504306141599248}
-  - {fileID: 1632760951684481483}
   - {fileID: -899535766028868467}
-  m_RendererFeatureMap: 0183c2a96502ea60f0e90ba96d8a62a5cb4148506fbba8168d24179bfc3484f3
+  m_RendererFeatureMap: 0183c2a96502ea60f0e90ba96d8a62a58d24179bfc3484f3
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   shaders:
     blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
