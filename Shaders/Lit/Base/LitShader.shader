@@ -23,7 +23,8 @@ Shader "ZDShader/LWRP/PBR Base"
         [ToggleOff] _SpecularHighlights ("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections ("Environment Reflections", Float) = 1.0
         [ToggleOff] _SSPREnabled ("Screen Space Planar Reflections", Float) = 0.0
-        
+        [ToggleOff] _FlowEmissionEnabled ("Flow Emossion", Float) = 0.0
+
         _BumpScale ("Scale", Float) = 1.0
         _BumpMap ("Normal Map", 2D) = "bump" { }
         
@@ -81,6 +82,10 @@ Shader "ZDShader/LWRP/PBR Base"
             
             //SSPR
             #pragma shader_feature _SSPR_OFF
+            
+            //FlowEmission
+            #pragma shader_feature _FlowEmission_OFF
+            
             #pragma shader_feature _SPECULARHIGHLIGHTS_OFF
             #pragma shader_feature _GLOSSYREFLECTIONS_OFF
             #pragma shader_feature _SPECULAR_SETUP
@@ -228,6 +233,9 @@ Shader "ZDShader/LWRP/PBR Base"
                     float4 tangentOS: TANGENT;
                     float2 texcoord: TEXCOORD0;
                     float2 lightmapUV: TEXCOORD1;
+                    #ifdef _FlowEmission_OFF
+                        float2 effectcoord: TEXCOORD2;
+                    #endif
                     #ifdef _DrawMeshInstancedProcedural
                         uint mid: SV_INSTANCEID;
                     #else
@@ -237,7 +245,7 @@ Shader "ZDShader/LWRP/PBR Base"
                 
                 struct Varyings
                 {
-                    float2 uv: TEXCOORD0;
+                    float4 uv: TEXCOORD0;
                     DECLARE_LIGHTMAP_OR_SH(lightmapUV, vertexSH, 1);
                     
                     #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
@@ -366,8 +374,10 @@ Shader "ZDShader/LWRP/PBR Base"
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
                     
-                    output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
-                    
+                    output.uv.xy = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                    #ifdef _FlowEmission_OFF
+                        output.uv.zw = input.effectcoord;
+                    #endif
                     #ifdef _NORMALMAP
                         output.normalWS = half4(normalInput.normalWS, viewDirWS.x);
                         output.tangentWS = half4(normalInput.tangentWS, viewDirWS.y);
@@ -469,7 +479,20 @@ Shader "ZDShader/LWRP/PBR Base"
                         #endif
                     #endif
                     
-                    half4 color = UniversalFragmentPBR_SSPR(inputData, surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.occlusion, surfaceData.emission, surfaceData.alpha, screenUV);
+                    half4 color = UniversalFragmentPBR_SSPR(inputData,
+                    surfaceData.albedo,
+                    surfaceData.metallic,
+                    surfaceData.specular,
+                    surfaceData.smoothness,
+                    surfaceData.occlusion,
+                    surfaceData.emission
+                    #ifdef _FlowEmission_OFF
+                        + surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0)
+                    #endif
+                    ,
+                    surfaceData.alpha,
+                    screenUV);
+                    
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
                     
                     return color;

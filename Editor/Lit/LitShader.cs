@@ -10,14 +10,14 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         // Properties
         private LitGUI.LitProperties litProperties;
         private MaterialProperty ssprEnabled;
-
+        private MaterialProperty flowEmissionEnabled;
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
             ssprEnabled = FindProperty("_SSPREnabled", properties, false);
-            
+            flowEmissionEnabled = FindProperty("_FlowEmissionEnabled", properties, false);
         }
 
         // material changed check
@@ -31,6 +31,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             if (material.HasProperty("_SSPREnabled"))
                 CoreUtils.SetKeyword(material, "_SSPR_OFF",
                     material.GetFloat("_SSPREnabled") == 1.0f);
+
+            if (material.HasProperty("_FlowEmissionEnabled"))
+                CoreUtils.SetKeyword(material, "_FlowEmission_OFF",
+                    material.GetFloat("_FlowEmissionEnabled") == 1.0f);
         }
 
         // material main surface options
@@ -181,7 +185,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             {
                 ChangeCheckArea_Float(material, ssprEnabled, "Enabled");
 
-            }); ;
+            }); 
+            }
+            if (material.HasProperty("_FlowEmissionEnabled"))
+            {
+                DrawArea("Flow Emossion", () =>
+                {
+                    ChangeCheckArea_Float(material, flowEmissionEnabled, "Enabled");
+
+                });
             }
             if (EditorGUI.EndChangeCheck())
             {

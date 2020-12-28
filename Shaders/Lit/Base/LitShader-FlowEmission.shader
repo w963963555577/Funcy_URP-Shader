@@ -348,8 +348,6 @@ Shader "ZDShader/LWRP/PBR Base(Flow Emission)"
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     
-                    float3 pw = inputData.positionWS;
-                    float positionOffset = pw.x + pw.y + pw.z + pw.x * pw.y + pw.y * pw.z + pw.x * pw.z;
                     
                     half4 color = UniversalFragmentPBR(inputData,
                     surfaceData.albedo,
@@ -357,10 +355,11 @@ Shader "ZDShader/LWRP/PBR Base(Flow Emission)"
                     surfaceData.specular,
                     surfaceData.smoothness,
                     surfaceData.occlusion,
-                    surfaceData.emission + surfaceData.emission * sin(input.uv.z * 6.28*2.0 + _Time.y * 3.0),
+                    surfaceData.emission + surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0),
                     surfaceData.alpha);
                     
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                    
                     return color;
                 }
                 
