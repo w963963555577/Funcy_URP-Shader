@@ -24,7 +24,7 @@ Shader "ZDShader/LWRP/PBR Base"
         [ToggleOff] _EnvironmentReflections ("Environment Reflections", Float) = 1.0
         [ToggleOff] _SSPREnabled ("Screen Space Planar Reflections", Float) = 0.0
         [ToggleOff] _FlowEmissionEnabled ("Flow Emossion", Float) = 0.0
-
+        
         _BumpScale ("Scale", Float) = 1.0
         _BumpMap ("Normal Map", 2D) = "bump" { }
         
@@ -197,7 +197,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     #endif
                 }
                 
-                inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData)
+                inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfaceData, out half emissionFlowMask)
                 {
                     half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
                     outSurfaceData.alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
@@ -216,7 +216,14 @@ Shader "ZDShader/LWRP/PBR Base"
                     outSurfaceData.smoothness = specGloss.a;
                     outSurfaceData.normalTS = SampleNormal(uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
                     outSurfaceData.occlusion = SampleOcclusion(uv);
-                    outSurfaceData.emission = SampleEmission(uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
+                    #ifndef _EMISSION
+                        outSurfaceData.emission = 0;
+                        emissionFlowMask = 0;
+                    #else
+                        half4 emissionMap = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, uv);
+                        outSurfaceData.emission = emissionMap.rgb * _EmissionColor.rgb;
+                        emissionFlowMask = emissionMap.a;
+                    #endif
                 }
                 
             #endif // UNIVERSAL_INPUT_SURFACE_PBR_INCLUDED
@@ -464,7 +471,8 @@ Shader "ZDShader/LWRP/PBR Base"
                         UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                     #endif
                     SurfaceData surfaceData;
-                    InitializeStandardLitSurfaceData(input.uv, surfaceData);
+                    half emissionFlowMask = 0.0;
+                    InitializeStandardLitSurfaceData(input.uv, surfaceData, emissionFlowMask);
                     
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
@@ -487,7 +495,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     surfaceData.occlusion,
                     surfaceData.emission
                     #ifdef _FlowEmission_OFF
-                        + surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0)
+                        + surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0) * emissionFlowMask
                     #endif
                     ,
                     surfaceData.alpha,
