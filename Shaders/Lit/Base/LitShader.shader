@@ -426,6 +426,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     
                     #ifdef _SSPR_OFF
                         half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
+                        ssrColor.a *= saturate(dot(normalWS, half3(0.0, 1.0, 0.0)));
                         indirectSpecular = lerp(indirectSpecular, ssrColor.rgb, ssrColor.a);
                     #endif
                     
