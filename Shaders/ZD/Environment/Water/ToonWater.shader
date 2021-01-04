@@ -31,7 +31,7 @@ Shader "ZDShader/LWRP/Environment/ToonWater"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward_SSPR" }
+            Tags { "LightMode" = "UniversalForward" }
             
             Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
             ZWrite Off

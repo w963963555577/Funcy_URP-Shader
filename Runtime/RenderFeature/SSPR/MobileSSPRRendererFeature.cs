@@ -45,7 +45,7 @@ namespace UnityEngine.Funcy.LWRP.Runtime
             RenderTargetIdentifier _SSPR_PosWSyRT_rti = new RenderTargetIdentifier(_SSPR_PosWSyRT_pid);
 
 
-            ShaderTagId lightMode_SSPR_sti = new ShaderTagId("UniversalForward_SSPR");//reflection plane renderer's material's shader must use this LightMode
+            ShaderTagId lightMode_SSPR_sti = new ShaderTagId("UniversalForward");//reflection plane renderer's material's shader must use this LightMode
 
             const int SHADER_NUMTHREAD_X = 8; //must match compute shader's [numthread(x)]
             const int SHADER_NUMTHREAD_Y = 8; //must match compute shader's [numthread(y)]
