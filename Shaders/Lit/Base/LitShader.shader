@@ -760,7 +760,7 @@ Shader "ZDShader/LWRP/PBR Base"
             
         }
         
-        UsePass "Universal Render Pipeline/Lit/Meta"
+        //UsePass "Universal Render Pipeline/Lit/Meta"
     }
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
