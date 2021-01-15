@@ -235,7 +235,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 float3 _OEM = v.normal;
                 
-                half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.8) * _OutlineWidthControl_var.r;
+                half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
                 half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
@@ -653,12 +653,24 @@ Shader "ZDShader/LWRP/Character"
                 }
             #endif
             
+            float4 WorldToShadowCoord(float3 positionWS)
+            {
+                #ifdef _MAIN_LIGHT_SHADOWS_CASCADE
+                    half cascadeIndex = ComputeCascadeIndex(positionWS);
+                #else
+                    half cascadeIndex = 0;
+                #endif
+                float4x4 m = _MainLightWorldToShadow[cascadeIndex];
+
+                return mul(m, float4(positionWS, 1.0));
+            }
+            
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
-                float4 shadowCoords = TransformWorldToShadowCoord(i.positionWSAndFogFactor.xyz);
+                float4 shadowCoords = WorldToShadowCoord(i.positionWSAndFogFactor.xyz);
                 Light mainLight = GetMainLight(shadowCoords);
                 
                 mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
