@@ -6,6 +6,7 @@ using UnityEditor.Rendering;
 using System.Collections.Generic;
 using UnityEditor.AnimatedValues;
 using System.Linq;
+using System.Reflection;
 
 namespace UnityEditor
 {
@@ -36,6 +37,28 @@ namespace UnityEditor
         }
         public abstract void MaterialChanged(Material material);
 
+        public virtual void FindProperties(ShaderGUI data)
+        {
+            BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            
+            var obj = data;
+            var poList = obj.GetType().GetProperties(flags).ToList().FindAll(p => p.PropertyType == typeof(MaterialProperty));
+            
+            foreach (var po in poList)
+            {
+                var f = string.Format("_{0}{1}", po.Name.Substring(0, 1).ToUpper(), po.Name.Substring(1));
+                
+                try
+                {
+                    po.SetValue(obj, FindProperty(f, props));
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+        }
+
         public override void OnGUI(MaterialEditor materialEditorIn, MaterialProperty[] properties)
         {
             materialEditor = materialEditorIn;
@@ -51,7 +74,7 @@ namespace UnityEditor
         }
 
         public virtual void OnMaterialGUI()
-        {
+        {            
             base.OnGUI(materialEditor, props);
         }
         public void MaterialChangeCheck()
