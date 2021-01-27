@@ -2,8 +2,7 @@
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" { }
-        //   _offset ("Offset", float) = 0.5
+        _MainTex ("Texture", 2D) = "white" { }        
     }
     
     SubShader
@@ -32,7 +31,7 @@
                 float4 vertex: SV_POSITION;
             };
             float _offset;
-
+            
             TEXTURE2D(_MainTex);        SAMPLER(sampler_MainTex);
             
             CBUFFER_START(UnityPerMaterial)

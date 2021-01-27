@@ -16,13 +16,14 @@ Shader "ZDShader/LWRP/Character"
         _SelfMask ("Self Mask", 2D) = "black" { }
         
         
-        [Toggle(_SelfMaskEnable)] _SelfMaskEnable ("Self Mask Enable", float) = 0
+        [MaterialToggle] _SelfMaskEnable ("Self Mask Enable", float) = 0
         
         [Enum(positiveZ positiveY, 0, positiveY negativeX, 1)]_SelfMaskDirection ("Self Mask Direction", Float) = 0
         
         [HDR]_EmissionColor ("EmissionColor", Color) = (0, 0, 0)
         [MaterialToggle] _EmissionxBase ("Emission x Base", Float) = 0
         [MaterialToggle] _EmissionOn ("EmissionOn", Float) = 0
+        [MaterialToggle] _EmissionFlow ("Flow Emission", Float) = 0
         
         _Gloss ("Gloss (texture=1)", Range(0, 1)) = 0.5
         [HDR]_SpecularColor ("SpecularColor", Color) = (0.6176471, 0.6145149, 0.5722318, 1)
@@ -79,7 +80,6 @@ Shader "ZDShader/LWRP/Character"
         _OutlineColor ("Color", Color) = (0.0075, 0.0006, 0.0006, 1)
         _DiffuseBlend ("Diffuse Blend", Range(0, 1)) = 0.2
         _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur ("Outline Ctrl Properties", Vector) = (0.0, 0.5, 0.5, 0.0)
-        
         
         //Expression
         [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
@@ -156,6 +156,7 @@ Shader "ZDShader/LWRP/Character"
             
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
+            half _SelfMaskEnable;
             half4 _SelfMask_ST;
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
@@ -174,6 +175,7 @@ Shader "ZDShader/LWRP/Character"
             half _Gloss;
             half _EmissionxBase;
             half _EmissionOn;
+            half _EmissionFlow;
             half _Flash;
             half _EdgeLightWidth;
             half _EdgeLightIntensity;
@@ -301,8 +303,6 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _AlphaClip
             
-            #pragma shader_feature_local _CustomLighting
-            #pragma shader_feature_local _SelfMaskEnable
             #pragma shader_feature_local _DiscolorationSystem
             #pragma shader_feature_local _ExpressionEnable
             
@@ -311,9 +311,8 @@ Shader "ZDShader/LWRP/Character"
                 #pragma shader_feature_local _ExpressionFormat_Wink
                 #pragma shader_feature_local _ExpressionFormat_FaceSheet
             #endif
+            
             #pragma multi_compile_fog
-            
-            
             #pragma multi_compile_instancing
             
             #pragma vertex LitPassVertex
@@ -327,6 +326,7 @@ Shader "ZDShader/LWRP/Character"
             
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
+            half _SelfMaskEnable;
             half4 _SelfMask_ST;
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
@@ -345,6 +345,7 @@ Shader "ZDShader/LWRP/Character"
             half _Gloss;
             half _EmissionxBase;
             half _EmissionOn;
+            half _EmissionFlow;
             half _Flash;
             half _EdgeLightWidth;
             half _EdgeLightIntensity;
@@ -400,21 +401,22 @@ Shader "ZDShader/LWRP/Character"
                 float4 tangentOS: TANGENT;
                 float2 uv0: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
+                float2 effectcoord: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
             struct Varyings
             {
                 float4 uv01: TEXCOORD0;
+                float2 effectcoord: TEXCOORD1;
                 float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
                 float3 normalWS: TEXCOORD3;
                 
                 
-                #ifdef _SelfMaskEnable
-                    float3 objectDirection: TEXCOORD4;
-                    float3 lightXZDirection: TEXCOORD5;
-                    float3 objectUp: TEXCOORD6;
-                #endif
+                float3 objectDirection: TEXCOORD4;
+                float3 lightXZDirection: TEXCOORD5;
+                float3 objectUp: TEXCOORD6;
+                
                 
                 float vertexDist: TEXCOORD7;
                 
@@ -471,7 +473,7 @@ Shader "ZDShader/LWRP/Character"
                 // TRANSFORM_TEX is the same as the old shader library.
                 output.uv01.xy = TRANSFORM_TEX(input.uv0, _diffuse);
                 output.uv01.zw = input.uv1;
-                
+                output.effectcoord = input.effectcoord;
                 output.positionWSAndFogFactor = float4(vertexInput.positionWS, fogFactor);
                 output.normalWS = vertexNormalInput.normalWS;
                 
@@ -480,24 +482,18 @@ Shader "ZDShader/LWRP/Character"
                     output.bitangentWS = vertexNormalInput.bitangentWS;
                 #endif
                 
-                #if _SelfMaskEnable
-                    Light mainLight = GetMainLight();
-                    
-                    half index = _SelfMaskDirection;
-                    
-                    half3 dirPZPY = half3(0, 0, 1);half3 upPZPY = half3(0, 1, 0);
-                    half3 dirPYNX = half3(0, 1, 0);half3 upPYNX = half3(-1, 0, 0);
-                    
-                    half3 useDir = lerp(dirPZPY, dirPYNX, saturate(index));
-                    half3 useUp = lerp(upPZPY, upPYNX, saturate(index));
-                    
-                    
-                    output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
-                    output.objectDirection.y = 0;
-                    output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
-                    
-                    output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
-                #endif
+                //SelfMask
+                Light mainLight = GetMainLight();
+                half index = _SelfMaskDirection;
+                half3 dirPZPY = half3(0, 0, 1);half3 upPZPY = half3(0, 1, 0);
+                half3 dirPYNX = half3(0, 1, 0);half3 upPYNX = half3(-1, 0, 0);
+                half3 useDir = lerp(dirPZPY, dirPYNX, saturate(index));
+                half3 useUp = lerp(upPZPY, upPYNX, saturate(index));
+                output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
+                output.objectDirection.y = 0;
+                output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
+                output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
+                
                 
                 output.vertexDist = distance(input.positionOS.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
@@ -559,21 +555,21 @@ Shader "ZDShader/LWRP/Character"
                 return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
             }
             
-            #if _SelfMaskEnable
-                float LigntMapAreaInUV1(Varyings i, float origShadow)
-                {
-                    float cm = normalize(cross(i.objectDirection, i.lightXZDirection)).y;
-                    float4 _SelfMask_UV1_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, float2(i.uv01.z * cm, i.uv01.w));
-                    
-                    float angle01 = acos(-dot(i.objectDirection, i.lightXZDirection)) / 3.14159265359h;
-                    angle01 = Remap(angle01, 0, 1, 0.01, 0.99);
-                    
-                    half upNear = dot(i.objectUp, half3(0, 1, 0));
-                    _SelfMask_UV1_var.r = lerp(origShadow, _SelfMask_UV1_var.r, upNear * 0.5 + 0.5);
-                    
-                    return 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01);
-                }
-            #endif
+            
+            float LigntMapAreaInUV1(Varyings i, float origShadow)
+            {
+                float cm = normalize(cross(i.objectDirection, i.lightXZDirection)).y;
+                float4 _SelfMask_UV1_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, float2(i.uv01.z * cm, i.uv01.w));
+                
+                float angle01 = acos(-dot(i.objectDirection, i.lightXZDirection)) / 3.14159265359h;
+                angle01 = Remap(angle01, 0, 1, 0.01, 0.99);
+                
+                half upNear = dot(i.objectUp, half3(0, 1, 0));
+                _SelfMask_UV1_var.r = lerp(origShadow, _SelfMask_UV1_var.r, upNear * 0.5 + 0.5);
+                
+                return 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01);
+            }
+            
             
             #if _DiscolorationSystem
                 half3 RGB2HSV(half3 c)
@@ -661,7 +657,7 @@ Shader "ZDShader/LWRP/Character"
                     half cascadeIndex = 0;
                 #endif
                 float4x4 m = _MainLightWorldToShadow[cascadeIndex];
-
+                
                 return mul(m, float4(positionWS, 1.0));
             }
             
@@ -796,11 +792,9 @@ Shader "ZDShader/LWRP/Character"
                 //PBRShadowArea
                 float refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
                 half uvUseArea;
-                #if _SelfMaskEnable
-                    uvUseArea = LigntMapAreaInUV1(i, refractionShadowArea);
-                #else
-                    uvUseArea = 0.0;
-                #endif
+                
+                uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
+                
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
                 
                 refractionShadowArea = saturate(refractionShadowArea);
@@ -833,9 +827,13 @@ Shader "ZDShader/LWRP/Character"
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * saturate(shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb + shadowAreaElse * _ShadowColorElse.rgb), shadowTotal);
                 
                 
+                half clampMask = 1.0 - smoothstep(0.99, 1.0, abs(i.effectcoord.y - 0.5) * 2.0);
+                float3 emissionColor = (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var);
+                
+                
                 float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
                 + specularColor + diffuseColor) * mainLight.color * _Color.rgb +
-                (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var) +
+                emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + (_Time.y + i.effectcoord.y * i.effectcoord.y) * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
                 
@@ -904,7 +902,6 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile _ _AlphaClip
             // -------------------------------------
             // Material Keywords
-            #pragma shader_feature_local _SelfMaskEnable
             
             //--------------------------------------
             // GPU Instancing
@@ -925,6 +922,7 @@ Shader "ZDShader/LWRP/Character"
             sampler2D _SelfMask;
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
+            half _SelfMaskEnable;
             half4 _SelfMask_ST;
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
@@ -943,6 +941,7 @@ Shader "ZDShader/LWRP/Character"
             half _Gloss;
             half _EmissionxBase;
             half _EmissionOn;
+            half _EmissionFlow;
             half _Flash;
             half _EdgeLightWidth;
             half _EdgeLightIntensity;
@@ -1018,11 +1017,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 #if UNITY_REVERSED_Z
-                    positionCS.z = min(positionCS.z, positionCS.w * (UNITY_NEAR_CLIP_VALUE
-                    #if _SelfMaskEnable
-                        * _SelfMask_var.b
-                    #endif
-                    ));
+                    positionCS.z = min(positionCS.z, positionCS.w * (UNITY_NEAR_CLIP_VALUE * lerp(1.0, _SelfMask_var.b, _SelfMaskEnable)));
                 #else
                     positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
@@ -1096,6 +1091,7 @@ Shader "ZDShader/LWRP/Character"
             
             CBUFFER_START(UnityPerMaterial)
             half4 _diffuse_ST;
+            half _SelfMaskEnable;
             half4 _SelfMask_ST;
             half _SubsurfaceScattering;
             half _SubsurfaceRadius;
@@ -1114,6 +1110,7 @@ Shader "ZDShader/LWRP/Character"
             half _Gloss;
             half _EmissionxBase;
             half _EmissionOn;
+            half _EmissionFlow;
             half _Flash;
             half _EdgeLightWidth;
             half _EdgeLightIntensity;

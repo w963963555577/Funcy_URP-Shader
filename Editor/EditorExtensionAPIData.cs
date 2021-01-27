@@ -140,6 +140,7 @@ namespace UnityEditor
 
         static void Create(string fileName, string assetPath = "Assets")
         {
+            /*
             if (!EditorExtensionAPIData.data)
                 EditorExtensionAPIData.data = Project.CreateCannotBeDeleteObject<EditorExtensionAPIData>("EditorExtensionAPIData");
             EditorApplication.projectWindowChanged += delegate
@@ -147,6 +148,7 @@ namespace UnityEditor
                 if (!EditorExtensionAPIData.data)
                     EditorExtensionAPIData.data = Project.CreateCannotBeDeleteObject<EditorExtensionAPIData>("EditorExtensionAPIData");
             };
+            */
 
         }
 

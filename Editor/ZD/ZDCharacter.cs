@@ -40,6 +40,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public MaterialProperty emissionColor { get; set; }
         public MaterialProperty emissionxBase { get; set; }
         public MaterialProperty emissionxOn { get; set; }
+        public MaterialProperty emissionFlow { get; set; }
         public MaterialProperty gloss { get; set; }
         public MaterialProperty specularColor { get; set; }
         public MaterialProperty shadowRemap { get; set; }
@@ -128,6 +129,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             emissionColor = FindProperty("_EmissionColor", props);
             emissionxBase = FindProperty("_EmissionxBase", props);
             emissionxOn = FindProperty("_EmissionOn", props);
+            emissionFlow = FindProperty("_EmissionFlow", props);
             gloss = FindProperty("_Gloss", props);
             specularColor = FindProperty("_SpecularColor", props);
             shadowRemap = FindProperty("_ShadowRamp", props);
@@ -261,6 +263,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.BeginVertical("Box");
                                     
                     materialEditor.ShaderProperty(emissionxOn, "Emission");
+                    materialEditor.ShaderProperty(emissionFlow, emissionFlow.displayName);                    
                     Rect baseRect = GUILayoutUtility.GetLastRect();
                     var current = baseRect;
 

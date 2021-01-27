@@ -6,29 +6,29 @@ using UnityEngine.Rendering.Universal;
 public class KawaseBlur : ScriptableRendererFeature
 {
     [System.Serializable]
-    public class KawaseBlurSettings
+    public class Settings
     {
         public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRendering;
         public Material blurMaterial = null;
 
-        [Range(2,15)]
+        [Range(2, 15)]
         public int blurPasses = 6;
 
-        [Range(1,4)]
+        [Range(1, 4)]
         public int downsample = 2;
         public bool copyToFramebuffer;
         public string targetName = "_blurTexture";
     }
 
-    public KawaseBlurSettings settings = new KawaseBlurSettings();
+    public Settings settings = new Settings();
 
-    class CustomRenderPass : ScriptableRenderPass
+    class Pass : ScriptableRenderPass
     {
         public Material blurMaterial;
         public int passes;
         public int downsample;
         public bool copyToFramebuffer;
-        public string targetName;        
+        public string targetName;
         string profilerTag;
 
         int tmpId1;
@@ -36,14 +36,15 @@ public class KawaseBlur : ScriptableRendererFeature
 
         RenderTargetIdentifier tmpRT1;
         RenderTargetIdentifier tmpRT2;
-        
+
         private RenderTargetIdentifier source { get; set; }
 
-        public void Setup(RenderTargetIdentifier source) {
+        public void Setup(RenderTargetIdentifier source)
+        {
             this.source = source;
         }
 
-        public CustomRenderPass(string profilerTag)
+        public Pass(string profilerTag)
         {
             this.profilerTag = profilerTag;
         }
@@ -60,7 +61,7 @@ public class KawaseBlur : ScriptableRendererFeature
 
             tmpRT1 = new RenderTargetIdentifier(tmpId1);
             tmpRT2 = new RenderTargetIdentifier(tmpId2);
-            
+
             ConfigureTarget(tmpRT1);
             ConfigureTarget(tmpRT2);
         }
@@ -77,7 +78,8 @@ public class KawaseBlur : ScriptableRendererFeature
             cmd.SetGlobalFloat("_offset", 1.5f);
             cmd.Blit(source, tmpRT1, blurMaterial);
 
-            for (var i=1; i<passes-1; i++) {
+            for (var i = 1; i < passes - 1; i++)
+            {
                 cmd.SetGlobalFloat("_offset", 0.5f + i);
                 cmd.Blit(tmpRT1, tmpRT2, blurMaterial);
 
@@ -89,9 +91,12 @@ public class KawaseBlur : ScriptableRendererFeature
 
             // final pass
             cmd.SetGlobalFloat("_offset", 0.5f + passes - 1f);
-            if (copyToFramebuffer) {
+            if (copyToFramebuffer)
+            {
                 cmd.Blit(tmpRT1, source, blurMaterial);
-            } else {
+            }
+            else
+            {
                 cmd.Blit(tmpRT1, tmpRT2, blurMaterial);
                 cmd.SetGlobalTexture(targetName, tmpRT2);
             }
@@ -107,25 +112,25 @@ public class KawaseBlur : ScriptableRendererFeature
         }
     }
 
-    CustomRenderPass scriptablePass;
+    Pass pass;
 
     public override void Create()
     {
-        scriptablePass = new CustomRenderPass("KawaseBlur");
-        scriptablePass.blurMaterial = settings.blurMaterial;
-        scriptablePass.passes = settings.blurPasses;
-        scriptablePass.downsample = settings.downsample;
-        scriptablePass.copyToFramebuffer = settings.copyToFramebuffer;
-        scriptablePass.targetName = settings.targetName;
+        pass = new Pass(this.name);
+        pass.blurMaterial = settings.blurMaterial;
+        pass.passes = settings.blurPasses;
+        pass.downsample = settings.downsample;
+        pass.copyToFramebuffer = settings.copyToFramebuffer;
+        pass.targetName = settings.targetName;
 
-        scriptablePass.renderPassEvent = settings.renderPassEvent;
+        pass.renderPassEvent = settings.renderPassEvent;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         var src = renderer.cameraColorTarget;
-        scriptablePass.Setup(src);
-        renderer.EnqueuePass(scriptablePass);
+        pass.Setup(src);
+        renderer.EnqueuePass(pass);
     }
 }
 
