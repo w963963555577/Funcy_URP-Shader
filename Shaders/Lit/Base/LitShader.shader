@@ -473,7 +473,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     #endif
                     SurfaceData surfaceData;
                     half emissionFlowMask = 0.0;
-                    InitializeStandardLitSurfaceData(input.uv, surfaceData, emissionFlowMask);
+                    InitializeStandardLitSurfaceData(input.uv.xy, surfaceData, emissionFlowMask);
                     
                     InputData inputData;
                     InitializeInputData(input, surfaceData.normalTS, inputData);
