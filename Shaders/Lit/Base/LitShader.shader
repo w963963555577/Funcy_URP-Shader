@@ -2,8 +2,9 @@ Shader "ZDShader/LWRP/PBR Base"
 {
     Properties
     {
+        [MaterialToggle]  _EditorAppearMode ("Editor Appear Mode", Float) = 1.0
         // Specular vs Metallic workflow
-        [HideInInspector] _WorkflowMode ("WorkflowMode", Float) = 1.0
+        [HideInInspector] _WorkflowMode ("Workflow Mode", Float) = 1.0
         
         [MainColor] _BaseColor ("Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap ("Albedo", 2D) = "white" { }

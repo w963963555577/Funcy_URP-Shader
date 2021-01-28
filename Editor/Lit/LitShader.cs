@@ -11,6 +11,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         private LitGUI.LitProperties litProperties;
         private MaterialProperty ssprEnabled;
         private MaterialProperty flowEmissionEnabled;
+        private MaterialProperty editorAppearMode;
+
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
@@ -18,6 +20,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             litProperties = new LitGUI.LitProperties(properties);
             ssprEnabled = FindProperty("_SSPREnabled", properties, false);
             flowEmissionEnabled = FindProperty("_FlowEmissionEnabled", properties, false);
+            editorAppearMode = FindProperty("_EditorAppearMode", properties, false);            
         }
 
         // material changed check
@@ -59,8 +62,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         // material main surface inputs
         public override void DrawSurfaceInputs(Material material)
         {
+
             base.DrawSurfaceInputs(material);
-            LitGUI.Inputs(litProperties, materialEditor, material);
+            if (editorAppearMode.floatValue == 1.0f)
+                LitGUI.Inputs(litProperties, materialEditor, material);
             DrawEmissionProperties(material, true);
             DrawTileOffset(materialEditor, baseMapProp);
         }
@@ -70,11 +75,14 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {
             if (litProperties.reflections != null && litProperties.highlights != null)
             {
-                EditorGUI.BeginChangeCheck();
+                if (editorAppearMode.floatValue == 1.0f)
                 {
-                    materialEditor.ShaderProperty(litProperties.highlights, LitGUI.Styles.highlightsText);
-                    materialEditor.ShaderProperty(litProperties.reflections, LitGUI.Styles.reflectionsText);
                     EditorGUI.BeginChangeCheck();
+                    {
+                        materialEditor.ShaderProperty(litProperties.highlights, LitGUI.Styles.highlightsText);
+                        materialEditor.ShaderProperty(litProperties.reflections, LitGUI.Styles.reflectionsText);
+                        EditorGUI.BeginChangeCheck();
+                    }
                 }
             }
 
@@ -145,6 +153,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             materialEditor = materialEditorIn;
             Material material = materialEditor.target as Material;
 
+            if (material.HasProperty("_EditorAppearMode"))
+            {
+                string text = string.Format("<b><size=12>WorkMode: {0}</size></b>", editorAppearMode.floatValue == 1 ? "Complex" : "Simple");
+                if (GUILayout.Button(text, "ShurikenModuleTitle")) 
+                {
+                    editorAppearMode.floatValue = 1.0f - editorAppearMode.floatValue;
+                }
+            }
+
             // Make sure that needed setup (ie keywords/renderqueue) are set up if we're switching some existing
             // material to a lightweight shader.
             if (m_FirstTimeApply)
@@ -157,7 +174,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 throw new ArgumentNullException("material");
 
             EditorGUI.BeginChangeCheck();
-
+            
 
             DrawArea(Styles.SurfaceInputs.text, () =>
             {
@@ -179,15 +196,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawAdditionalFoldouts(material);
-            if (material.HasProperty("_SSPREnabled"))
+            if (material.HasProperty("_SSPREnabled") && editorAppearMode.floatValue == 1.0f)
             {
                 DrawArea("Screen Space Planar Reflections", () =>
             {
                 ChangeCheckArea_Float(material, ssprEnabled, "Enabled");
 
-            }); 
+            });
             }
-            if (material.HasProperty("_FlowEmissionEnabled"))
+            if (material.HasProperty("_FlowEmissionEnabled") && editorAppearMode.floatValue == 1.0f)
             {
                 DrawArea("Flow Emossion", () =>
                 {
@@ -195,6 +212,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
                 });
             }
+
             if (EditorGUI.EndChangeCheck())
             {
                 foreach (var obj in materialEditor.targets)
@@ -202,5 +220,30 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             }
                         
         }
+
+        public void DrawMode(string text, float fadeSpeed = 3.0f, string style = "ShurikenModuleTitle")
+        {
+            string key = text;
+            bool state = EditorPrefs.GetBool(key, true);           
+
+            GUILayout.BeginHorizontal();
+            {
+                GUI.changed = false;
+
+                text = "<b><size=11>" + text + "</size></b>";
+                if (state) text =  text;
+                else text =  text;
+                if (GUILayout.Button(text, style))
+                {
+                    state = !state;
+                    EditorPrefs.SetBool(key, state);
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUI.backgroundColor = Color.white;
+            
+
+        }
+
     }
 }
