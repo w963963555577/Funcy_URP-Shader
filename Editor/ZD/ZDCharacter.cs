@@ -99,8 +99,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         public MaterialProperty faceRect { get; set; }
         public MaterialProperty mouthRect { get; set; }
 
-
         public MaterialProperty effectiveMap { get; set; }
+
+        public MaterialProperty floatModel { get; set; }
         public MaterialProperty effectiveColor { get; set; }
 
 
@@ -181,6 +182,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             browRect = FindProperty("_BrowRect", props);
             faceRect = FindProperty("_FaceRect", props);
             mouthRect = FindProperty("_MouthRect", props);
+
+            floatModel = FindProperty("_FloatModel", props);
 
             effectiveMap = FindProperty("_EffectiveMap", props);
             effectiveColor = FindProperty("_EffectiveColor", props);
@@ -522,6 +525,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
                 materialEditor.ShaderProperty(selfShadowRemap, selfShadowRemap.displayName);
                 materialEditor.RenderQueueField();
+            });
+
+            DrawArea("Float Model", () => {
+                materialEditor.ShaderProperty(floatModel, floatModel.displayName);
             });
 
             MaterialChangeCheck();

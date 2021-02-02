@@ -95,6 +95,7 @@ Shader "ZDShader/LWRP/Character"
         [IntRange]_SelectMouth ("Select Mouth ", Range(1, 8)) = 1
         _MouthRect ("Mouth UV Rect", Vector) = (0, -0.97, 0.427, 0.28)
         
+        [MaterialToggle] _FloatModel ("Float Model", float) = 0
         
         //Effective Disslove
         _EffectiveMap ("Effective Map", 2D) = "white" { }
@@ -128,8 +129,6 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _AlphaClip
             
-            #pragma shader_feature_local _OutlineEnable
-            
             #pragma target 3.0
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -140,6 +139,7 @@ Shader "ZDShader/LWRP/Character"
                 float3 normal: NORMAL;
                 float3 color: COLOR0;
                 float2 uv: TEXCOORD0;
+                float2 effectcoord: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
@@ -204,6 +204,7 @@ Shader "ZDShader/LWRP/Character"
             float4 _OutlineColor;
             float _DiffuseBlend;
             
+            half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
             float _SelectMouth;
@@ -214,6 +215,7 @@ Shader "ZDShader/LWRP/Character"
             half4 _FaceRect;
             half4 _MouthRect;
             
+            half _FloatModel;
             half4 _EffectiveColor;
             CBUFFER_END
             
@@ -225,6 +227,8 @@ Shader "ZDShader/LWRP/Character"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
                 half RTD_OL_OLWABVD_OO = 1.0;
                 half4 _OutlineWidthControl_var = tex2Dlod(_OutlineWidthControl, float4(v.uv, 0.0, 0));
@@ -244,7 +248,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 RTD_OL *= (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z));
                 
-                o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
+                o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz) / _OutlineEnable;
                 o.uv = v.uv;
                 return o;
             }
@@ -254,11 +258,6 @@ Shader "ZDShader/LWRP/Character"
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
-                #if _OutlineEnable
-                    
-                #else
-                    discard;
-                #endif
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
                 half4 effectiveDisslive = _EffectiveColor;
@@ -374,6 +373,7 @@ Shader "ZDShader/LWRP/Character"
             float4 _OutlineColor;
             float _DiffuseBlend;
             
+            half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
             float _SelectMouth;
@@ -384,6 +384,7 @@ Shader "ZDShader/LWRP/Character"
             half4 _FaceRect;
             half4 _MouthRect;
             
+            half _FloatModel;
             half4 _EffectiveColor;
             CBUFFER_END
             
@@ -462,6 +463,9 @@ Shader "ZDShader/LWRP/Character"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                
+                
+                input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
                 
@@ -970,6 +974,7 @@ Shader "ZDShader/LWRP/Character"
             float4 _OutlineColor;
             float _DiffuseBlend;
             
+            half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
             float _SelectMouth;
@@ -980,6 +985,7 @@ Shader "ZDShader/LWRP/Character"
             half4 _FaceRect;
             half4 _MouthRect;
             
+            half _FloatModel;
             half4 _EffectiveColor;
             CBUFFER_END
             
@@ -994,6 +1000,7 @@ Shader "ZDShader/LWRP/Character"
                 float4 positionOS: POSITION;
                 float3 normalOS: NORMAL;
                 float2 texcoord: TEXCOORD0;
+                float2 effectcoord: TEXCOORD2;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -1029,7 +1036,7 @@ Shader "ZDShader/LWRP/Character"
             Varyings ShadowPassVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
-                
+                input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
@@ -1139,6 +1146,7 @@ Shader "ZDShader/LWRP/Character"
             float4 _OutlineColor;
             float _DiffuseBlend;
             
+            half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
             float _SelectMouth;
@@ -1149,6 +1157,7 @@ Shader "ZDShader/LWRP/Character"
             half4 _FaceRect;
             half4 _MouthRect;
             
+            half _FloatModel;
             half4 _EffectiveColor;
             CBUFFER_END
             
@@ -1159,7 +1168,7 @@ Shader "ZDShader/LWRP/Character"
             {
                 float4 position: POSITION;
                 float2 texcoord: TEXCOORD0;
-                
+                float2 effectcoord: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
@@ -1180,7 +1189,7 @@ Shader "ZDShader/LWRP/Character"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 
-                
+                input.position.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
                 
                 float3 positionWS = mul(GetObjectToWorldMatrix(), float4(input.position.xyz, 0.0)).xyz;
@@ -1206,6 +1215,169 @@ Shader "ZDShader/LWRP/Character"
             }
             
             
+            ENDHLSL
+            
+        }
+        
+        Pass
+        {
+            Name "SceneSelectionPass"
+            Tags { "LightMode" = "SceneSelectionPass" }
+
+            ZWrite On
+            ZTest Always
+            Cull Off
+            Blend One Zero
+            
+            HLSLPROGRAM
+            
+            #pragma vertex vert
+            #pragma fragment frag
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ _AlphaClip
+            
+            #pragma target 3.0
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            
+            struct appdata
+            {
+                float4 vertex: POSITION;
+                float3 normal: NORMAL;
+                float3 color: COLOR0;
+                float2 uv: TEXCOORD0;
+                float2 effectcoord: TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct v2f
+            {
+                float4 vertex: SV_POSITION;
+                float2 uv: TEXCOORD0;
+                
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            sampler2D _diffuse;
+            sampler2D _OutlineWidthControl;
+            
+            CBUFFER_START(UnityPerMaterial)
+            half4 _diffuse_ST;
+            half _SelfMaskEnable;
+            half4 _SelfMask_ST;
+            half _SubsurfaceScattering;
+            half _SubsurfaceRadius;
+            half _SelfMaskDirection;
+            
+            half4 _mask_ST;
+            half4 _Color;
+            half4 _EmissionColor;
+            half4 _SpecularColor;
+            half4 _Picker_0;
+            half4 _Picker_1;
+            half4 _ShadowColor0;
+            half4 _ShadowColor1;
+            half4 _ShadowColorElse;
+            half _Cutoff;
+            half _Gloss;
+            half _EmissionxBase;
+            half _EmissionOn;
+            half _EmissionFlow;
+            half _Flash;
+            half _EdgeLightWidth;
+            half _EdgeLightIntensity;
+            half _NormalScale;
+            half _ShadowRamp;
+            half _SelfShadowRamp;
+            half _ReceiveShadow;
+            half _ShadowRefraction;
+            half _ShadowOffset;
+            
+            half4 _CustomLightColor;
+            half4 _CustomLightDirection;
+            half _CustomLightIntensity;
+            
+            float4 _DiscolorationColor_0;
+            float4 _DiscolorationColor_1;
+            float4 _DiscolorationColor_2;
+            float4 _DiscolorationColor_3;
+            float4 _DiscolorationColor_4;
+            float4 _DiscolorationColor_5;
+            float4 _DiscolorationColor_6;
+            float4 _DiscolorationColor_7;
+            float4 _DiscolorationColor_8;
+            float4 _DiscolorationColor_9;
+            
+            float4 _OutlineColor;
+            float _DiffuseBlend;
+            
+            half _OutlineEnable;
+            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+            
+            float _SelectMouth;
+            float _SelectFace;
+            float _SelectBrow;
+            
+            half4 _BrowRect;
+            half4 _FaceRect;
+            half4 _MouthRect;
+            
+            half _FloatModel;
+            half4 _EffectiveColor;
+            CBUFFER_END
+            
+            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            
+            v2f vert(appdata v)
+            {
+                v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
+                
+                half RTD_OL_OLWABVD_OO = 1.0;
+                half4 _OutlineWidthControl_var = tex2Dlod(_OutlineWidthControl, float4(v.uv, 0.0, 0));
+                
+                half2 RTD_OL_DNOL_OO = v.uv;
+                half2 node_8743 = RTD_OL_DNOL_OO;
+                float2 node_1283_skew = node_8743 + 0.2127 + node_8743.x * 0.3713 * node_8743.y;
+                float2 node_1283_rnd = 4.789 * sin(489.123 * (node_1283_skew));
+                half node_1283 = frac(node_1283_rnd.x * node_1283_rnd.y * (1 + node_1283_skew.x));
+                
+                float3 _OEM = v.normal;
+                
+                half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
+                
+                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+                
+                RTD_OL *= (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z));
+                
+                o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz) / _OutlineEnable;
+                o.uv = v.uv;
+                return o;
+            }
+            
+            half4 frag(v2f i): SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                
+                #if _AlphaClip
+                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
+                    half4 effectiveDisslive = _EffectiveColor;
+                    
+                    half alphaMinus = 1.0 - _EffectiveColor.a;
+                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                    
+                    clip(effectiveDisslive.a - 0.5);
+                #endif                
+                
+                return 1.0;
+            }
             ENDHLSL
             
         }
