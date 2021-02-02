@@ -179,9 +179,9 @@ namespace UnityEngine.Funcy.LWRP.Runtime
                 //======================================================================
                 
                 //draw objects(e.g. reflective wet ground plane) with lightmode "MobileSSPR", which will sample _MobileSSPR_ColorRT
-                DrawingSettings drawingSettings = CreateDrawingSettings(lightMode_SSPR_sti, ref renderingData, SortingCriteria.CommonOpaque);
-                FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.all);
-                context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
+                //DrawingSettings drawingSettings = CreateDrawingSettings(lightMode_SSPR_sti, ref renderingData, SortingCriteria.CommonOpaque);
+                //FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.all);
+                //context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
                 
             }
 
