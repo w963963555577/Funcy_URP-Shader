@@ -837,7 +837,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
                 + specularColor + diffuseColor) * mainLight.color * _Color.rgb +
-                emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + (_Time.y + i.effectcoord.y * i.effectcoord.y) * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
+                emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + _Time.y * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
                 
@@ -1223,7 +1223,7 @@ Shader "ZDShader/LWRP/Character"
         {
             Name "SceneSelectionPass"
             Tags { "LightMode" = "SceneSelectionPass" }
-
+            
             ZWrite On
             ZTest Always
             Cull Off
@@ -1374,7 +1374,7 @@ Shader "ZDShader/LWRP/Character"
                     effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
                     
                     clip(effectiveDisslive.a - 0.5);
-                #endif                
+                #endif
                 
                 return 1.0;
             }
