@@ -12,15 +12,26 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         private MaterialProperty ssprEnabled;
         private MaterialProperty flowEmissionEnabled;
         private MaterialProperty editorAppearMode;
-
+        MaterialProperty wind { get; set; }
+        MaterialProperty speed { get; set; }
+        MaterialProperty amount { get; set; }
+        MaterialProperty distance { get; set; }
+        MaterialProperty positionMask { get; set; }
+        
         // collect properties from the material properties
         public override void FindProperties(MaterialProperty[] properties)
         {
             base.FindProperties(properties);
             litProperties = new LitGUI.LitProperties(properties);
+            editorAppearMode = FindProperty("_EditorAppearMode", properties, false);
             ssprEnabled = FindProperty("_SSPREnabled", properties, false);
             flowEmissionEnabled = FindProperty("_FlowEmissionEnabled", properties, false);
-            editorAppearMode = FindProperty("_EditorAppearMode", properties, false);            
+            wind = FindProperty("_WindEnabled", properties, false);
+            speed = FindProperty("_Speed", properties, false);
+            amount = FindProperty("_Amount", properties, false);
+            distance = FindProperty("_Distance", properties, false);
+            positionMask = FindProperty("_PositionMask", properties, false);            
+            
         }
 
         // material changed check
@@ -30,14 +41,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 throw new ArgumentNullException("material");
 
             SetMaterialKeywords(material, LitGUI.SetMaterialKeywords);
-
-            if (material.HasProperty("_SSPREnabled"))
-                CoreUtils.SetKeyword(material, "_SSPR_OFF",
-                    material.GetFloat("_SSPREnabled") == 1.0f);
-
-            if (material.HasProperty("_FlowEmissionEnabled"))
-                CoreUtils.SetKeyword(material, "_FlowEmission_OFF",
-                    material.GetFloat("_FlowEmissionEnabled") == 1.0f);
+         
         }
 
         // material main surface options
@@ -196,6 +200,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawAdditionalFoldouts(material);
+
             if (material.HasProperty("_SSPREnabled") && editorAppearMode.floatValue == 1.0f)
             {
                 DrawArea("Screen Space Planar Reflections", () =>
@@ -210,6 +215,19 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 {
                     ChangeCheckArea_Float(material, flowEmissionEnabled, "Enabled");
 
+                });
+            }
+
+            if (material.HasProperty("_WindEnabled"))
+            {
+                DrawArea("Wind", () =>
+                {
+                    ChangeCheckArea_Float(material, wind, "Enabled");
+                    materialEditor.ShaderProperty(speed, speed.displayName);
+                    materialEditor.ShaderProperty(amount, amount.displayName);
+                    materialEditor.ShaderProperty(distance, distance.displayName);
+                    materialEditor.TexturePropertySingleLine(positionMask.displayName.ToGUIContent(), positionMask);
+                    materialEditor.TextureScaleOffsetProperty(positionMask);                    
                 });
             }
 

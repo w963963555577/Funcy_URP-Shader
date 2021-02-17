@@ -23,8 +23,8 @@ Shader "ZDShader/LWRP/PBR Base"
         
         [ToggleOff] _SpecularHighlights ("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections ("Environment Reflections", Float) = 1.0
-        [ToggleOff] _SSPREnabled ("Screen Space Planar Reflections", Float) = 0.0
-        [ToggleOff] _FlowEmissionEnabled ("Flow Emossion", Float) = 0.0
+        [Toggle] _SSPREnabled ("Screen Space Planar Reflections", Float) = 0.0
+        [Toggle] _FlowEmissionEnabled ("Flow Emossion", Float) = 0.0
         
         _BumpScale ("Scale", Float) = 1.0
         _BumpMap ("Normal Map", 2D) = "bump" { }
@@ -34,6 +34,13 @@ Shader "ZDShader/LWRP/PBR Base"
         
         _EmissionColor ("Color", Color) = (0, 0, 0)
         _EmissionMap ("Emission", 2D) = "white" { }
+        
+        //Wind
+        [MaterialToggle]  _WindEnabled ("Wind", Float) = 0.0
+        _Speed ("Speed", Float) = 1.5
+        _Amount ("Amount", Float) = 5
+        _Distance ("Distance", Range(0, 1)) = 0.5
+        _PositionMask ("PositionMask", 2D) = "white" { }
         
         // Blending state
         [HideInInspector] _Surface ("__surface", Float) = 0.0
@@ -81,11 +88,6 @@ Shader "ZDShader/LWRP/PBR Base"
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma shader_feature _OCCLUSIONMAP
             
-            //SSPR
-            #pragma shader_feature _SSPR_OFF
-            
-            //FlowEmission
-            #pragma shader_feature _FlowEmission_OFF
             
             #pragma shader_feature _SPECULARHIGHLIGHTS_OFF
             #pragma shader_feature _GLOSSYREFLECTIONS_OFF
@@ -103,8 +105,8 @@ Shader "ZDShader/LWRP/PBR Base"
             
             #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
             
-            //SSPR
-            #pragma multi_compile _MobileSSPR
+            
+            
             
             // -------------------------------------
             // Unity defined keywords
@@ -138,12 +140,21 @@ Shader "ZDShader/LWRP/PBR Base"
                 half _Metallic;
                 half _BumpScale;
                 half _OcclusionStrength;
+                half _SSPREnabled;
+                half _FlowEmissionEnabled;
+                half4 _PositionMask_ST;
+                half _WindEnabled;
+                half _Speed;
+                half _Amount;
+                half _Distance;
                 #ifdef _DrawMeshInstancedProcedural
                     StructuredBuffer<float4x4> _ObjectToWorldBuffer;
                     StructuredBuffer<float4x4> _WorldToObjectBuffer;
                     StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
                 #endif
                 CBUFFER_END
+                
+                #include "../../../ShaderLibrary/VertexAnimation.hlsl"
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
                 TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
@@ -275,9 +286,8 @@ Shader "ZDShader/LWRP/PBR Base"
                         float4 shadowCoord: TEXCOORD7;
                     #endif
                     
-                    #ifdef _SSPR_OFF
-                        float4 positionSS: TEXCOORD8;
-                    #endif
+                    float4 positionSS: TEXCOORD8;
+                    
                     float4 positionCS: SV_POSITION;
                     
                     #ifdef _DrawMeshInstancedProcedural
@@ -367,6 +377,16 @@ Shader "ZDShader/LWRP/PBR Base"
                         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                     #endif
                     
+                    float4 offset = input.positionOS;
+                    #ifdef _DrawMeshInstancedProcedural
+                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]), _WindEnabled);
+                    #else
+                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                    #endif
+                    offset -= input.positionOS;
+                    input.normalOS = input.normalOS + offset.xyz * 0.5 * _WindEnabled;
+                    
+                    
                     VertexPositionInputs vertexInput;
                     VertexNormalInputs normalInput;
                     
@@ -410,9 +430,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     
                     output.positionCS = vertexInput.positionCS;
                     
-                    #ifdef _SSPR_OFF
-                        output.positionSS = ComputeScreenPos(output.positionCS);
-                    #endif
+                    output.positionSS = ComputeScreenPos(output.positionCS);
                     
                     return output;
                 }
@@ -425,11 +443,9 @@ Shader "ZDShader/LWRP/PBR Base"
                     half3 indirectDiffuse = bakedGI * occlusion;
                     half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, brdfData.perceptualRoughness, occlusion);
                     
-                    #ifdef _SSPR_OFF
-                        half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
-                        ssrColor.a *= saturate(dot(normalWS, half3(0.0, 1.0, 0.0)));
-                        indirectSpecular = lerp(indirectSpecular, ssrColor.rgb, ssrColor.a);
-                    #endif
+                    half4 ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV);
+                    ssrColor.a *= saturate(dot(normalWS, half3(0.0, 1.0, 0.0))) * _SSPREnabled;
+                    indirectSpecular = lerp(indirectSpecular, ssrColor.rgb, ssrColor.a);
                     
                     return EnvironmentBRDF(brdfData, indirectDiffuse, indirectSpecular, fresnelTerm);
                 }
@@ -480,14 +496,13 @@ Shader "ZDShader/LWRP/PBR Base"
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     float2 screenUV = 0.0;
                     
-                    #ifdef _SSPR_OFF
-                        input.positionSS /= input.positionSS.w;
-                        input.positionSS.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? input.positionSS.z: input.positionSS.z * 0.5 + 0.5;
-                        screenUV = input.positionSS;
-                        #if defined(UNITY_SINGLE_PASS_STEREO)
-                            screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
-                        #endif
+                    input.positionSS /= input.positionSS.w;
+                    input.positionSS.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? input.positionSS.z: input.positionSS.z * 0.5 + 0.5;
+                    screenUV = input.positionSS.xy;
+                    #if defined(UNITY_SINGLE_PASS_STEREO)
+                        screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
                     #endif
+                    
                     
                     half4 color = UniversalFragmentPBR_SSPR(inputData,
                     surfaceData.albedo,
@@ -495,11 +510,8 @@ Shader "ZDShader/LWRP/PBR Base"
                     surfaceData.specular,
                     surfaceData.smoothness,
                     surfaceData.occlusion,
-                    surfaceData.emission
-                    #ifdef _FlowEmission_OFF
-                        + surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0) * emissionFlowMask
-                    #endif
-                    ,
+                    surfaceData.emission +
+                    surfaceData.emission * sin(input.uv.z * 6.28 * 2.0 + _Time.y * 3.0) * emissionFlowMask * _FlowEmissionEnabled,
                     surfaceData.alpha,
                     screenUV);
                     
@@ -563,6 +575,13 @@ Shader "ZDShader/LWRP/PBR Base"
             half _Metallic;
             half _BumpScale;
             half _OcclusionStrength;
+            half _SSPREnabled;
+            half _FlowEmissionEnabled;
+            half4 _PositionMask_ST;
+            half _WindEnabled;
+            half _Speed;
+            half _Amount;
+            half _Distance;
             #ifdef _DrawMeshInstancedProcedural
                 StructuredBuffer<float4x4> _ObjectToWorldBuffer;
                 StructuredBuffer<float4x4> _WorldToObjectBuffer;
@@ -570,6 +589,7 @@ Shader "ZDShader/LWRP/PBR Base"
             #endif
             CBUFFER_END
             
+            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -629,11 +649,22 @@ Shader "ZDShader/LWRP/PBR Base"
             
             Varyings ShadowPassVertex(Attributes input)
             {
-                Varyings output;
+                Varyings output = (Varyings)0;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
                     UNITY_SETUP_INSTANCE_ID(input);
                 #endif
+                
+                float4 offset = input.positionOS;
+                #ifdef _DrawMeshInstancedProcedural
+                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                #else
+                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                #endif
+                
+                offset -= input.positionOS;
+                input.normalOS = input.normalOS + offset.xyz * 0.5 * _WindEnabled;
+                
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
@@ -695,12 +726,146 @@ Shader "ZDShader/LWRP/PBR Base"
             half _Metallic;
             half _BumpScale;
             half _OcclusionStrength;
+            half _SSPREnabled;
+            half _FlowEmissionEnabled;
+            half4 _PositionMask_ST;
+            half _WindEnabled;
+            half _Speed;
+            half _Amount;
+            half _Distance;
             #ifdef _DrawMeshInstancedProcedural
                 StructuredBuffer<float4x4> _ObjectToWorldBuffer;
                 StructuredBuffer<float4x4> _WorldToObjectBuffer;
                 StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
             #endif
             CBUFFER_END
+            
+            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
+            
+            struct Attributes
+            {
+                float4 position: POSITION;
+                float2 texcoord: TEXCOORD0;
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
+            };
+            
+            struct Varyings
+            {
+                float2 uv: TEXCOORD0;
+                float4 positionCS: SV_POSITION;
+                
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
+            };
+            
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                #ifdef _DrawMeshInstancedProcedural
+                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #endif
+
+                #ifdef _DrawMeshInstancedProcedural
+                    input.position = lerp(input.position, WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                #else
+                    input.position = lerp(input.position, WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                #endif
+                
+                output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
+                
+                float3 positionWS = float3(0.0, 0.0, 0.0);
+                #ifdef _DrawMeshInstancedProcedural
+                    positionWS = mul(_ObjectToWorldBuffer[id], float4(input.position.xyz, 1.0)).xyz;
+                #else
+                    positionWS = TransformObjectToWorld(input.position.xyz);
+                #endif
+                
+                output.positionCS = TransformWorldToHClip(positionWS);
+                return output;
+            }
+            
+            half4 DepthOnlyFragment(Varyings input): SV_TARGET
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                return 0;
+            }
+            
+            
+            ENDHLSL
+            
+        }
+        
+        Pass
+        {
+            Name "SceneSelectionPass"
+            Tags { "LightMode" = "SceneSelectionPass" }
+            
+            ZWrite On
+            ColorMask 0
+            Cull[_Cull]
+            
+            HLSLPROGRAM
+            
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
+            
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            
+            
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            half4 _BaseColor;
+            half4 _SpecColor;
+            half4 _EmissionColor;
+            half _Cutoff;
+            half _Smoothness;
+            half _Metallic;
+            half _BumpScale;
+            half _OcclusionStrength;
+            half _SSPREnabled;
+            half _FlowEmissionEnabled;
+            half4 _PositionMask_ST;
+            half _WindEnabled;
+            half _Speed;
+            half _Amount;
+            half _Distance;
+            #ifdef _DrawMeshInstancedProcedural
+                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+                StructuredBuffer<float4x4> _WorldToObjectBuffer;
+                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+            #endif
+            CBUFFER_END
+            
+            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
             
             struct Attributes
             {
@@ -735,6 +900,12 @@ Shader "ZDShader/LWRP/PBR Base"
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 #endif
                 
+                #ifdef _DrawMeshInstancedProcedural
+                    input.position = lerp(input.position, WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                #else
+                    input.position = lerp(input.position, WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                #endif
+                
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 
                 float3 positionWS = float3(0.0, 0.0, 0.0);
@@ -753,14 +924,13 @@ Shader "ZDShader/LWRP/PBR Base"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 
                 Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
-                return 0;
+                return 1.0;
             }
             
             
             ENDHLSL
             
         }
-        
         //UsePass "Universal Render Pipeline/Lit/Meta"
     }
     

@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PBR Base
   m_Shader: {fileID: 4800000, guid: ea44f5c82198d9543aad39bc54315cdb, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: _DrawMeshInstancedProcedural
   m_LightmapFlags: 6
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -85,6 +85,7 @@ Material:
     - _DstBlend: 0
     - _EdgeLightIntensity: 1
     - _EdgeLightWidth: 1
+    - _EditorAppearMode: 1
     - _EmissionOn: 0
     - _EmissionxBase: 0
     - _EnvironmentReflections: 1
@@ -92,6 +93,7 @@ Material:
     - _ExpressionFormat_FaceSheet: 1
     - _ExpressionFormat_Wink: 0
     - _Flash: 0
+    - _FlowEmissionEnabled: 0
     - _Gloss: 0.5
     - _GlossMapScale: 1
     - _Metallic: 0
@@ -101,6 +103,7 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadow: 1
     - _ReceiveShadows: 1
+    - _SSPREnabled: 0
     - _SelectBrow: 1
     - _SelectFace: 1
     - _SelectMouth: 1
