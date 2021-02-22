@@ -21,178 +21,112 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             };
         }
 
-        public MaterialProperty baseMap { get; set; }
-        public MaterialProperty baseColor { get; set; }
+        #region Properties
+        MaterialProperty diffuse { get; set; }
+        MaterialProperty color { get; set; }
 
-        MaterialProperty sss { get; set; }
-        MaterialProperty sssRadius { get; set; }
+        MaterialProperty subsurfaceScattering { get; set; }
+        MaterialProperty subsurfaceRadius { get; set; }
         
 
-        public MaterialProperty selfMaskDirection { get; set; }
+        MaterialProperty selfMaskDirection { get; set; }
 
-        public MaterialProperty maskMap { get; set; }
-        public MaterialProperty flash { get; set; }
+        MaterialProperty mask { get; set; }
+        MaterialProperty flash { get; set; }
 
-        public MaterialProperty edgeLightWidth { get; set; }
-        public MaterialProperty edgeLightIntensity { get; set; }
+        MaterialProperty edgeLightWidth { get; set; }
+        MaterialProperty edgeLightIntensity { get; set; }
         
 
-        public MaterialProperty emissionColor { get; set; }
-        public MaterialProperty emissionxBase { get; set; }
-        public MaterialProperty emissionxOn { get; set; }
-        public MaterialProperty emissionFlow { get; set; }
-        public MaterialProperty gloss { get; set; }
-        public MaterialProperty specularColor { get; set; }
-        public MaterialProperty shadowRemap { get; set; }
-        public MaterialProperty selfShadowRemap { get; set; }
+        MaterialProperty emissionColor { get; set; }
+        MaterialProperty emissionxBase { get; set; }
+        MaterialProperty emissionOn { get; set; }
+        MaterialProperty emissionFlow { get; set; }
+        MaterialProperty gloss { get; set; }
+        MaterialProperty specularColor { get; set; }
+        MaterialProperty shadowRamp { get; set; }
+        MaterialProperty selfShadowRamp { get; set; }
 
 
-        public MaterialProperty outlineEnable { get; set; }
-        public MaterialProperty outlineMask { get; set; }
+        MaterialProperty outlineEnable { get; set; }
+        MaterialProperty outlineWidthControl { get; set; }
 
-        public MaterialProperty pciker0 { get; set; }
-        public MaterialProperty shadowColor0 { get; set; }
-        public MaterialProperty pciker1 { get; set; }
-        public MaterialProperty shadowColor1 { get; set; }
-        public MaterialProperty shadowColorElse { get; set; }
+        MaterialProperty picker_0 { get; set; }
+        MaterialProperty shadowColor0 { get; set; }
+        MaterialProperty picker_1 { get; set; }
+        MaterialProperty shadowColor1 { get; set; }
+        MaterialProperty shadowColorElse { get; set; }
 
-        public MaterialProperty customLightColor { get; set; }
-        public MaterialProperty customLightIntensity { get; set; }
+        MaterialProperty customLightColor { get; set; }
+        MaterialProperty customLightIntensity { get; set; }
 
 
-        public MaterialProperty receiveShadow { get; set; }
-        public MaterialProperty selfMask { get; set; }
-        public MaterialProperty selfMaskEnb { get; set; }
-        public MaterialProperty shadowRefrection { get; set; }
-        public MaterialProperty shadowOffset { get; set; }
+        MaterialProperty receiveShadow { get; set; }
+        MaterialProperty selfMask { get; set; }
+        MaterialProperty selfMaskEnable { get; set; }
+        MaterialProperty shadowRefraction { get; set; }
+        MaterialProperty shadowOffset { get; set; }
 
-        public MaterialProperty discolorationColor0 { get; set; }
-        public MaterialProperty discolorationColor1 { get; set; }
-        public MaterialProperty discolorationColor2 { get; set; }
-        public MaterialProperty discolorationColor3 { get; set; }
-        public MaterialProperty discolorationColor4 { get; set; }
-        public MaterialProperty discolorationColor5 { get; set; }
-        public MaterialProperty discolorationColor6 { get; set; }        
-        public MaterialProperty discolorationColor7 { get; set; }
-        public MaterialProperty discolorationColor8 { get; set; }
-        public MaterialProperty discolorationColor9 { get; set; }
+        MaterialProperty discolorationColor_0 { get; set; }
+        MaterialProperty discolorationColor_1 { get; set; }
+        MaterialProperty discolorationColor_2 { get; set; }
+        MaterialProperty discolorationColor_3 { get; set; }
+        MaterialProperty discolorationColor_4 { get; set; }
+        MaterialProperty discolorationColor_5 { get; set; }
+        MaterialProperty discolorationColor_6 { get; set; }        
+        MaterialProperty discolorationColor_7 { get; set; }
+        MaterialProperty discolorationColor_8 { get; set; }
+        MaterialProperty discolorationColor_9 { get; set; }
         MaterialProperty[] discolorationColorList = new MaterialProperty[10];
-        public MaterialProperty discolorationSystem { get; set; }
-        public MaterialProperty discolorationColorCount { get; set; }
+        MaterialProperty discolorationSystem { get; set; }
+        MaterialProperty discolorationColorCount { get; set; }
 
-        public MaterialProperty outliineCtrlProperties { get; set; }
+        MaterialProperty outlineWidth_MinWidth_MaxWidth_Dist_DistBlur { get; set; }
 
-        public MaterialProperty outlineColor { get; set; }
-        public MaterialProperty diffuseBlend { get; set; }
+        MaterialProperty outlineColor { get; set; }
+        MaterialProperty diffuseBlend { get; set; }
 
 
         public enum ExpressionFormat { Wink, FaceSheet }
-        public MaterialProperty expressionEnable { get; set; }
-        public MaterialProperty expressionMap { get; set; }
-        public MaterialProperty expressionFormat_Wink { get; set; }
-        public MaterialProperty expressionFormat_FaceSheet { get; set; }
-        public MaterialProperty selectBrow { get; set; }
-        public MaterialProperty selectFace { get; set; }
-        public MaterialProperty selectMouth { get; set; }
+        MaterialProperty expressionEnable { get; set; }
+        MaterialProperty selectExpressionMap { get; set; }
+        MaterialProperty expressionMap { get; set; }
+        MaterialProperty expressionQMap { get; set; }
+        MaterialProperty expressionFormat_Wink { get; set; }
+        MaterialProperty expressionFormat_FaceSheet { get; set; }
+        MaterialProperty selectBrow { get; set; }
+        MaterialProperty selectFace { get; set; }
+        MaterialProperty selectMouth { get; set; }
 
-        public MaterialProperty browRect { get; set; }
-        public MaterialProperty faceRect { get; set; }
-        public MaterialProperty mouthRect { get; set; }
+        MaterialProperty browRect { get; set; }
+        MaterialProperty faceRect { get; set; }
+        MaterialProperty mouthRect { get; set; }
 
-        public MaterialProperty effectiveMap { get; set; }
+        MaterialProperty effectiveMap { get; set; }
+        MaterialProperty faceLightMapCombineMode { get; set; }
+        MaterialProperty floatModel { get; set; }
+        MaterialProperty effectiveColor { get; set; }
 
-        public MaterialProperty floatModel { get; set; }
-        public MaterialProperty effectiveColor { get; set; }
 
+        MaterialProperty srcBlend { get; set; }
+        MaterialProperty dstBlend { get; set; }
 
-        public MaterialProperty srcblend { get; set; }
-        public MaterialProperty dstblend { get; set; }
-
+        #endregion
         bool drawBaseMap = false;
-        public virtual void FindProperties()
+        public void FindProperties()
         {
-            baseMap = FindProperty("_diffuse", props);
-            baseColor = FindProperty("_Color", props);
-
-            sss = FindProperty("_SubsurfaceScattering", props);
-            sssRadius = FindProperty("_SubsurfaceRadius", props);
-
-            selfMaskDirection = FindProperty("_SelfMaskDirection", props);
-
-            maskMap = FindProperty("_mask", props);
-            selfMask = FindProperty("_SelfMask", props);
-            selfMaskEnb = FindProperty("_SelfMaskEnable", props);
-            flash = FindProperty("_Flash", props);
-
-            edgeLightWidth = FindProperty("_EdgeLightWidth", props);
-            edgeLightIntensity = FindProperty("_EdgeLightIntensity", props);
-
-            emissionColor = FindProperty("_EmissionColor", props);
-            emissionxBase = FindProperty("_EmissionxBase", props);
-            emissionxOn = FindProperty("_EmissionOn", props);
-            emissionFlow = FindProperty("_EmissionFlow", props);
-            gloss = FindProperty("_Gloss", props);
-            specularColor = FindProperty("_SpecularColor", props);
-            shadowRemap = FindProperty("_ShadowRamp", props);
-            selfShadowRemap = FindProperty("_SelfShadowRamp", props);
-
-            outlineEnable = FindProperty("_OutlineEnable", props);
-            outlineMask = FindProperty("_OutlineWidthControl", props);
-
-            pciker0 = FindProperty("_Picker_0", props);
-            shadowColor0 = FindProperty("_ShadowColor0", props);
-            pciker1 = FindProperty("_Picker_1", props);
-            shadowColor1 = FindProperty("_ShadowColor1", props);
-            shadowColorElse = FindProperty("_ShadowColorElse", props);
-
-            customLightColor = FindProperty("_CustomLightColor", props);
-            customLightIntensity = FindProperty("_CustomLightIntensity", props);
-
-            receiveShadow = FindProperty("_ReceiveShadow", props);
-            shadowRefrection= FindProperty("_ShadowRefraction", props);
-            shadowOffset = FindProperty("_ShadowOffset", props);
-
+            FindProperties(this);
+            diffuse = FindProperty("_diffuse", props);
+            mask = FindProperty("_mask", props);
+           
             discolorationColorList = new MaterialProperty[] {
-                discolorationColor0, discolorationColor1,discolorationColor2, discolorationColor3,
-                discolorationColor4, discolorationColor5,discolorationColor6, discolorationColor7,
-                discolorationColor8,discolorationColor9
-            };
-
-            for (int i = 0; i < 10; i++)
-            {
-                discolorationColorList[i] = FindProperty(string.Format("_DiscolorationColor_{0}", i ), props);
-            }
-
-            discolorationSystem = FindProperty("_DiscolorationSystem", props);
-            discolorationColorCount = FindProperty("_DiscolorationColorCount", props);
-
-
-            outliineCtrlProperties = FindProperty("_OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur", props);
-            outlineColor = FindProperty("_OutlineColor", props);
-            diffuseBlend = FindProperty("_DiffuseBlend", props);
-
-
-            expressionEnable = FindProperty("_ExpressionEnable", props);
-            expressionMap = FindProperty("_ExpressionMap", props);
-            expressionFormat_Wink = FindProperty("_ExpressionFormat_Wink", props);
-            expressionFormat_FaceSheet =FindProperty("_ExpressionFormat_FaceSheet", props);            
-            selectBrow = FindProperty("_SelectBrow", props);
-            selectFace = FindProperty("_SelectFace", props);
-            selectMouth = FindProperty("_SelectMouth", props);
-            browRect = FindProperty("_BrowRect", props);
-            faceRect = FindProperty("_FaceRect", props);
-            mouthRect = FindProperty("_MouthRect", props);
-
-            floatModel = FindProperty("_FloatModel", props);
-
-            effectiveMap = FindProperty("_EffectiveMap", props);
-            effectiveColor = FindProperty("_EffectiveColor", props);
-
-            srcblend = FindProperty("_SrcBlend", props);
-            dstblend = FindProperty("_DstBlend", props);
+                discolorationColor_0, discolorationColor_1,discolorationColor_2, discolorationColor_3,
+                discolorationColor_4, discolorationColor_5,discolorationColor_6, discolorationColor_7,
+                discolorationColor_8,discolorationColor_9
+            };           
         }
 
-        
+
         public override void OnEnable()
         {            
             EditorApplication.update += materialEditor.Repaint;            
@@ -239,7 +173,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             {
                 mat.DisableKeyword("_ExpressionFormat_FaceSheet");
                 mat.EnableKeyword("_ExpressionFormat_Wink");
-            }            
+            }
         }
 
 
@@ -254,8 +188,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawArea("Subsurface Scattering", () => {
-                materialEditor.ShaderProperty(sss, sss.displayName);                
-                materialEditor.ShaderProperty(sssRadius, sssRadius.displayName);
+                materialEditor.ShaderProperty(subsurfaceScattering, subsurfaceScattering.displayName);                
+                materialEditor.ShaderProperty(subsurfaceRadius, subsurfaceRadius.displayName);
             });
 
             DrawArea("Effective", () =>
@@ -265,12 +199,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.Label("Base Effective", EditorStyles.boldLabel);
                 GUILayout.BeginVertical("Box");
                                     
-                    materialEditor.ShaderProperty(emissionxOn, "Emission");
+                    materialEditor.ShaderProperty(emissionOn, "Emission");
                     materialEditor.ShaderProperty(emissionFlow, emissionFlow.displayName);                    
                     Rect baseRect = GUILayoutUtility.GetLastRect();
                     var current = baseRect;
 
-                    EditorGUI.BeginDisabledGroup(emissionxOn.floatValue == 0.0f);
+                    EditorGUI.BeginDisabledGroup(emissionOn.floatValue == 0.0f);
                     {
                         GUILayout.Space(10);
                         GUILayout.Space(10);
@@ -311,6 +245,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.BeginVertical("Box");
                 {
                     materialEditor.TexturePropertySingleLine(effectiveMap.displayName.ToGUIContent(), effectiveMap, effectiveColor);
+                    materialEditor.ShaderProperty(faceLightMapCombineMode, faceLightMapCombineMode.displayName);
                     GUILayout.Space(10);
                 }
                 GUILayout.EndVertical();
@@ -321,8 +256,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.Label("Blend Mode", EditorStyles.boldLabel);
                 GUILayout.BeginVertical("Box");
                 {
-                    materialEditor.ShaderProperty(srcblend, "");
-                    materialEditor.ShaderProperty(dstblend, "");                    
+                    materialEditor.ShaderProperty(srcBlend, "");
+                    materialEditor.ShaderProperty(dstBlend, "");                    
                 }
                 GUILayout.EndVertical();
                 GUILayout.Space(10);
@@ -340,13 +275,13 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             {
                 materialEditor.ShaderProperty(outlineEnable, "Enable");
                 GUILayout.Space(10);
-                materialEditor.TexturePropertySingleLine("Width Mask".ToGUIContent(), outlineMask);
+                materialEditor.TexturePropertySingleLine("Width Mask".ToGUIContent(), outlineWidthControl);
                 
-                Vector4 outCtrlProperties = outliineCtrlProperties.vectorValue;
+                Vector4 outCtrlProperties = outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue;
                 outCtrlProperties.x = EditorGUILayout.FloatField("Min Width",outCtrlProperties.x);
                 outCtrlProperties.y = EditorGUILayout.FloatField("Max Width", outCtrlProperties.y);
                 outCtrlProperties.z = EditorGUILayout.FloatField("Fade Length Scale", outCtrlProperties.z);
-                outliineCtrlProperties.vectorValue = outCtrlProperties;
+                outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue = outCtrlProperties;
 
                 //materialEditor.ShaderProperty(outliineCtrlProperties, outliineCtrlProperties.displayName);
 
@@ -357,7 +292,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 {
                     if (m != mat)
                     {
-                        m.SetVector(outliineCtrlProperties.name, outliineCtrlProperties.vectorValue);
+                        m.SetVector(outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.name, outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue);
                         m.SetFloat(diffuseBlend.name, diffuseBlend.floatValue);                        
                     }
                 }
@@ -420,7 +355,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 #region Start Picker
                 {
                     current.y += 16; current.width /= 3.0f;
-                    materialEditor.ColorProperty(current, pciker0, "");
+                    materialEditor.ColorProperty(current, picker_0, "");
                     current = baseRect;
                     current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
                     materialEditor.ColorProperty(current, shadowColor0, "");
@@ -431,7 +366,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 {
                     current = baseRect;
                     current.y += 32; current.width /= 3.0f;
-                    materialEditor.ColorProperty(current, pciker1, "");
+                    materialEditor.ColorProperty(current, picker_1, "");
                     current = baseRect;
                     current.y += 32; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
                     materialEditor.ColorProperty(current, shadowColor1, "");
@@ -439,22 +374,22 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 #endregion // Start Picker
                 
                 materialEditor.ShaderProperty(shadowColorElse, "Else Area");
-                drawBaseMap = EditorGUILayout.Toggle("Draw Base Map",drawBaseMap);
+                drawBaseMap = EditorGUILayout.Toggle("Draw Base Map", drawBaseMap);
                 if (drawBaseMap)
                 {
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.ObjectField(baseMap.textureValue, typeof(Texture2D), false, GUILayout.Width(EditorGUIUtility.currentViewWidth*0.8f), GUILayout.Height(EditorGUIUtility.currentViewWidth*0.8f));
+                    //EditorGUI.DrawTextureTransparent();
                     EditorGUI.EndDisabledGroup();
                 }
             });
-
 
             DrawArea("Expression System", () =>
             {
                 materialEditor.ShaderProperty(expressionEnable, "Enable");
                 EditorGUI.BeginDisabledGroup(mat.GetFloat("_ExpressionEnable") == 0.0);
+                materialEditor.ShaderProperty(selectExpressionMap, selectExpressionMap.displayName);
                 materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
-
+                materialEditor.TexturePropertySingleLine(expressionQMap.displayName.ToGUIContent(), expressionQMap);
                 var currentFormat = SetExpressionFormat(mat);
                 format = SetExpressionFormat(mat);
                 format = (ExpressionFormat)EditorGUILayout.EnumPopup("Format", format);
@@ -520,10 +455,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Settings",()=> {
                 materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName); 
-                materialEditor.ShaderProperty(shadowRefrection, shadowRefrection.displayName);
+                materialEditor.ShaderProperty(shadowRefraction, shadowRefraction.displayName);
                 materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
-                materialEditor.ShaderProperty(shadowRemap, shadowRemap.displayName);
-                materialEditor.ShaderProperty(selfShadowRemap, selfShadowRemap.displayName);
+                materialEditor.ShaderProperty(shadowRamp, shadowRamp.displayName);
+                materialEditor.ShaderProperty(selfShadowRamp, selfShadowRamp.displayName);
                 materialEditor.RenderQueueField();
             });
 
@@ -536,14 +471,14 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         public virtual void BaseArea(Material mat)
         {
-            materialEditor.TexturePropertySingleLine(baseMap.displayName.ToGUIContent(), baseMap, baseColor);
-            materialEditor.TexturePropertySingleLine(maskMap.displayName.ToGUIContent(
+            materialEditor.TexturePropertySingleLine(diffuse.displayName.ToGUIContent(), diffuse, color);
+            materialEditor.TexturePropertySingleLine(mask.displayName.ToGUIContent(
                 string.Format("{0} \n\n{1} \n\n{2} \n\n{3}",
                 "R= Emission Mask\n(發光遮罩)",
                 "G= Shadow Refraction\n(陰影速率(折射))",
                 "B= Specular Mask\n(反光遮罩)",
                 "A= Gloss\n(光滑遮罩)")
-                ), maskMap);
+                ), mask);
 
 
             materialEditor.TexturePropertySingleLine(selfMask.displayName.ToGUIContent(
@@ -557,13 +492,13 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             if (selfMask.textureValue != null)
             {
                 materialEditor.ShaderProperty(selfMaskDirection, selfMaskDirection.displayName.ToGUIContent());
-                selfMaskEnb.floatValue = 1.0f;
+                selfMaskEnable.floatValue = 1.0f;
                 mat.EnableKeyword("_SelfMaskEnable");
             }
             else
             {
                 selfMaskDirection.floatValue = 0;
-                selfMaskEnb.floatValue = 0.0f;
+                selfMaskEnable.floatValue = 0.0f;
                 mat.DisableKeyword("_SelfMaskEnable");
             }
         }

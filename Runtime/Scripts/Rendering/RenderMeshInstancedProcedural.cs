@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using System.Linq;
 using Unity.Mathematics;
+using Funcy.Graphics;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.AnimatedValues;
@@ -14,79 +15,110 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     public ComputeShader cullingComputeShader;
     public List<RenderGroup> renderGroups = new List<RenderGroup>();
     public bool viewCulling = true;
+    
+    private void OnEnable()
+    {
+        foreach (var rg in renderGroups)
+        {
+            rg.InitBuffers();
+            rg.UpdateBuffer();
+        }
+    }
+
+    public void UpdateObject(int rgIndex, int index)
+    {
+        var rg = renderGroups[rgIndex];
+        var ren = rg.GetObjects()[index];
+        rg.UpdateTransform(index);
+    }
+
     [System.Serializable]
     public class RenderGroup
     {
-        private ComputeBuffer _ObjectToWorldBuffer;
-        private ComputeBuffer _WorldToObjectBuffer;
+        private Buffer _ObjectToWorldBuffer;
+        private Buffer _WorldToObjectBuffer;
 
-        private ComputeBuffer boundsBuffer;
-        private ComputeBuffer visibleInstanceOnlyTransformBuffer;
-        private ComputeBuffer visibleTransformIDBuffer;
+        private Buffer boundsBuffer;
+        private Buffer visibleInstanceOnlyTransformBuffer;
+        private Buffer visibleTransformIDBuffer;
         uint[] visibleTransformID;
-        private ComputeBuffer argsBuffer;
+        private Buffer argsBuffer;
+        float4x4[] o2w;
+        float4x4[] w2o;
+        float3x2[] bounds;
+        uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+        public void InitBuffers()
+        {
+            _ObjectToWorldBuffer = new Buffer(objs.Count, typeof(Matrix4x4));
+            _WorldToObjectBuffer = new Buffer(objs.Count, typeof(Matrix4x4), ComputeBufferType.Default);
+            boundsBuffer = new Buffer(objs.Count, typeof(Bounds));
+            visibleInstanceOnlyTransformBuffer = new Buffer(objs.Count, typeof(uint), ComputeBufferType.Append); //uint only, per visible grass
+            visibleTransformIDBuffer = new Buffer(objs.Count, typeof(uint)); //uint only, per visible grass
+            visibleTransformID = new uint[objs.Count];
+            argsBuffer = new Buffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
+            o2w = new float4x4[objs.Count];
+            w2o = new float4x4[objs.Count];
+            bounds = new float3x2[objs.Count];
+        }
+
+        public void DispBuffers()
+        {
+            if (_ObjectToWorldBuffer != null) _ObjectToWorldBuffer.Dispose();
+            if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Dispose();
+            if (boundsBuffer != null) boundsBuffer.Dispose();
+            if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose();
+            if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Dispose();
+        }
 
         private Material instancedMaterial;
-        public void UpdateBuffer()
-        {            
-            if (_ObjectToWorldBuffer != null) _ObjectToWorldBuffer.Release();
-            if (_WorldToObjectBuffer != null) _WorldToObjectBuffer.Release();
-            if (boundsBuffer != null) boundsBuffer.Release();
-            if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Release();
-            if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Release();
-
-            _ObjectToWorldBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
-            _WorldToObjectBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 4 * 4, ComputeBufferType.Default);
-            boundsBuffer = new ComputeBuffer(objs.Count, sizeof(float) * 3 * 2); //float3 posWS only, per grass
-            visibleInstanceOnlyTransformBuffer = new ComputeBuffer(objs.Count, sizeof(uint), ComputeBufferType.Append); //uint only, per visible grass
-            visibleTransformIDBuffer = new ComputeBuffer(objs.Count, sizeof(uint)); //uint only, per visible grass
-            visibleTransformID = new uint[objs.Count];
-
-            float4x4[] o2w =new float4x4[objs.Count];
-            float4x4[] w2o =new float4x4[objs.Count];
-
-            List<float3x2> bounds = new List<float3x2>();
+        public void UpdateTransform(int index)
+        {
+            var o = objs[index];
+            o2w[index] = o.localToWorldMatrix;
+            w2o[index] = o.worldToLocalMatrix;
+            bounds[index] = new float3x2(o.bounds.center, o.bounds.extents);
+            UpdateBuffer(false, false);
+        }
+        public void UpdateBuffer(bool updateAllObjects = true, bool updateArgs = true)
+        {                        
             int index = 0;
-            foreach (var o in objs)
+            if (updateAllObjects)
             {
-                o2w[index] = o.localToWorldMatrix;
-                w2o[index] = o.worldToLocalMatrix;
-                float3x2 _bounds = new float3x2(o.bounds.center, o.bounds.extents);
-                bounds.Add(_bounds);
-                index++;
+                foreach (var o in objs)
+                {
+                    o2w[index] = o.localToWorldMatrix;
+                    w2o[index] = o.worldToLocalMatrix;
+                    bounds[index] = new float3x2(o.bounds.center, o.bounds.extents);
+                    index++;
+                }
             }
+                
             _ObjectToWorldBuffer.SetData(o2w);
             _WorldToObjectBuffer.SetData(w2o);
 
             var ren = reference.GetComponent<MeshRenderer>();
             var mat = ren.sharedMaterial;
-            mat.SetBuffer("_ObjectToWorldBuffer", _ObjectToWorldBuffer);
-            mat.SetBuffer("_WorldToObjectBuffer", _WorldToObjectBuffer);
+            mat.SetBuffer("_ObjectToWorldBuffer", _ObjectToWorldBuffer.target);
+            mat.SetBuffer("_WorldToObjectBuffer", _WorldToObjectBuffer.target);
 
             boundsBuffer.SetData(bounds);
-            mat.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-            mat.SetBuffer("_VisibleTransformIDBuffer", visibleTransformIDBuffer);
+            mat.SetBuffer("_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer.target);
+            mat.SetBuffer("_VisibleTransformIDBuffer", visibleTransformIDBuffer.target);
             
-            ///////////////////////////
-            // Indirect args buffer
-            ///////////////////////////
-            if (argsBuffer != null)
-                argsBuffer.Release();
-            uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-            argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+            if(updateArgs)
+            {
+                args[0] = (uint)reference.sharedMesh.GetIndexCount(0);
+                args[1] = (uint)objs.Count;
+                args[2] = (uint)reference.sharedMesh.GetIndexStart(0);
+                args[3] = (uint)reference.sharedMesh.GetBaseVertex(0);
+                args[4] = 0;
 
-            args[0] = (uint)reference.sharedMesh.GetIndexCount(0);
-            args[1] = (uint)objs.Count;
-            args[2] = (uint)reference.sharedMesh.GetIndexStart(0);
-            args[3] = (uint)reference.sharedMesh.GetBaseVertex(0);
-            args[4] = 0;
-
-            argsBuffer.SetData(args);
-
+                argsBuffer.SetData(args);
+            }            
         }
 
-        public void Draw(ComputeShader cullingComputeShader, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling)
+        public void Draw(ComputeShader cullingComputeShader, int kernel, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling)
         {
             if (instancedMaterial == null)
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
@@ -97,29 +129,33 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             { instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural"); }            
 
             
-            //dispatch culling compute, fill visible instance into visibleInstanceOnlyTransformBuffer
-            var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");                            
-
-            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
+            visibleInstanceOnlyTransformBuffer.target.SetCounterValue(0);
             cullingComputeShader.SetMatrix("_VMatrix", ViewMatrix);
             cullingComputeShader.SetMatrix("_PMatrix", ProjectionMatrix);
             cullingComputeShader.SetFloat("_MaxDrawDistance", farClipDistance);
-            cullingComputeShader.SetBuffer(kernel, "_BoundsBuffer", boundsBuffer);
-            cullingComputeShader.SetBuffer(kernel, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer);
-            cullingComputeShader.SetBuffer(kernel, "_VisibleTransformIDBuffer", visibleTransformIDBuffer);
+            cullingComputeShader.SetBuffer(kernel, "_BoundsBuffer", boundsBuffer.target);
+            cullingComputeShader.SetBuffer(kernel, "_VisibleInstanceOnlyTransformIDBuffer", visibleInstanceOnlyTransformBuffer.target);
+            cullingComputeShader.SetBuffer(kernel, "_VisibleTransformIDBuffer", visibleTransformIDBuffer.target);
             cullingComputeShader.Dispatch(kernel, Mathf.CeilToInt(objs.Count / 64f), 1, 1);
             
 
             if (!activeGroup)
             {
-                ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer, argsBuffer, 4);
-                Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer, 0, null, shadowCastingMode);
+                ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
+                Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer.target, 0, null, shadowCastingMode);
             }
             else
             {
                 if (viewCulling)
                 {
-                    visibleTransformIDBuffer.GetData(visibleTransformID);
+                    AsyncGPUReadback.Request(visibleTransformIDBuffer.target, r =>
+                    {
+                        if (r.hasError) return;
+                        
+                        var d = r.GetData<uint>();                        
+                        d.CopyTo(visibleTransformID);                        
+                    });
+                    
                     for (int i = 0; i < objs.Count; i++)
                     {
                         objs[i].enabled = visibleTransformID[i] == 1;
@@ -160,8 +196,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (boundsBuffer != null) boundsBuffer.Dispose(); boundsBuffer = null;
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose(); visibleInstanceOnlyTransformBuffer = null;
             if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Dispose(); visibleTransformIDBuffer = null;
-            if (argsBuffer != null) argsBuffer.Release(); argsBuffer = null;
-
+            if (argsBuffer != null) argsBuffer.Dispose(); argsBuffer = null;            
             var mat = reference.GetComponent<MeshRenderer>().sharedMaterial;            
             mat.DisableKeyword("_DrawMeshInstancedProcedural");
         }
@@ -170,22 +205,18 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 #endif
     }
     
-    private void OnEnable()
-    {
-        foreach (var rg in renderGroups)
-        {
-            rg.UpdateBuffer();
-        }
-    }
+
     void LateUpdate()
     {
         if (Camera.main == null) return;
         Matrix4x4 v = Camera.main.worldToCameraMatrix;
         Matrix4x4 p = Camera.main.projectionMatrix;
         Matrix4x4 vp = p * v;
+        var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");
+
         foreach (var rg in renderGroups)
         {
-            rg.Draw(cullingComputeShader, v, p, viewCulling);
+            rg.Draw(cullingComputeShader, kernel, v, p, viewCulling);
         }
     }
 
@@ -196,17 +227,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             rg.UpdateBuffer();            
         }
     }
-    /*
-    void Start()
-    {
-        
-    }
 
-    private void Update()
-    {
- 
-    }
-    */
 
     public void DisposeAllBuffer()
     {
@@ -259,6 +280,21 @@ public class RenderMeshInstancedProcedural_Editor : Editor
         {
             updateBuffer?.Invoke();
             FileModificationWarning.onSavedProject += updateBufferDelay;
+            EditorApplication.update += () => {
+
+                foreach (var data in FindObjectsOfType<RenderMeshInstancedProcedural>())
+                {
+                    foreach (var s in Selection.objects)
+                    {
+                        var rg = data.renderGroups.Find(g => g.GetObjects().Find(o => s == o.gameObject));
+                        if (rg == null) continue;
+                        var obj = rg.GetObjects().Find(o => s == o.gameObject);
+                        var index = rg.GetObjects().IndexOf(obj);
+
+                        rg.UpdateTransform(index);
+                    }
+                }                
+            };
         };
         
     }
@@ -289,6 +325,8 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                     result.AddRange(g.GetComponentsInChildren<MeshRenderer>(true).ToList().FindAll(r => r.GetComponent<MeshFilter>() && r.GetComponent<MeshFilter>().sharedMesh == rg.reference.sharedMesh));
                 }
                 rg.SetObjects(result);
+                if (result.Count > 0)
+                    rg.UpdateBuffer();
             }
             EditorUtility.SetDirty(target);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);

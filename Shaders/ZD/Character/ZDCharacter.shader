@@ -69,7 +69,7 @@ Shader "ZDShader/LWRP/Character"
         [Toggle]_ReceiveShadow ("Receive Shadow", Float) = 1.0
         
         
-        [Toggle(_CustomLighting)]_CustomLighting ("Custom Lighting", Float) = 1.0
+        
         _CustomLightIntensity ("Custom Light Intensity", Float) = 1.0
         _CustomLightColor ("Custom Light Color", Color) = (1, 1, 1, 1)
         
@@ -83,22 +83,27 @@ Shader "ZDShader/LWRP/Character"
         
         //Expression
         [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
-        [NoScaleOffset]_ExpressionMap ("Map", 2D) = "white" { }
+        
+        [IntRange]_SelectExpressionMap ("Select Map", Range(0, 1)) = 0
+        [NoScaleOffset]_ExpressionMap ("Face Sheet", 2D) = "white" { }
+        [NoScaleOffset]_ExpressionQMap ("Q Face Sheet", 2D) = "white" { }
         
         [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
         [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
         
-        [IntRange]_SelectBrow ("Select Brow", Range(1, 4)) = 1
+        [IntRange]_SelectBrow ("Select Brow", Range(0, 4)) = 1
         _BrowRect ("Brow UV Rect", Vector) = (0, 0.45, 0.855, 0.3)
-        [IntRange]_SelectFace ("Select Face", Range(1, 8)) = 1
+        [IntRange]_SelectFace ("Select Face", Range(0, 8)) = 1
         _FaceRect ("Eyes UV Rect", Vector) = (0, -0.02, 0.855, 0.37)
-        [IntRange]_SelectMouth ("Select Mouth ", Range(1, 8)) = 1
+        [IntRange]_SelectMouth ("Select Mouth ", Range(0, 8)) = 1
         _MouthRect ("Mouth UV Rect", Vector) = (0, -0.97, 0.427, 0.28)
         
         [MaterialToggle] _FloatModel ("Float Model", float) = 0
         
         //Effective Disslove
         _EffectiveMap ("Effective Map", 2D) = "white" { }
+        [MaterialToggle] _FaceLightMapCombineMode ("Face LightMap Combined", float) = 0.0
+        
         [HDR]_EffectiveColor ("_EffectiveColor", Color) = (1.0, 1.0, 1.0, 1.0)
     }
     
@@ -207,9 +212,10 @@ Shader "ZDShader/LWRP/Character"
             half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            float _SelectMouth;
-            float _SelectFace;
-            float _SelectBrow;
+            half _SelectExpressionMap;
+            half _SelectMouth;
+            half _SelectFace;
+            half _SelectBrow;
             
             half4 _BrowRect;
             half4 _FaceRect;
@@ -217,6 +223,7 @@ Shader "ZDShader/LWRP/Character"
             
             half _FloatModel;
             half4 _EffectiveColor;
+            half _FaceLightMapCombineMode;
             CBUFFER_END
             
             TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
@@ -376,9 +383,10 @@ Shader "ZDShader/LWRP/Character"
             half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            float _SelectMouth;
-            float _SelectFace;
-            float _SelectBrow;
+            half _SelectExpressionMap;
+            half _SelectMouth;
+            half _SelectFace;
+            half _SelectBrow;
             
             half4 _BrowRect;
             half4 _FaceRect;
@@ -386,6 +394,7 @@ Shader "ZDShader/LWRP/Character"
             
             half _FloatModel;
             half4 _EffectiveColor;
+            half _FaceLightMapCombineMode;
             CBUFFER_END
             
             
@@ -393,7 +402,8 @@ Shader "ZDShader/LWRP/Character"
             TEXTURE2D(_NormalMap);                  SAMPLER(sampler_NormalMap);
             TEXTURE2D(_SelfMask);                   SAMPLER(sampler_SelfMask);
             TEXTURE2D(_ExpressionMap);              SAMPLER(sampler_ExpressionMap);
-            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            TEXTURE2D(_ExpressionQMap);             SAMPLER(sampler_ExpressionQMap);
+            TEXTURE2D(_EffectiveMap);               SAMPLER(sampler_EffectiveMap);
             
             struct Attributes
             {
@@ -403,13 +413,14 @@ Shader "ZDShader/LWRP/Character"
                 float2 uv0: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
                 float2 effectcoord: TEXCOORD2;
+                float2 selfShadowCoord: TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
             struct Varyings
             {
                 float4 uv01: TEXCOORD0;
-                float2 effectcoord: TEXCOORD1;
+                float4 effectcoord: TEXCOORD1;
                 float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
                 float3 normalWS: TEXCOORD3;
                 
@@ -477,7 +488,8 @@ Shader "ZDShader/LWRP/Character"
                 // TRANSFORM_TEX is the same as the old shader library.
                 output.uv01.xy = TRANSFORM_TEX(input.uv0, _diffuse);
                 output.uv01.zw = input.uv1;
-                output.effectcoord = input.effectcoord;
+                input.selfShadowCoord = lerp(input.uv1, input.selfShadowCoord, _FaceLightMapCombineMode);
+                output.effectcoord = float4(input.effectcoord, input.selfShadowCoord);
                 output.positionWSAndFogFactor = float4(vertexInput.positionWS, fogFactor);
                 output.normalWS = vertexNormalInput.normalWS;
                 
@@ -498,13 +510,12 @@ Shader "ZDShader/LWRP/Character"
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                 output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 
-                
                 output.vertexDist = distance(input.positionOS.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
                 output.positionCS = vertexInput.positionCS;
                 
                 #if _ExpressionEnable
-                    
+                    _SelectExpressionMap = round(_SelectExpressionMap);
                     _SelectBrow = round(_SelectBrow);
                     _SelectFace = round(_SelectFace);
                     _SelectMouth = round(_SelectMouth);
@@ -562,18 +573,20 @@ Shader "ZDShader/LWRP/Character"
             
             float LigntMapAreaInUV1(Varyings i, float origShadow)
             {
-                float cm = normalize(cross(i.objectDirection, i.lightXZDirection)).y;
+                float cm = clamp(normalize(cross(i.objectDirection, i.lightXZDirection)).y, -1., 1.);
                 float4 _SelfMask_UV1_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, float2(i.uv01.z * cm, i.uv01.w));
-                
-                float angle01 = acos(-dot(i.objectDirection, i.lightXZDirection)) / 3.14159265359h;
+                half odl = -dot(i.objectDirection, i.lightXZDirection);
+                float angle01 = acos(odl) / 3.14159265359h;
                 angle01 = Remap(angle01, 0, 1, 0.01, 0.99);
                 
+                half faceLightMapScaleRange = lerp(1.0, 0.0625, _FaceLightMapCombineMode) * 0.1;
+                
+                half _SelfShadow_UV1_var = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, float2(i.effectcoord.z + cm * angle01 * faceLightMapScaleRange, i.effectcoord.w)).g;
                 half upNear = dot(i.objectUp, half3(0, 1, 0));
                 _SelfMask_UV1_var.r = lerp(origShadow, _SelfMask_UV1_var.r, upNear * 0.5 + 0.5);
                 
-                return 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01);
+                return min(_SelfShadow_UV1_var, 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01));
             }
-            
             
             #if _DiscolorationSystem
                 half3 RGB2HSV(half3 c)
@@ -665,19 +678,49 @@ Shader "ZDShader/LWRP/Character"
                 return mul(m, float4(positionWS, 1.0));
             }
             
+            half BRDFSpecular(half metallic, half smoothness, float3 normalWS, half3 lightDirectionWS, half3 viewDirectionWS)
+            {
+                float3 halfDir = SafeNormalize(float3(lightDirectionWS) + float3(viewDirectionWS));
+                
+                float NoH = saturate(dot(normalWS, halfDir));
+                half LoH = saturate(dot(lightDirectionWS, halfDir));
+                
+                half perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(smoothness);
+                half roughness = max(PerceptualRoughnessToRoughness(perceptualRoughness), HALF_MIN);
+                half roughness2 = roughness * roughness;
+                
+                half normalizationTerm = roughness * 4.0h + 2.0h;
+                half roughness2MinusOne = roughness2 - 1.0h;
+                float d = NoH * NoH * roughness2MinusOne + 1.00001f;
+                
+                half LoH2 = LoH * LoH;
+                half specularTerm = roughness2 / ((d * d) * max(0.1h, LoH2) * normalizationTerm);
+                
+                #if defined(SHADER_API_MOBILE) || defined(SHADER_API_SWITCH)
+                    specularTerm = specularTerm - HALF_MIN;
+                    specularTerm = clamp(specularTerm, 0.0, 100.0); // Prevent FP16 overflow on mobiles
+                #endif
+                
+                return specularTerm * lerp(0.04, 1.0, metallic);
+            }
+            
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
-                float4 shadowCoords = WorldToShadowCoord(i.positionWSAndFogFactor.xyz);
-                Light mainLight = GetMainLight(shadowCoords);
-                
-                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
-                
                 float4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
                 float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
+                
+                Light mainLight = GetMainLight();
+                /*Only remove face self shadow*/
+                
+                float4 shadowCoords = WorldToShadowCoord(lerp(i.positionWSAndFogFactor.xyz + mainLight.direction * min(i.vertexDist, 1.0), i.positionWSAndFogFactor.xyz, _SelfMask_UV0_var.b));
+                mainLight = GetMainLight(shadowCoords);
+                
+                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
+                
                 
                 float3 positionWS = i.positionWSAndFogFactor.xyz;
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
@@ -700,6 +743,7 @@ Shader "ZDShader/LWRP/Character"
                         half2 browMaskRect = abs(((browMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half browMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _BrowTRS.x, 1.0, browMaskRect.x), smoothstep(0.5 - maskBlur * _BrowTRS.y, 0.5, browMaskRect.y)));
                         half4 Brow = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, browUV);
+                        Brow = lerp(Brow, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, browUV), _SelectExpressionMap);
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
@@ -709,6 +753,7 @@ Shader "ZDShader/LWRP/Character"
                         half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
                         half4 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV);
+                        Eyes = lerp(Eyes, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, eyesUV), _SelectExpressionMap);
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
@@ -718,35 +763,32 @@ Shader "ZDShader/LWRP/Character"
                         half2 mouthMaskRect = abs(((mouthMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
                         half mouthMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _MouthsTRS.x, 1.0, mouthMaskRect.x), smoothstep(1.0 - maskBlur * _MouthsTRS.y, 1.0, mouthMaskRect.y)));
                         half4 Mouth = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, mouthUV);
+                        Mouth = lerp(Mouth, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, mouthUV), _SelectExpressionMap);
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a);
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a * saturate(_SelectMouth));
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a));
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a) * saturate(_SelectFace));
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a);
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a * saturate(_SelectBrow));
                     #endif
                     
                 #endif
                 
-                //Prepare Property....
-                //......................
-                
                 
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
-                ////// Lighting:
-                float attenuation = 1;
-                ////// Emissive:
                 
                 
                 float specStep = 2.0;
-                float specularArea = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                float specularValue = BRDFSpecular(1.0, _Gloss * glossMask, i.normalWS, mainLight.direction, viewDirection) * NdotL;
+                specularValue = floor(pow(saturate(max(specularValue, dot(i.normalWS, halfDirection))), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
@@ -795,9 +837,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 //PBRShadowArea
                 float refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
-                half uvUseArea;
-                
-                uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
+                half uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
                 
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
                 
@@ -825,8 +865,8 @@ Shader "ZDShader/LWRP/Character"
                 float _EmissionOn_var = _EmissionOn;
                 
                 float _Flash_var = (1.0 - max(0, dot(normalDirection, viewDirection))) * _Flash;
-                float3 specularColor = lerp(float3(0, 0, 0), float3(specularArea, specularArea, specularArea), (_SpecularColor_var.rgb * specularMask));
-                specularColor = clamp(specularColor, 0.0.xxx, 1.0.xxx);
+                float3 specularColor = _SpecularColor_var.rgb * specularValue * specularMask;
+                
                 float shadowTotal = saturate(shadowArea0 + shadowArea1 + shadowAreaElse) * (1.0 - PBRShadowArea);
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * saturate(shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb + shadowAreaElse * _ShadowColorElse.rgb), shadowTotal);
                 
@@ -836,7 +876,7 @@ Shader "ZDShader/LWRP/Character"
                 
                 
                 float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
-                + specularColor + diffuseColor) * mainLight.color * _Color.rgb +
+                + diffuseColor) * mainLight.color * _Color.rgb + specularColor +
                 emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + _Time.y * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
                 ;
@@ -977,9 +1017,10 @@ Shader "ZDShader/LWRP/Character"
             half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            float _SelectMouth;
-            float _SelectFace;
-            float _SelectBrow;
+            half _SelectExpressionMap;
+            half _SelectMouth;
+            half _SelectFace;
+            half _SelectBrow;
             
             half4 _BrowRect;
             half4 _FaceRect;
@@ -987,6 +1028,7 @@ Shader "ZDShader/LWRP/Character"
             
             half _FloatModel;
             half4 _EffectiveColor;
+            half _FaceLightMapCombineMode;
             CBUFFER_END
             
             TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
@@ -1149,9 +1191,10 @@ Shader "ZDShader/LWRP/Character"
             half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            float _SelectMouth;
-            float _SelectFace;
-            float _SelectBrow;
+            half _SelectExpressionMap;
+            half _SelectMouth;
+            half _SelectFace;
+            half _SelectBrow;
             
             half4 _BrowRect;
             half4 _FaceRect;
@@ -1159,6 +1202,7 @@ Shader "ZDShader/LWRP/Character"
             
             half _FloatModel;
             half4 _EffectiveColor;
+            half _FaceLightMapCombineMode;
             CBUFFER_END
             
             TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
@@ -1315,9 +1359,10 @@ Shader "ZDShader/LWRP/Character"
             half _OutlineEnable;
             half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
             
-            float _SelectMouth;
-            float _SelectFace;
-            float _SelectBrow;
+            half _SelectExpressionMap;
+            half _SelectMouth;
+            half _SelectFace;
+            half _SelectBrow;
             
             half4 _BrowRect;
             half4 _FaceRect;
@@ -1325,6 +1370,7 @@ Shader "ZDShader/LWRP/Character"
             
             half _FloatModel;
             half4 _EffectiveColor;
+            half _FaceLightMapCombineMode;
             CBUFFER_END
             
             TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);

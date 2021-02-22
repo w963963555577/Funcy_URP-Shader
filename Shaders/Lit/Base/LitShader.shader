@@ -251,10 +251,9 @@ Shader "ZDShader/LWRP/PBR Base"
                     float3 normalOS: NORMAL;
                     float4 tangentOS: TANGENT;
                     float2 texcoord: TEXCOORD0;
-                    float2 lightmapUV: TEXCOORD1;
-                    #ifdef _FlowEmission_OFF
-                        float2 effectcoord: TEXCOORD2;
-                    #endif
+                    float2 lightmapUV: TEXCOORD1;                    
+                    float2 effectcoord: TEXCOORD2;
+                    
                     #ifdef _DrawMeshInstancedProcedural
                         uint mid: SV_INSTANCEID;
                     #else
@@ -403,9 +402,9 @@ Shader "ZDShader/LWRP/PBR Base"
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
                     
                     output.uv.xy = TRANSFORM_TEX(input.texcoord, _BaseMap);
-                    #ifdef _FlowEmission_OFF
-                        output.uv.zw = input.effectcoord;
-                    #endif
+                    
+                    output.uv.zw = input.effectcoord.xy;
+                    
                     #ifdef _NORMALMAP
                         output.normalWS = half4(normalInput.normalWS, viewDirWS.x);
                         output.tangentWS = half4(normalInput.tangentWS, viewDirWS.y);
@@ -774,7 +773,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     UNITY_SETUP_INSTANCE_ID(input);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 #endif
-
+                
                 #ifdef _DrawMeshInstancedProcedural
                     input.position = lerp(input.position, WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
                 #else

@@ -23,7 +23,7 @@ float4 WorldToViewPoint(float4x4 VPMatrix, float3 worloPos)
     return result;
 }
 
-bool BoundsInView(float3 _center, float3 _extents)
+float BoundsInView(float3 _center, float3 _extents)
 {
     float4x4 _VPMatrix = mul(_PMatrix, _VMatrix);
     
@@ -61,7 +61,10 @@ bool BoundsInView(float3 _center, float3 _extents)
     float minY = min(min(min(p1.y, p2.y), min(p3.y, p4.y)), min(min(p5.y, p6.y), min(p7.y, p8.y)));
     
     float2 allow = float2(1.0, 1.0);
-    return vp0.w < _MaxDrawDistance && p0.z <= 1.0 && minX <= allow.x && minY <= allow.y;
+    
+    //return vp0.w <= _MaxDrawDistance && p0.z <= 1.0 && minX <= && minY <= allow.y;
+    
+    return step(vp0.w, _MaxDrawDistance) * step(p0.z, 1.0) * step(minX, allow.x) * step(minY, allow.y);
 }
 
 [numthreads(64, 1, 1)]
@@ -70,17 +73,13 @@ void ViewCulling(uint3 id: SV_DispatchThreadID)
     float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
     float3 _extents = _BoundsBuffer[id.x]._m01_m11_m21;
     
-    bool boundInView = BoundsInView(_center, _extents);
+    float boundInView = BoundsInView(_center, _extents);
     
-    if (boundInView)
+    if (boundInView == 1.0)
     {
         _VisibleInstanceOnlyTransformIDBuffer.Append(id.x);
-        _VisibleTransformIDBuffer[id.x] = 1;
     }
-    else
-    {
-        _VisibleTransformIDBuffer[id.x] = 0;
-    }
+    _VisibleTransformIDBuffer[id.x] = boundInView;
 }
 
 [numthreads(64, 1, 1)]
@@ -89,15 +88,7 @@ void ViewRendererCulling(uint3 id: SV_DispatchThreadID)
     float3 _center = _BoundsBuffer[id.x]._m00_m10_m20;
     float3 _extents = _BoundsBuffer[id.x]._m01_m11_m21;
     
-    bool boundInView = BoundsInView(_center, _extents);
-    
-    if (boundInView)
-    {        
-        _VisibleTransformIDBuffer[id.x] = 1;
-    }
-    else
-    {
-        _VisibleTransformIDBuffer[id.x] = 0;
-    }
+    float boundInView = BoundsInView(_center, _extents);
+    _VisibleTransformIDBuffer[id.x] = boundInView;
 }
 
