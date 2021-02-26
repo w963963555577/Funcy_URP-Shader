@@ -309,7 +309,7 @@ Shader "ZDShader/LWRP/Character"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _AlphaClip
             
-            #pragma shader_feature_local _DiscolorationSystem
+            #pragma multi_compile _ _DiscolorationSystem
             #pragma shader_feature_local _ExpressionEnable
             
             
@@ -576,7 +576,7 @@ Shader "ZDShader/LWRP/Character"
                 float cm = clamp(normalize(cross(i.objectDirection, i.lightXZDirection)).y, -1., 1.);
                 float4 _SelfMask_UV1_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, float2(i.uv01.z * cm, i.uv01.w));
                 half odl = -dot(i.objectDirection, i.lightXZDirection);
-                float angle01 = acos(odl) / 3.14159265359h;
+                float angle01 = acos(odl) * 0.318309886h;
                 angle01 = Remap(angle01, 0, 1, 0.01, 0.99);
                 
                 half faceLightMapScaleRange = lerp(1.0, 0.0625, _FaceLightMapCombineMode) * 0.1;

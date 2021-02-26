@@ -82,6 +82,11 @@ namespace Funcy.Graphics
         {
             buffer.SetData(data, managedBufferStartIndex, computeBufferStartIndex, count);
         }
+
+        public void SetCounterValue(uint counterValue)
+        {
+            buffer.SetCounterValue(counterValue);
+        }
     }
     #endregion Buffer
 }

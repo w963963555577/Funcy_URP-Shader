@@ -11,7 +11,8 @@ using UnityEditor.AnimatedValues;
 #endif
 [ExecuteInEditMode]
 public class RenderMeshInstancedProcedural : MonoBehaviour
-{    
+{
+    public LightProbeProxyVolume volume;    
     public ComputeShader cullingComputeShader;
     public List<RenderGroup> renderGroups = new List<RenderGroup>();
     public bool viewCulling = true;
@@ -22,7 +23,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         {
             rg.InitBuffers();
             rg.UpdateBuffer();
-        }
+        }        
     }
 
     public void UpdateObject(int rgIndex, int index)
@@ -34,7 +35,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
     [System.Serializable]
     public class RenderGroup
-    {
+    {        
         private Buffer _ObjectToWorldBuffer;
         private Buffer _WorldToObjectBuffer;
 
@@ -47,8 +48,16 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         float4x4[] w2o;
         float3x2[] bounds;
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+
+        
+        //Probes
+        MaterialPropertyBlock properties = null;
+
         public void InitBuffers()
         {
+            properties = new MaterialPropertyBlock();
+            reference.GetComponent<Renderer>().GetPropertyBlock(properties);              
+
             _ObjectToWorldBuffer = new Buffer(objs.Count, typeof(Matrix4x4));
             _WorldToObjectBuffer = new Buffer(objs.Count, typeof(Matrix4x4), ComputeBufferType.Default);
             boundsBuffer = new Buffer(objs.Count, typeof(Bounds));
@@ -118,7 +127,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             }            
         }
 
-        public void Draw(ComputeShader cullingComputeShader, int kernel, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling)
+        public void Draw(ComputeShader cullingComputeShader, int kernel, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling, LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes, LightProbeProxyVolume volume = null)
         {
             if (instancedMaterial == null)
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
@@ -129,7 +138,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             { instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural"); }            
 
             
-            visibleInstanceOnlyTransformBuffer.target.SetCounterValue(0);
+            visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
             cullingComputeShader.SetMatrix("_VMatrix", ViewMatrix);
             cullingComputeShader.SetMatrix("_PMatrix", ProjectionMatrix);
             cullingComputeShader.SetFloat("_MaxDrawDistance", farClipDistance);
@@ -142,7 +151,8 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (!activeGroup)
             {
                 ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
-                Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer.target, 0, null, shadowCastingMode);
+                Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer.target, 0,
+                    null, shadowCastingMode, true, reference.gameObject.layer, null, lightProbeUsage, volume);
             }
             else
             {
@@ -196,15 +206,14 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (boundsBuffer != null) boundsBuffer.Dispose(); boundsBuffer = null;
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose(); visibleInstanceOnlyTransformBuffer = null;
             if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Dispose(); visibleTransformIDBuffer = null;
-            if (argsBuffer != null) argsBuffer.Dispose(); argsBuffer = null;            
+            if (argsBuffer != null) argsBuffer.Dispose(); argsBuffer = null;
             var mat = reference.GetComponent<MeshRenderer>().sharedMaterial;            
             mat.DisableKeyword("_DrawMeshInstancedProcedural");
         }
 #if UNITY_EDITOR
         public bool hasMesh = false;
 #endif
-    }
-    
+    }    
 
     void LateUpdate()
     {
@@ -213,10 +222,10 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         Matrix4x4 p = Camera.main.projectionMatrix;
         Matrix4x4 vp = p * v;
         var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");
-
+        var lightProbeUsage = volume == null ? LightProbeUsage.BlendProbes : LightProbeUsage.UseProxyVolume;
         foreach (var rg in renderGroups)
         {
-            rg.Draw(cullingComputeShader, kernel, v, p, viewCulling);
+            rg.Draw(cullingComputeShader, kernel, v, p, viewCulling, lightProbeUsage, volume);
         }
     }
 
@@ -224,7 +233,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     {
         foreach (var rg in renderGroups)
         {
-            rg.UpdateBuffer();            
+            rg.UpdateBuffer();
         }
     }
 
@@ -344,8 +353,8 @@ public class RenderMeshInstancedProcedural_Editor : Editor
         GUILayout.Space(5);
 
         data.viewCulling = EditorGUILayout.Toggle("View Culling", data.viewCulling);
-
-
+        
+        data.volume = EditorGUILayout.ObjectField(data.volume, typeof(LightProbeProxyVolume), true) as LightProbeProxyVolume;
         bool isRootChange = false;
 
         int removeIndex = -1;
@@ -371,6 +380,7 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                 GUILayout.EndHorizontal();
                 rg.farClipDistance = EditorGUILayout.FloatField("Max Distance", rg.farClipDistance);
                 rg.shadowCastingMode = (ShadowCastingMode)EditorGUILayout.EnumPopup("Shadow Mode",rg.shadowCastingMode);
+                
                 GUILayout.Label("Object Count = " + rg.objectCount);
             },
             () => 
@@ -383,7 +393,11 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                     foreach (var o in rg.GetObjects())
                     {
                         o.gameObject.SetActive(rg.activeGroup);
-                    }
+                    }                    
+                    
+                    rg.InitBuffers();                                            
+                    rg.UpdateBuffer();
+
                     EditorUtility.SetDirty(target);
                     UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);
                 }

@@ -100,7 +100,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             float _Speed;
             float _Amount;
             float _Distance;
-        
+            
             float _LambertOffset;
             float _ClipThreshod;
             float _SpecularOffset;
@@ -190,7 +190,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 Light mainLight = GetMainLight();
                 float3 WorldPosition = IN.worldPos;
                 float3 viewDirection = normalize(WorldPosition - _WorldSpaceCameraPos.xyz);
-                float4 ShadowCoords = TransformWorldToShadowCoord(WorldPosition);                
+                float4 ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
                 
                 float3 ase_worldNormal = IN.ase_texcoord4.xyz;
                 float dotResult41 = dot(ase_worldNormal, mainLight.direction);
@@ -258,6 +258,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             ZWrite On
             ZTest LEqual
+            Cull[_Cull]
             
             HLSLPROGRAM
             
@@ -268,7 +269,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             // -------------------------------------
             // Material Keywords
-            #pragma shader_feature _ALPHATEST_ON
+            
             
             //--------------------------------------
             // GPU Instancing
@@ -285,7 +286,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             CBUFFER_START(UnityPerMaterial)
             float4 _PositionMask_ST;
@@ -310,8 +311,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             CBUFFER_END
             
             #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
-            TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
-            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -355,6 +354,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 #else
                     float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                     float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                    
                 #endif
                 
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
@@ -370,42 +370,49 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             Varyings ShadowPassVertex(Attributes input)
             {
-                Varyings output;
+                Varyings output = (Varyings)0;
                 #ifdef _DrawMeshInstancedProcedural
-                    uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
                 #else
                     UNITY_SETUP_INSTANCE_ID(input);
                 #endif
                 
+                float4 offset = input.positionOS;
                 #ifdef _DrawMeshInstancedProcedural
-                    input.positionOS = WindAnimation(input.positionOS, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                    input.positionOS = WindAnimation(input.positionOS, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]);
                 #else
                     input.positionOS = WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 #endif
+                
+                offset -= input.positionOS;
+                input.normalOS = input.normalOS + offset.xyz * 0.5 ;
                 
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
             }
             
-            half Alpha(half albedoAlpha, half cutoff)
+            
+            half alpha(half albedoAlpha, half4 color, half cutoff)
             {
-                half alpha = albedoAlpha ;
-                clip(alpha - cutoff);
+                #if !defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A) && !defined(_GLOSSINESS_FROM_BASE_ALPHA)
+                    half alpha = albedoAlpha * color.a;
+                #else
+                    half alpha = color.a;
+                #endif
+                                
+                clip(alpha - cutoff);                
+                
                 return alpha;
             }
             
-            half4 SampleAlbedoAlpha(float2 uv, TEXTURE2D_PARAM(albedoAlphaMap, sampler_albedoAlphaMap))
-            {
-                return SAMPLE_TEXTURE2D(albedoAlphaMap, sampler_albedoAlphaMap, uv);
-            }
-            
-            
             half4 ShadowPassFragment(Varyings input): SV_TARGET
             {
-                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _ClipThreshod);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, 1.0.xxxx, _ClipThreshod);
                 return 0;
             }
+            
             
             
             ENDHLSL
@@ -420,6 +427,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             ZWrite On
             ColorMask 0
+            Cull[_Cull]
             
             HLSLPROGRAM
             
@@ -433,7 +441,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             // -------------------------------------
             // Material Keywords
-            #pragma shader_feature _ALPHATEST_ON
+            
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             
             //--------------------------------------
@@ -443,7 +451,7 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
-            //#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
             CBUFFER_START(UnityPerMaterial)
@@ -469,7 +477,6 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
             CBUFFER_END
             
             #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
-            TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
             
             struct Attributes
             {
@@ -505,10 +512,11 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 #endif
                 
                 #ifdef _DrawMeshInstancedProcedural
-                    input.position = WindAnimation(input.position, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                    input.position = WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]);
                 #else
                     input.position = WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 #endif
+                
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 
                 float3 positionWS = float3(0.0, 0.0, 0.0);
@@ -522,24 +530,24 @@ Shader "ZDShader/LWRP/Environment/SpecialTree"
                 return output;
             }
             
-            half Alpha(half albedoAlpha, half cutoff)
+            half alpha(half albedoAlpha, half4 color, half cutoff)
             {
-                half alpha = albedoAlpha;
-                clip(alpha - cutoff);
+                #if !defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A) && !defined(_GLOSSINESS_FROM_BASE_ALPHA)
+                    half alpha = albedoAlpha * color.a;
+                #else
+                    half alpha = color.a;
+                #endif
+                                
+                clip(alpha - cutoff);                
+                
                 return alpha;
             }
-            
-            half4 SampleAlbedoAlpha(float2 uv, TEXTURE2D_PARAM(albedoAlphaMap, sampler_albedoAlphaMap))
-            {
-                return SAMPLE_TEXTURE2D(albedoAlphaMap, sampler_albedoAlphaMap, uv);
-            }
-            
             
             half4 DepthOnlyFragment(Varyings input): SV_TARGET
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 
-                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _ClipThreshod);
+                alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, 1.0.xxxx, _ClipThreshod);
                 return 0;
             }
             
