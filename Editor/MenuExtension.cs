@@ -238,35 +238,44 @@ public class MenuExtension
         [MenuItem("Assets/ZD/複製所有角色RGB", false, 1001)]
         public static void CopyAllDiscolorationInfo()
         {
-            var fbxs = Directory.GetFiles(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"), "*", SearchOption.AllDirectories)
-                .ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".fbx");
-
+            var dirs = Directory.GetDirectories(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"));
             string result = "";
             char tab = '	';
+            foreach(var d in dirs) {
 
-            foreach (var f in fbxs)
-            {
-                string path = f.toAssetsPath();
+                string path = d.toAssetsPath();
+                var fbxs = Directory.GetFiles(d, "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".fbx");
 
                 string s = "";
-                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
 
-                var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(path);                                
-                var mat = importer.GetExternalObjectMap().ToList()[0].Value as Material;
-                string[] split = Path.GetFileName(Path.GetDirectoryName(path)).Split('_');
+                var fbx = fbxs.Count > 0 ? fbxs[0].toAssetsPath() : "";
+
+                var avatarID = "-1";
+                var modelID =  "-1";
+                var modelName =  "<尚未命名>";
+
+                if (fbx != "")
+                {
+                    ModelImporter importer = AssetImporter.GetAtPath(fbx) as ModelImporter;
+                    if (importer.sourceAvatar)
+                    { avatarID = importer.sourceAvatar.name.Split('_')[1]; }
+                }
                 
-                var avatarID = importer.sourceAvatar == null ? "-1" : importer.sourceAvatar.name.Split('_')[1];
-                var modelID = split.Length > 1 ? split[1] : "-1";
-                var modelName = split.Length > 2 ? split[2] : "<尚未命名>";                
+                string[] split = Path.GetFileName(Path.GetFileName(d)).Split('_');
+
+                modelID = split.Length > 1 ? split[1] : modelID;
+                modelName = split.Length > 2 ? split[2] : modelName;
+
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(Directory.GetFiles(d + "/Materials/", "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".mat")[0].toAssetsPath());
+
 
                 s = string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}",
                     tab, modelName, avatarID, "", "", modelID, 1, 0, 0, 0, 0, 0, 0, 0, CopyCharacterShaderInfo(mat));
 
                 result += s + "\n";
             }
+
             GUIUtility.systemCopyBuffer = result;
-            //Material referenceMaterial = Selection.activeObject as Material;
-            //GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial);
         }
 
         static string ColorToSheetString(Color c)
