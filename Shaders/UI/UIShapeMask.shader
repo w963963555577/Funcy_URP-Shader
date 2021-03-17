@@ -59,6 +59,7 @@
                 float4 vertex: POSITION;
                 float2 uv: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
+                float2 uv2: TEXCOORD2;
                 float4 color: COLOR;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -67,6 +68,7 @@
             {
                 float2 uv: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
+                float2 uv2: TEXCOORD2;
                 float4 worldPosition: TEXCOORD4;
                 float4 color: COLOR;
                 float4 vertex: SV_POSITION;
@@ -110,6 +112,7 @@
                 o.vertex = UnityObjectToClipPos(o.worldPosition);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv1 = v.uv1;
+                o.uv2 = v.uv2;
                 o.color = v.color * _Color;
                 return o;
             }
@@ -123,7 +126,7 @@
             fixed4 frag(v2f i): SV_Target
             {
                 half4 col = (tex2D(_MainTex, i.uv) + _TextureSampleAdd);
-                
+                half3 origCol = col.rgb;
                 //col *= i.color;
                 
                 #ifdef UNITY_UI_CLIP_RECT
@@ -136,8 +139,8 @@
                 
                 //properties
                 half skillTime_fillAmount = saturate(i.uv1.x);
-                half skill_doingAmount = Remap(i.uv1.y, 0.0, 1.0, -0.34, 1.0) ;
-                
+                half skill_doingAmount = Remap(i.uv1.y, 0.0, 1.0, -0.34, 1.01) ;
+                half skill_finishedAmount = saturate(i.uv2.x);
                 
                 
                 half2 centerUV = (i.uv - 0.5.xx) * 2.0;
@@ -162,9 +165,13 @@
                 col.rgb = lerp(col.rgb, col_bw, 1.0 - smoothstep(skillTime_fillAmount - AA_blur, skillTime_fillAmount + AA_blur, circle_Mask));
                 
                 
-                half wave = min((1.0 + sin(sphereMask * 18.0 - skill_doingAmount * 18.0)) * 0.5, smoothstep(skill_doingAmount - 0.01, skill_doingAmount + 0.01, sphereMask));
-                wave *= 1.0 - smoothstep(skill_doingAmount + 0.2, skill_doingAmount + 0.25, sphereMask);
-                col.rgb += wave * 0.8;
+                half wave_doing = min((1.0 + sin(sphereMask * 18.0 - skill_doingAmount * 18.0)) * 0.5, smoothstep(skill_doingAmount - 0.01, skill_doingAmount + 0.01, sphereMask));
+                wave_doing *= 1.0 - smoothstep(skill_doingAmount + 0.2, skill_doingAmount + 0.25, sphereMask);
+                col.rgb += origCol * wave_doing * 2.0;
+                
+                half wave_finished = (1.0 + cos(sphereMask * 3.14159 - skill_finishedAmount * 3.14159)) * 0.5;
+                wave_finished *= abs(1.0 - (skill_finishedAmount - 0.5) * 2.0) * saturate((1.0 - smoothstep(0.5, 2.0, sphereMask)) * skill_finishedAmount * 10.0);
+                col.rgb += origCol * wave_finished * 4.0;
                 
                 return col;
             }
