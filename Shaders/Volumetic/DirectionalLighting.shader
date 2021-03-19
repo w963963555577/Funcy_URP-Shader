@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Volume/Directional Lighting"
+Shader "ZDShader/URP/Volume/Directional Lighting"
 {
     Properties
     {

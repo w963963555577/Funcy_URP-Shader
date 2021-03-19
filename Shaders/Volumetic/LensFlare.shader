@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Volume/Lens Flare"
+Shader "ZDShader/URP/Volume/Lens Flare"
 {
     Properties
     {

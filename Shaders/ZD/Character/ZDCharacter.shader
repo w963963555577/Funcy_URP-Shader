@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Character"
+Shader "ZDShader/URP/Character"
 {
     Properties
     {

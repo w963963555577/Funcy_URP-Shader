@@ -94,7 +94,7 @@
         
         half4 maskColor = SAMPLE_TEXTURE2D(_BumpMask, sampler_BumpMask, uv);
         
-        uv += (uv - 0.5.xx) * 2.0 * max(max(maskColor.r, maskColor.g), maskColor.b);       
+        uv += (uv - 0.5.xx) * 2.0 * max(max(maskColor.r, maskColor.g), maskColor.b) * (1.0 - length((uv - 0.5.xx) ));
         
         half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
         half4 b = SAMPLE_TEXTURE2D(_BlurTex, sampler_BlurTex, uv) * _BloomAmount;

@@ -1,7 +1,7 @@
 ﻿//see README here:
 //github.com/ColinLeung-NiloCat/UnityURPUnlitScreenSpaceDecalShader
 
-Shader "ZDShader/LWRP/Projector/Shape"
+Shader "ZDShader/URP/Projector/Shape"
 {
     Properties
     {

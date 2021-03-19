@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Environment/SpecialTree"
+Shader "ZDShader/URP/Environment/SpecialTree"
 {
     Properties
     {

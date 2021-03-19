@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/PBR Base"
+Shader "ZDShader/URP/PBR-Base"
 {
     Properties
     {
@@ -76,6 +76,12 @@ Shader "ZDShader/LWRP/PBR Base"
             Cull[_Cull]
             
             HLSLPROGRAM
+            
+            // Required to compile gles 2.0 with standard SRP library
+            // All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            #pragma target 2.0
             
             // -------------------------------------
             // Material Keywords
@@ -251,7 +257,7 @@ Shader "ZDShader/LWRP/PBR Base"
                     float3 normalOS: NORMAL;
                     float4 tangentOS: TANGENT;
                     float2 texcoord: TEXCOORD0;
-                    float2 lightmapUV: TEXCOORD1;                    
+                    float2 lightmapUV: TEXCOORD1;
                     float2 effectcoord: TEXCOORD2;
                     
                     #ifdef _DrawMeshInstancedProcedural

@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Unlit-Default"
+Shader "ZDShader/URP/Unlit-Default"
 {
     Properties
     {

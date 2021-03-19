@@ -1,4 +1,4 @@
-Shader "ZDShader/LWRP/Volume/Point Lighting"
+Shader "ZDShader/URP/Volume/Point Lighting"
 {
     Properties
     {

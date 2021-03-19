@@ -1,6 +1,6 @@
 // Made with Amplify Shader Editor
 // Available at the Unity Asset Store - http://u3d.as/y3X 
-Shader "ZDShader/LWRP/Environment/ToonWaterFall"
+Shader "ZDShader/URP/Environment/ToonWaterFall"
 {
     Properties
     {

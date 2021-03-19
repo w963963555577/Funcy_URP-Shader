@@ -1,6 +1,6 @@
 // Made with Amplify Shader Editor
 // Available at the Unity Asset Store - http://u3d.as/y3X 
-Shader "Hidden/ZDShader/LWRP/Character Face LM"
+Shader "Hidden/ZDShader/URP/Character Face LM"
 {
 	Properties
 	{

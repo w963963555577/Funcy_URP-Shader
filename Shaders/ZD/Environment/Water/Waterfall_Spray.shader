@@ -1,6 +1,6 @@
 // Made with Amplify Shader Editor
 // Available at the Unity Asset Store - http://u3d.as/y3X 
-Shader "ZDShader/LWRP/Particles/Waterfall_Spary"
+Shader "ZDShader/URP/Particles/Waterfall_Spary"
 {
 	Properties
 	{

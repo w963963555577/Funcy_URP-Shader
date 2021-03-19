@@ -1,4 +1,4 @@
-﻿Shader "ZDShader/LWRP/Stencil/Write Buffer"
+﻿Shader "ZDShader/URP/Stencil/Write Buffer"
 {
     //show values to edit in inspector
     Properties
