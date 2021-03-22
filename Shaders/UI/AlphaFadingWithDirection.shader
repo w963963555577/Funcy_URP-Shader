@@ -100,7 +100,7 @@
                 #endif
 
                 half alphaMinus = 1.0 - i.color.a;
-                col.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - i.uv.x + 0.1 * (i.color.a - 0.5) * 2.0));
+                col.a *= smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, ( i.uv.y + 0.1 * (i.color.a - 0.5) * 2.0));
                 
                 return col;
             }
