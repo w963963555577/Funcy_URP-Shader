@@ -98,7 +98,7 @@
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(col.a - 0.001);
                 #endif
-                
+                col.a = saturate(col.a);
                 return col;
             }
             ENDCG
