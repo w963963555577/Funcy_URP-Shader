@@ -54,10 +54,11 @@ MonoBehaviour:
   m_Name: MobileBloomRenderer
   m_EditorClassIdentifier: 
   m_RendererFeatures:
+  - {fileID: 3031588477919855300}
   - {fileID: 6983396807854424833}
   - {fileID: -6529504306141599248}
   - {fileID: -899535766028868467}
-  m_RendererFeatureMap: 0183c2a96502ea60f0e90ba96d8a62a58d24179bfc3484f3
+  m_RendererFeatureMap: c482949ba85d122a0183c2a96502ea60f0e90ba96d8a62a58d24179bfc3484f3
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   shaders:
     blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
@@ -99,6 +100,20 @@ MonoBehaviour:
     FastFilter: 1
     SampleCount: 6
     blitMaterial: {fileID: 2100000, guid: e0cefc7f43609cd45bd4d17a5bbd651e, type: 2}
+--- !u!114 &3031588477919855300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7179ce5e0366e4e08817f6996541064d, type: 3}
+  m_Name: NewProjectorRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  m_stencilMask: 255
 --- !u!114 &6983396807854424833
 MonoBehaviour:
   m_ObjectHideFlags: 0

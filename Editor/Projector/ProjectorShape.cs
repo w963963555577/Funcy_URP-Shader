@@ -54,9 +54,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             EditorApplication.update -= materialEditor.Repaint;
         }
         ShapeType SetShapeType(Material mat)
-        {      
-            bool circleSectorOn = Array.IndexOf(mat.shaderKeywords, "_CircleSector") != -1;
-            bool rectangleOn = Array.IndexOf(mat.shaderKeywords, "_Rectangle") != -1;
+        {
+            bool circleSectorOn = mat.GetFloat("_CircleSector") == 1.0f;
+            bool rectangleOn = mat.GetFloat("_Rectangle") == 1.0f;
 
             if (circleSectorOn && !rectangleOn)
             {                
@@ -75,18 +75,18 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         {            
             if (shapeType == ShapeType.CircleSector)
             {
-                mat.EnableKeyword("_CircleSector");                
-                mat.DisableKeyword("_Rectangle");
+                mat.SetFloat("_CircleSector", 1.0f);
+                mat.SetFloat("_Rectangle", 0.0f);                
             }
             if (shapeType == ShapeType.Rectangle)
             {
-                mat.DisableKeyword("_CircleSector");
-                mat.EnableKeyword("_Rectangle");
+                mat.SetFloat("_CircleSector", 0.0f);
+                mat.SetFloat("_Rectangle", 1.0f);
             }
             if (shapeType == ShapeType.None)
             {
-                mat.DisableKeyword("_CircleSector");
-                mat.DisableKeyword("_Rectangle");
+                mat.SetFloat("_CircleSector", 0.0f);
+                mat.SetFloat("_Rectangle", 0.0f);
             }
         }
         public override void OnMaterialGUI()
@@ -99,8 +99,9 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             shapeType = (ShapeType)EditorGUILayout.EnumPopup("Shape Type", shapeType);
             GetShapeType(mat);
 
-            bool circleSectorOn = Array.IndexOf(mat.shaderKeywords, "_CircleSector") != -1;
-            bool rectangleOn = Array.IndexOf(mat.shaderKeywords, "_Rectangle") != -1;
+            bool circleSectorOn = mat.GetFloat("_CircleSector") == 1.0f;
+            bool rectangleOn = mat.GetFloat("_Rectangle") == 1.0f;
+
 
             DrawArea("Base", () => {
                 materialEditor.ShaderProperty(color, color.displayName);
