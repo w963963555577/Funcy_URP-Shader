@@ -7,6 +7,7 @@
 //
 
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
 
 namespace ProjectorForURP
@@ -41,3 +42,4 @@ namespace ProjectorForURP
 		}
 	}
 }
+#endif

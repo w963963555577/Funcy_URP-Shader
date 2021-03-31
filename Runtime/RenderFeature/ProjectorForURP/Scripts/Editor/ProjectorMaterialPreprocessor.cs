@@ -8,6 +8,7 @@
 
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_EDITOR
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
@@ -50,4 +51,4 @@ namespace ProjectorForURP
 		}
 	}
 }
-
+#endif
