@@ -467,6 +467,13 @@ Shader "ZDShader/URP/Character"
                 
             #endif
             
+            Light LerpLightDirection(float3 objectDirection)
+            {
+                Light light;
+                light.direction = lerp(normalize(objectDirection + half3(objectDirection.x * 4.0, 6.0, objectDirection.z*3.0)), _MainLightPosition.xyz, unity_LightData.z);
+                return light;
+            }
+            
             Varyings LitPassVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
@@ -499,7 +506,6 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 //SelfMask
-                Light mainLight = GetMainLight();
                 half index = _SelfMaskDirection;
                 half3 dirPZPY = half3(0, 0, 1);half3 upPZPY = half3(0, 1, 0);
                 half3 dirPYNX = half3(0, 1, 0);half3 upPYNX = half3(-1, 0, 0);
@@ -507,6 +513,18 @@ Shader "ZDShader/URP/Character"
                 half3 useUp = lerp(upPZPY, upPYNX, saturate(index));
                 output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
                 output.objectDirection.y = 0;
+                
+                Light mainLight = LerpLightDirection(output.objectDirection);
+                
+                // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
+                mainLight.distanceAttenuation = 1;
+                #if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE)
+                    // unity_ProbesOcclusion.x is the mixed light probe occlusion data
+                    mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
+                #endif
+                mainLight.shadowAttenuation = 1.0;
+                mainLight.color = _MainLightColor.rgb;
+                
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                 output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 
@@ -713,13 +731,25 @@ Shader "ZDShader/URP/Character"
                 float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
-                Light mainLight = GetMainLight();
-                /*Only remove face self shadow*/
+                
+                Light mainLight = LerpLightDirection(i.objectDirection);
+                
+                // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
+                mainLight.distanceAttenuation = 1;
+                #if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE)
+                    // unity_ProbesOcclusion.x is the mixed light probe occlusion data
+                    mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
+                #endif
+                mainLight.shadowAttenuation = 1.0;
+                mainLight.color = _MainLightColor.rgb;
+                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
                 float4 shadowCoords = WorldToShadowCoord(lerp(i.positionWSAndFogFactor.xyz + mainLight.direction * min(i.vertexDist, 1.0), i.positionWSAndFogFactor.xyz, _SelfMask_UV0_var.b));
-                mainLight = GetMainLight(shadowCoords);
+                mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
                 
-                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
+                
+                
+                
                 
                 
                 float3 positionWS = i.positionWSAndFogFactor.xyz;
