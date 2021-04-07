@@ -16,6 +16,8 @@
         _MaskClip ("_Mask Clip", Range(0.0, 1.0)) = 0.01
         _EdgeLength ("Edge Length", Range(0.0, 1.0)) = 0.0
         
+        _EffectiveMap ("Effective Map", 2D) = "white" { }
+        
         [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
     SubShader
@@ -66,7 +68,7 @@
             };
             struct v2f
             {
-                float2 uv: TEXCOORD0;
+                float4 uv: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
                 float2 uv2: TEXCOORD2;
                 float4 worldPosition: TEXCOORD4;
@@ -75,15 +77,16 @@
                 UNITY_VERTEX_OUTPUT_STEREO
             };
             
-            sampler2D _MainTex;
+            sampler2D _MainTex;            float4 _MainTex_ST;
             fixed4 _Color;
             fixed4 _TextureSampleAdd;
             float4 _ClipRect;
-            float4 _MainTex_ST;
+            
             
             fixed _EdgeLength;
             fixed _MaskClip;
             
+            sampler2D _EffectiveMap;      float4 _EffectiveMap_ST;
             
             half3 RGB2HSV(half3 c)
             {
@@ -110,7 +113,8 @@
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.worldPosition = v.vertex;
                 o.vertex = UnityObjectToClipPos(o.worldPosition);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv.xy = TRANSFORM_TEX(v.uv.xy, _MainTex);
+                o.uv.zw = v.uv.xy;
                 o.uv1 = v.uv1;
                 o.uv2 = v.uv2;
                 o.color = v.color * _Color;
@@ -122,10 +126,32 @@
                 return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
             }
             
+            half2 Panner(half2 uv, half2 vec, half speed, half time)
+            {
+                return uv + vec * time * speed;
+            }
             
             fixed4 frag(v2f i): SV_Target
             {
-                half4 col = (tex2D(_MainTex, i.uv) + _TextureSampleAdd);
+                half4 col = (tex2D(_MainTex, i.uv.xy) + _TextureSampleAdd);
+                half2 polarCoord = atan2(i.uv.x - 0.5, 1.0 - i.uv.y - 0.5) * 0.3183098861928886;
+                half2 centerUV = (i.uv - 0.5.xx) * 2.0;
+                half sphereMask = length(centerUV);
+                polarCoord.y = sphereMask;
+                
+                half2 polar_EffectiveMapCoord_1 = TRANSFORM_TEX(polarCoord, _EffectiveMap);
+                half2 polar_EffectiveMapCoord_2 = TRANSFORM_TEX(polarCoord, _EffectiveMap);
+                
+                polar_EffectiveMapCoord_1 = Panner(polar_EffectiveMapCoord_1, half2(0.1177437, 0.521341), 1.0, _Time.y);
+                polar_EffectiveMapCoord_2 = Panner(polar_EffectiveMapCoord_2, half2(0.0834271, 0.325677), 1.0, _Time.y);
+                half polarNoise_1 = (tex2D(_EffectiveMap, polar_EffectiveMapCoord_1) + _TextureSampleAdd).r;
+                half polarNoise_2 = (tex2D(_EffectiveMap, polar_EffectiveMapCoord_2) + _TextureSampleAdd).r;
+                
+                half polarNoise = smoothstep(0.0, 0.5, polarNoise_1 * polarNoise_2);
+                
+                half4 refractCol = (tex2D(_MainTex, i.uv.xy + (polarNoise - 0.5) * 0.05) + _TextureSampleAdd);
+                //return refractCol;
+                
                 half3 origCol = col.rgb;
                 //col *= i.color;
                 
@@ -141,10 +167,9 @@
                 half skillTime_fillAmount = saturate(i.uv1.x);
                 half skill_doingAmount = Remap(i.uv1.y, 0.0, 1.0, -0.34, 1.01) ;
                 half skill_finishedAmount = saturate(i.uv2.x);
+                half skill_loopAmount = saturate(i.uv2.y);
                 
                 
-                half2 centerUV = (i.uv - 0.5.xx) * 2.0;
-                half sphereMask = length(centerUV);
                 
                 half alphaFade = smoothstep(_MaskClip - _EdgeLength, _MaskClip, 1.0 - sphereMask);
                 half alphaHard = smoothstep(_MaskClip - _EdgeLength * 0.5, _MaskClip, 1.0 - sphereMask);
@@ -157,8 +182,9 @@
                 col_bw.g = 0.0;
                 col_bw.b *= 0.5;
                 col_bw = HSV2RGB(col_bw);
-                half2 polarCoord = atan2(i.uv.x - 0.5, 1.0 - i.uv.y - 0.5);
-                half circle_Mask = (atan2(i.uv.x - 0.5, 1.0 - i.uv.y - 0.5) * 0.3183098861928886 + 1.0) * 0.5;
+                
+                
+                half circle_Mask = (polarCoord.x + 1.0) * 0.5;
                 
                 half AA_blur = min(1.0 - max(0.995, skillTime_fillAmount), skillTime_fillAmount);
                 
@@ -172,6 +198,13 @@
                 half wave_finished = (1.0 + cos(sphereMask * 3.14159 - skill_finishedAmount * 3.14159)) * 0.5;
                 wave_finished *= abs(1.0 - (skill_finishedAmount - 0.5) * 2.0) * saturate((1.0 - smoothstep(0.5, 2.0, sphereMask)) * skill_finishedAmount * 10.0);
                 col.rgb += origCol * wave_finished * 4.0;
+                
+                half wave_loop = (1.0 + cos(sphereMask * 3.14159 - skill_finishedAmount * 3.14159 + (polarNoise - 0.5))) * 0.5;
+                half wave_Mask = (1.0 + cos(sphereMask * 3.14159 - skill_finishedAmount * 3.14159)) * 0.5;
+                wave_Mask = (1.0 - wave_loop) * smoothstep(0.5, 1.0, 1.0 - wave_Mask);
+                wave_loop = smoothstep(0.95, 1.0, wave_Mask);
+                
+                col.rgb = lerp(col.rgb, refractCol + i.color.rgb * wave_Mask, wave_Mask * skill_loopAmount);
                 
                 return col;
             }
