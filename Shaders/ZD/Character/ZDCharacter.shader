@@ -142,7 +142,6 @@ Shader "ZDShader/URP/Character"
             {
                 float4 vertex: POSITION;
                 float3 normal: NORMAL;
-                float3 color: COLOR0;
                 float2 uv: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -152,6 +151,8 @@ Shader "ZDShader/URP/Character"
             {
                 float4 vertex: SV_POSITION;
                 float2 uv: TEXCOORD0;
+                float4 positionSS: TEXCOORD1;
+                float vertexDist: TEXCOORD2;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -159,74 +160,7 @@ Shader "ZDShader/URP/Character"
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
             
-            CBUFFER_START(UnityPerMaterial)
-            half4 _diffuse_ST;
-            half _SelfMaskEnable;
-            half4 _SelfMask_ST;
-            half _SubsurfaceScattering;
-            half _SubsurfaceRadius;
-            half _SelfMaskDirection;
-            
-            half4 _mask_ST;
-            half4 _Color;
-            half4 _EmissionColor;
-            half4 _SpecularColor;
-            half4 _Picker_0;
-            half4 _Picker_1;
-            half4 _ShadowColor0;
-            half4 _ShadowColor1;
-            half4 _ShadowColorElse;
-            half _Cutoff;
-            half _Gloss;
-            half _EmissionxBase;
-            half _EmissionOn;
-            half _EmissionFlow;
-            half _Flash;
-            half _EdgeLightWidth;
-            half _EdgeLightIntensity;
-            half _NormalScale;
-            half _ShadowRamp;
-            half _SelfShadowRamp;
-            half _ReceiveShadow;
-            half _ShadowRefraction;
-            half _ShadowOffset;
-            
-            half4 _CustomLightColor;
-            half4 _CustomLightDirection;
-            half _CustomLightIntensity;
-            
-            float4 _DiscolorationColor_0;
-            float4 _DiscolorationColor_1;
-            float4 _DiscolorationColor_2;
-            float4 _DiscolorationColor_3;
-            float4 _DiscolorationColor_4;
-            float4 _DiscolorationColor_5;
-            float4 _DiscolorationColor_6;
-            float4 _DiscolorationColor_7;
-            float4 _DiscolorationColor_8;
-            float4 _DiscolorationColor_9;
-            
-            float4 _OutlineColor;
-            float _DiffuseBlend;
-            
-            half _OutlineEnable;
-            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
-            
-            half _SelectExpressionMap;
-            half _SelectMouth;
-            half _SelectFace;
-            half _SelectBrow;
-            
-            half4 _BrowRect;
-            half4 _FaceRect;
-            half4 _MouthRect;
-            
-            half _FloatModel;
-            half4 _EffectiveColor;
-            half _FaceLightMapCombineMode;
-            CBUFFER_END
-            
-            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            #include "ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
@@ -234,6 +168,8 @@ Shader "ZDShader/URP/Character"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0));
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -250,13 +186,16 @@ Shader "ZDShader/URP/Character"
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
-                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                half dist = distance(float3(0.0, v.vertex.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
                 
                 RTD_OL *= (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z));
                 
-                o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz) / _OutlineEnable;
+                float4 positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
+                o.vertex = positionCS / _OutlineEnable;
+                o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
                 o.uv = v.uv;
+                o.vertexDist = dist;
                 return o;
             }
             
@@ -265,6 +204,9 @@ Shader "ZDShader/URP/Character"
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
+                float2 screenUV = i.positionSS.xy / i.positionSS.w;
+                
+                DistanceDisslove(screenUV, i.vertexDist);
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
                 half4 effectiveDisslive = _EffectiveColor;
@@ -328,74 +270,10 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             
+            
             sampler2D _diffuse;
             
-            CBUFFER_START(UnityPerMaterial)
-            half4 _diffuse_ST;
-            half _SelfMaskEnable;
-            half4 _SelfMask_ST;
-            half _SubsurfaceScattering;
-            half _SubsurfaceRadius;
-            half _SelfMaskDirection;
-            
-            half4 _mask_ST;
-            half4 _Color;
-            half4 _EmissionColor;
-            half4 _SpecularColor;
-            half4 _Picker_0;
-            half4 _Picker_1;
-            half4 _ShadowColor0;
-            half4 _ShadowColor1;
-            half4 _ShadowColorElse;
-            half _Cutoff;
-            half _Gloss;
-            half _EmissionxBase;
-            half _EmissionOn;
-            half _EmissionFlow;
-            half _Flash;
-            half _EdgeLightWidth;
-            half _EdgeLightIntensity;
-            half _NormalScale;
-            half _ShadowRamp;
-            half _SelfShadowRamp;
-            half _ReceiveShadow;
-            half _ShadowRefraction;
-            half _ShadowOffset;
-            
-            half4 _CustomLightColor;
-            half4 _CustomLightDirection;
-            half _CustomLightIntensity;
-            
-            float4 _DiscolorationColor_0;
-            float4 _DiscolorationColor_1;
-            float4 _DiscolorationColor_2;
-            float4 _DiscolorationColor_3;
-            float4 _DiscolorationColor_4;
-            float4 _DiscolorationColor_5;
-            float4 _DiscolorationColor_6;
-            float4 _DiscolorationColor_7;
-            float4 _DiscolorationColor_8;
-            float4 _DiscolorationColor_9;
-            
-            float4 _OutlineColor;
-            float _DiffuseBlend;
-            
-            half _OutlineEnable;
-            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
-            
-            half _SelectExpressionMap;
-            half _SelectMouth;
-            half _SelectFace;
-            half _SelectBrow;
-            
-            half4 _BrowRect;
-            half4 _FaceRect;
-            half4 _MouthRect;
-            
-            half _FloatModel;
-            half4 _EffectiveColor;
-            half _FaceLightMapCombineMode;
-            CBUFFER_END
+            #include "ZDCharacter-CBufferProperties.hlsl"
             
             
             TEXTURE2D(_mask);                       SAMPLER(sampler_mask);
@@ -403,7 +281,6 @@ Shader "ZDShader/URP/Character"
             TEXTURE2D(_SelfMask);                   SAMPLER(sampler_SelfMask);
             TEXTURE2D(_ExpressionMap);              SAMPLER(sampler_ExpressionMap);
             TEXTURE2D(_ExpressionQMap);             SAMPLER(sampler_ExpressionQMap);
-            TEXTURE2D(_EffectiveMap);               SAMPLER(sampler_EffectiveMap);
             
             struct Attributes
             {
@@ -421,13 +298,13 @@ Shader "ZDShader/URP/Character"
             {
                 float4 uv01: TEXCOORD0;
                 float4 effectcoord: TEXCOORD1;
-                float4 positionWSAndFogFactor: TEXCOORD2; // xyz: positionWS, w: vertex fog factor
-                float3 normalWS: TEXCOORD3;
+                float4 positionWSAndFogFactor: TEXCOORD2;
+                float4 normalWS: TEXCOORD3;             //  w: screenPosition.x
                 
                 
-                float3 objectDirection: TEXCOORD4;
-                float3 lightXZDirection: TEXCOORD5;
-                float3 objectUp: TEXCOORD6;
+                float4 objectDirection: TEXCOORD4;      //  w: screenPosition.y
+                float4 lightXZDirection: TEXCOORD5;     //  w: screenPosition.z
+                float4 objectUp: TEXCOORD6;             //  w: screenPosition.w
                 
                 
                 float vertexDist: TEXCOORD7;
@@ -470,7 +347,7 @@ Shader "ZDShader/URP/Character"
             Light LerpLightDirection(float3 objectDirection)
             {
                 Light light;
-                light.direction = lerp(normalize(objectDirection + half3(objectDirection.x * 4.0, 6.0, objectDirection.z*3.0)), _MainLightPosition.xyz, unity_LightData.z);
+                light.direction = lerp(normalize(objectDirection + half3(objectDirection.x * 4.0, 6.0, objectDirection.z * 3.0)), _MainLightPosition.xyz, unity_LightData.z);
                 return light;
             }
             
@@ -482,6 +359,7 @@ Shader "ZDShader/URP/Character"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 
+                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0));
                 
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -498,7 +376,7 @@ Shader "ZDShader/URP/Character"
                 input.selfShadowCoord = lerp(input.uv1, input.selfShadowCoord, _FaceLightMapCombineMode);
                 output.effectcoord = float4(input.effectcoord, input.selfShadowCoord);
                 output.positionWSAndFogFactor = float4(vertexInput.positionWS, fogFactor);
-                output.normalWS = vertexNormalInput.normalWS;
+                output.normalWS.xyz = vertexNormalInput.normalWS;
                 
                 #ifdef _NORMALMAP
                     output.tangentWS = vertexNormalInput.tangentWS;
@@ -514,7 +392,7 @@ Shader "ZDShader/URP/Character"
                 output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
                 output.objectDirection.y = 0;
                 
-                Light mainLight = LerpLightDirection(output.objectDirection);
+                Light mainLight = LerpLightDirection(output.objectDirection.xyz);
                 
                 // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
                 mainLight.distanceAttenuation = 1;
@@ -526,11 +404,17 @@ Shader "ZDShader/URP/Character"
                 mainLight.color = _MainLightColor.rgb;
                 
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
-                output.lightXZDirection = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
+                output.lightXZDirection.xyz = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 
-                output.vertexDist = distance(input.positionOS.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                output.vertexDist = distance(float3(0.0, input.positionOS.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
                 output.positionCS = vertexInput.positionCS;
+                float4 positionSS = ComputeScreenPos(vertexInput.positionCS, _ProjectionParams.x);
+                
+                output.normalWS.w = positionSS.x;
+                output.objectDirection.w = positionSS.y;
+                output.lightXZDirection.w = positionSS.z;
+                output.objectUp.w = positionSS.w;
                 
                 #if _ExpressionEnable
                     _SelectExpressionMap = round(_SelectExpressionMap);
@@ -591,16 +475,16 @@ Shader "ZDShader/URP/Character"
             
             float LigntMapAreaInUV1(Varyings i, float origShadow)
             {
-                float cm = clamp(normalize(cross(i.objectDirection, i.lightXZDirection)).y, -1., 1.);
+                float cm = clamp(normalize(cross(i.objectDirection.xyz, i.lightXZDirection.xyz)).y, -1., 1.);
                 float4 _SelfMask_UV1_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, float2(i.uv01.z * cm, i.uv01.w));
-                half odl = -dot(i.objectDirection, i.lightXZDirection);
+                half odl = -dot(i.objectDirection.xyz, i.lightXZDirection.xyz);
                 float angle01 = acos(odl) * 0.318309886h;
                 angle01 = Remap(angle01, 0, 1, 0.01, 0.99);
                 
                 half faceLightMapScaleRange = lerp(1.0, 0.0625, _FaceLightMapCombineMode) * 0.1;
                 
                 half _SelfShadow_UV1_var = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, float2(i.effectcoord.z + cm * angle01 * faceLightMapScaleRange, i.effectcoord.w)).g;
-                half upNear = dot(i.objectUp, half3(0, 1, 0));
+                half upNear = dot(i.objectUp.xyz, half3(0, 1, 0));
                 _SelfMask_UV1_var.r = lerp(origShadow, _SelfMask_UV1_var.r, upNear * 0.5 + 0.5);
                 
                 return min(_SelfShadow_UV1_var, 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01));
@@ -727,12 +611,18 @@ Shader "ZDShader/URP/Character"
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
+                float3 positionWS = i.positionWSAndFogFactor.xyz;
+                float4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
+                float2 screenUV = positionSS.xy /= positionSS.w;
+                
+                DistanceDisslove(screenUV, i.vertexDist);
+                
                 float4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
                 float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
                 
-                Light mainLight = LerpLightDirection(i.objectDirection);
+                Light mainLight = LerpLightDirection(i.objectDirection.xyz);
                 
                 // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
                 mainLight.distanceAttenuation = 1;
@@ -744,21 +634,16 @@ Shader "ZDShader/URP/Character"
                 mainLight.color = _MainLightColor.rgb;
                 mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
-                float4 shadowCoords = WorldToShadowCoord(lerp(i.positionWSAndFogFactor.xyz + mainLight.direction * min(i.vertexDist, 1.0), i.positionWSAndFogFactor.xyz, _SelfMask_UV0_var.b));
+                float4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
                 mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
                 
                 
-                
-                
-                
-                
-                float3 positionWS = i.positionWSAndFogFactor.xyz;
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
-                float3 normalDirection = i.normalWS;
+                float3 normalDirection = i.normalWS.xyz;
                 
                 float glossMask = _ESSGMask_var.a;
                 
-                half NdotL = dot(i.normalWS, mainLight.direction);
+                half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 float fresnel = max(1.0 - dot(viewDirection, normalDirection), saturate(dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
@@ -816,8 +701,8 @@ Shader "ZDShader/URP/Character"
                 
                 
                 float specStep = 2.0;
-                float specularValue = BRDFSpecular(1.0, _Gloss * glossMask, i.normalWS, mainLight.direction, viewDirection) * NdotL;
-                specularValue = floor(pow(saturate(max(specularValue, dot(i.normalWS, halfDirection))), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                float specularValue = BRDFSpecular(1.0, _Gloss * glossMask, i.normalWS.xyz, mainLight.direction, viewDirection) * NdotL;
+                specularValue = floor(pow(saturate(max(specularValue, dot(i.normalWS.xyz, halfDirection))), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
                 
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
@@ -931,7 +816,7 @@ Shader "ZDShader/URP/Character"
                     {
                         Light light = GetAdditionalLight(iter, positionWS);
                         
-                        float3 currentLightColor = LightingPhysicallyBased(brdfData, light, i.normalWS, viewDirectionWS) ;
+                        float3 currentLightColor = LightingPhysicallyBased(brdfData, light, i.normalWS.xyz, viewDirectionWS) ;
                         additionalLightColor += currentLightColor;
                     }
                     
@@ -993,76 +878,8 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            sampler2D _SelfMask;
-            CBUFFER_START(UnityPerMaterial)
-            half4 _diffuse_ST;
-            half _SelfMaskEnable;
-            half4 _SelfMask_ST;
-            half _SubsurfaceScattering;
-            half _SubsurfaceRadius;
-            half _SelfMaskDirection;
             
-            half4 _mask_ST;
-            half4 _Color;
-            half4 _EmissionColor;
-            half4 _SpecularColor;
-            half4 _Picker_0;
-            half4 _Picker_1;
-            half4 _ShadowColor0;
-            half4 _ShadowColor1;
-            half4 _ShadowColorElse;
-            half _Cutoff;
-            half _Gloss;
-            half _EmissionxBase;
-            half _EmissionOn;
-            half _EmissionFlow;
-            half _Flash;
-            half _EdgeLightWidth;
-            half _EdgeLightIntensity;
-            half _NormalScale;
-            half _ShadowRamp;
-            half _SelfShadowRamp;
-            half _ReceiveShadow;
-            half _ShadowRefraction;
-            half _ShadowOffset;
-            
-            half4 _CustomLightColor;
-            half4 _CustomLightDirection;
-            half _CustomLightIntensity;
-            
-            float4 _DiscolorationColor_0;
-            float4 _DiscolorationColor_1;
-            float4 _DiscolorationColor_2;
-            float4 _DiscolorationColor_3;
-            float4 _DiscolorationColor_4;
-            float4 _DiscolorationColor_5;
-            float4 _DiscolorationColor_6;
-            float4 _DiscolorationColor_7;
-            float4 _DiscolorationColor_8;
-            float4 _DiscolorationColor_9;
-            
-            float4 _OutlineColor;
-            float _DiffuseBlend;
-            
-            half _OutlineEnable;
-            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
-            
-            half _SelectExpressionMap;
-            half _SelectMouth;
-            half _SelectFace;
-            half _SelectBrow;
-            
-            half4 _BrowRect;
-            half4 _FaceRect;
-            half4 _MouthRect;
-            
-            half _FloatModel;
-            half4 _EffectiveColor;
-            half _FaceLightMapCombineMode;
-            CBUFFER_END
-            
-            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
-            
+            #include "ZDCharacter-CBufferProperties.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -1092,11 +909,9 @@ Shader "ZDShader/URP/Character"
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 
-                float4 _SelfMask_var = tex2Dlod(_SelfMask, float4(input.texcoord, 0, 0));
-                
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 #if UNITY_REVERSED_Z
-                    positionCS.z = min(positionCS.z, positionCS.w * (UNITY_NEAR_CLIP_VALUE * lerp(1.0, _SelfMask_var.b, _SelfMaskEnable)));
+                    positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #else
                     positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
@@ -1167,76 +982,7 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            
-            CBUFFER_START(UnityPerMaterial)
-            half4 _diffuse_ST;
-            half _SelfMaskEnable;
-            half4 _SelfMask_ST;
-            half _SubsurfaceScattering;
-            half _SubsurfaceRadius;
-            half _SelfMaskDirection;
-            
-            half4 _mask_ST;
-            half4 _Color;
-            half4 _EmissionColor;
-            half4 _SpecularColor;
-            half4 _Picker_0;
-            half4 _Picker_1;
-            half4 _ShadowColor0;
-            half4 _ShadowColor1;
-            half4 _ShadowColorElse;
-            half _Cutoff;
-            half _Gloss;
-            half _EmissionxBase;
-            half _EmissionOn;
-            half _EmissionFlow;
-            half _Flash;
-            half _EdgeLightWidth;
-            half _EdgeLightIntensity;
-            half _NormalScale;
-            half _ShadowRamp;
-            half _SelfShadowRamp;
-            half _ReceiveShadow;
-            half _ShadowRefraction;
-            half _ShadowOffset;
-            
-            half4 _CustomLightColor;
-            half4 _CustomLightDirection;
-            half _CustomLightIntensity;
-            
-            float4 _DiscolorationColor_0;
-            float4 _DiscolorationColor_1;
-            float4 _DiscolorationColor_2;
-            float4 _DiscolorationColor_3;
-            float4 _DiscolorationColor_4;
-            float4 _DiscolorationColor_5;
-            float4 _DiscolorationColor_6;
-            float4 _DiscolorationColor_7;
-            float4 _DiscolorationColor_8;
-            float4 _DiscolorationColor_9;
-            
-            float4 _OutlineColor;
-            float _DiffuseBlend;
-            
-            half _OutlineEnable;
-            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
-            
-            half _SelectExpressionMap;
-            half _SelectMouth;
-            half _SelectFace;
-            half _SelectBrow;
-            
-            half4 _BrowRect;
-            half4 _FaceRect;
-            half4 _MouthRect;
-            
-            half _FloatModel;
-            half4 _EffectiveColor;
-            half _FaceLightMapCombineMode;
-            CBUFFER_END
-            
-            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
-            
+            #include "ZDCharacter-CBufferProperties.hlsl"
             
             struct Attributes
             {
@@ -1250,8 +996,8 @@ Shader "ZDShader/URP/Character"
             {
                 float2 uv: TEXCOORD0;
                 float4 positionCS: SV_POSITION;
-                
-                
+                float vertexDist: TEXCOORD1;
+                float4 positionSS: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -1270,13 +1016,17 @@ Shader "ZDShader/URP/Character"
                 positionWS.y = lerp(positionWS.y, -0.99, step(positionWS.y, -0.99));
                 input.position.xyz = mul(GetWorldToObjectMatrix(), float4(positionWS, 0.0)).xyz;
                 output.positionCS = TransformObjectToHClip(input.position.xyz);
-                
+                output.positionSS = ComputeScreenPos(output.positionCS, _ProjectionParams.x);
+                output.vertexDist = distance(float3(0.0, input.position.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 return output;
             }
             
             half4 DepthOnlyFragment(Varyings input): SV_TARGET
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                float2 screenUV = input.positionSS.xy / input.positionSS.w;
+                DistanceDisslove(screenUV, input.vertexDist);
+                
                 #if _AlphaClip
                     half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
                     half4 effectiveDisslive = _EffectiveColor;
@@ -1336,74 +1086,7 @@ Shader "ZDShader/URP/Character"
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
             
-            CBUFFER_START(UnityPerMaterial)
-            half4 _diffuse_ST;
-            half _SelfMaskEnable;
-            half4 _SelfMask_ST;
-            half _SubsurfaceScattering;
-            half _SubsurfaceRadius;
-            half _SelfMaskDirection;
-            
-            half4 _mask_ST;
-            half4 _Color;
-            half4 _EmissionColor;
-            half4 _SpecularColor;
-            half4 _Picker_0;
-            half4 _Picker_1;
-            half4 _ShadowColor0;
-            half4 _ShadowColor1;
-            half4 _ShadowColorElse;
-            half _Cutoff;
-            half _Gloss;
-            half _EmissionxBase;
-            half _EmissionOn;
-            half _EmissionFlow;
-            half _Flash;
-            half _EdgeLightWidth;
-            half _EdgeLightIntensity;
-            half _NormalScale;
-            half _ShadowRamp;
-            half _SelfShadowRamp;
-            half _ReceiveShadow;
-            half _ShadowRefraction;
-            half _ShadowOffset;
-            
-            half4 _CustomLightColor;
-            half4 _CustomLightDirection;
-            half _CustomLightIntensity;
-            
-            float4 _DiscolorationColor_0;
-            float4 _DiscolorationColor_1;
-            float4 _DiscolorationColor_2;
-            float4 _DiscolorationColor_3;
-            float4 _DiscolorationColor_4;
-            float4 _DiscolorationColor_5;
-            float4 _DiscolorationColor_6;
-            float4 _DiscolorationColor_7;
-            float4 _DiscolorationColor_8;
-            float4 _DiscolorationColor_9;
-            
-            float4 _OutlineColor;
-            float _DiffuseBlend;
-            
-            half _OutlineEnable;
-            half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
-            
-            half _SelectExpressionMap;
-            half _SelectMouth;
-            half _SelectFace;
-            half _SelectBrow;
-            
-            half4 _BrowRect;
-            half4 _FaceRect;
-            half4 _MouthRect;
-            
-            half _FloatModel;
-            half4 _EffectiveColor;
-            half _FaceLightMapCombineMode;
-            CBUFFER_END
-            
-            TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
+            #include "ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
