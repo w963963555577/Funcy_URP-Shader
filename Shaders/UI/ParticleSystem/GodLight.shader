@@ -59,6 +59,7 @@
                 float4 vertex: POSITION;
                 float4 uv0: TEXCOORD0;
                 float4 uv1: TEXCOORD1;
+                float4 uv2: TEXCOORD2;
                 float4 color: COLOR;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -79,7 +80,6 @@
             float4 _ClipRect;
             float4 _MainTex_ST;
             
-            
             v2f vert(appdata v)
             {
                 v2f o;
@@ -88,7 +88,7 @@
                 o.worldPosition = v.vertex;
                 o.vertex = UnityObjectToClipPos(o.worldPosition);
                 o.uv0 = v.uv0;
-                o.uv1 = v.uv1;
+                o.uv1.xyz = half3(v.uv1.x, 1.0 / v.uv2.x, v.uv2.y);
                 o.uv0.xy -= half2(0.5, 0.0);
                 
                 o.color = v.color * _Color;
@@ -109,7 +109,7 @@
                 
                 half alphaMinus = 1.0 - i.color.a;
                 i.uv0.x *= 8.0;
-                col.a = i.color.a * smoothstep(0.0, 0.5, 1.0 - i.uv0.y) * smoothstep(0.45, 0.55, sin(atan2(i.uv0.y, i.uv0.x))) / (length(i.uv0.xy+0.01) );
+                col.a = i.color.a * smoothstep(i.uv1.z * 0.2, i.uv1.z, i.uv0.y) * smoothstep(0.0, 0.5, 1.0 - saturate(i.uv0.y * i.uv1.y)) * smoothstep(0.5 - i.uv1.x, 0.5 + i.uv1.x, sin(atan2(i.uv0.y, i.uv0.x))) / (length(i.uv0.xy + 0.01));
                 return col;
             }
             ENDCG

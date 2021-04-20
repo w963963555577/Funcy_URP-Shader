@@ -1,298 +1,168 @@
 // Made with Amplify Shader Editor
-// Available at the Unity Asset Store - http://u3d.as/y3X 
+// Available at the Unity Asset Store - http://u3d.as/y3X
 Shader "ZDShader/URP/Particles/Additive"
 {
-	Properties
-	{
-		[HideInInspector] _AlphaCutoff("Alpha Cutoff ", Range(0, 1)) = 0.5
-		[HideInInspector] _EmissionColor("Emission Color", Color) = (1,1,1,1)
-		[HDR]_TintColor("Tint Color", Color) = (1,1,1,1)
-		_MainTex("MainTex", 2D) = "white" {}
-		_Soft("Soft", Range( 0 , 5)) = 1
-		[HideInInspector] _texcoord( "", 2D ) = "white" {}
-
-	}
-
-	SubShader
-	{
-		LOD 0
-
-		
-		Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent" }
-		
-		Cull Off
-		HLSLINCLUDE
-		#pragma target 3.0
-		ENDHLSL
-
-		
-		Pass
-		{
-			Name "Forward"
-			Tags { "LightMode"="UniversalForward" }
-			
-			Blend SrcAlpha One
-			ZWrite Off
-			ZTest LEqual
-			Offset 0 , 0
-			ColorMask RGBA
-			
-
-			HLSLPROGRAM
-			#define _RECEIVE_SHADOWS_OFF 1
-			#pragma multi_compile_instancing
-			#define ASE_SRP_VERSION 70201
-			#define REQUIRE_DEPTH_TEXTURE 1
-
-			#pragma prefer_hlslcc gles
-			#pragma exclude_renderers d3d11_9x
-
-			#pragma vertex vert
-			#pragma fragment frag
-
-
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-
-			
-
-			sampler2D _MainTex;
-			uniform float4 _CameraDepthTexture_TexelSize;
-			CBUFFER_START( UnityPerMaterial )
-			float4 _MainTex_ST;
-			float4 _TintColor;
-			float _Soft;
-			CBUFFER_END
-
-
-			struct VertexInput
-			{
-				float4 vertex : POSITION;
-				float3 ase_normal : NORMAL;
-				float4 ase_texcoord : TEXCOORD0;
-				float4 ase_color : COLOR;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct VertexOutput
-			{
-				float4 clipPos : SV_POSITION;
-				#ifdef ASE_FOG
-				float fogFactor : TEXCOORD0;
-				#endif
-				float4 ase_texcoord1 : TEXCOORD1;
-				float4 ase_color : COLOR;
-				float4 ase_texcoord2 : TEXCOORD2;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			
-			VertexOutput vert ( VertexInput v  )
-			{
-				VertexOutput o = (VertexOutput)0;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord2 = screenPos;
-				
-				o.ase_texcoord1.xy = v.ase_texcoord.xy;
-				o.ase_color = v.ase_color;
-				
-				//setting value to unused interpolator channels and avoid initialization warnings
-				o.ase_texcoord1.zw = 0;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					float3 defaultVertexValue = v.vertex.xyz;
-				#else
-					float3 defaultVertexValue = float3(0, 0, 0);
-				#endif
-				float3 vertexValue = defaultVertexValue;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					v.vertex.xyz = vertexValue;
-				#else
-					v.vertex.xyz += vertexValue;
-				#endif
-				v.ase_normal = v.ase_normal;
-
-				VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
-				o.clipPos = vertexInput.positionCS;
-				#ifdef ASE_FOG
-				o.fogFactor = ComputeFogFactor( vertexInput.positionCS.z );
-				#endif
-				return o;
-			}
-
-			half4 frag ( VertexOutput IN  ) : SV_Target
-			{
-				UNITY_SETUP_INSTANCE_ID( IN );
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
-
-				float2 uv_MainTex = IN.ase_texcoord1.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 break13 = ( tex2D( _MainTex, uv_MainTex ) * IN.ase_color * _TintColor );
-				float3 appendResult14 = (float3(break13.r , break13.g , break13.b));
-				
-				float4 screenPos = IN.ase_texcoord2;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH( ase_screenPosNorm.xy ),_ZBufferParams);
-				float distanceDepth16 = abs( ( screenDepth16 - LinearEyeDepth( ase_screenPosNorm.z,_ZBufferParams ) ) / ( _Soft ) );
-				
-				float3 BakedAlbedo = 0;
-				float3 BakedEmission = 0;
-				float3 Color = appendResult14;
-				float Alpha = saturate( ( break13.a * saturate( distanceDepth16 ) ) );
-				float AlphaClipThreshold = 0.5;
-
-				#if _AlphaClip
-					clip( Alpha - AlphaClipThreshold );
-				#endif
-
-				#ifdef ASE_FOG
-					Color = MixFog( Color, IN.fogFactor );
-				#endif
-
-				#ifdef LOD_FADE_CROSSFADE
-					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
-				#endif
-
-				return half4( Color, Alpha );
-			}
-
-			ENDHLSL
-		}
-
-		
-		Pass
-		{
-			
-			Name "DepthOnly"
-			Tags { "LightMode"="DepthOnly" }
-
-			ZWrite On
-			ColorMask 0
-
-			HLSLPROGRAM
-			#define _RECEIVE_SHADOWS_OFF 1
-			#pragma multi_compile_instancing
-			#define ASE_SRP_VERSION 70201
-			#define REQUIRE_DEPTH_TEXTURE 1
-
-			#pragma prefer_hlslcc gles
-			#pragma exclude_renderers d3d11_9x
-
-			#pragma vertex vert
-			#pragma fragment frag
-
-
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-			
-
-			sampler2D _MainTex;
-			uniform float4 _CameraDepthTexture_TexelSize;
-			CBUFFER_START( UnityPerMaterial )
-			float4 _MainTex_ST;
-			float4 _TintColor;
-			float _Soft;
-			CBUFFER_END
-
-
-			struct VertexInput
-			{
-				float4 vertex : POSITION;
-				float3 ase_normal : NORMAL;
-				float4 ase_texcoord : TEXCOORD0;
-				float4 ase_color : COLOR;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-			};
-
-			struct VertexOutput
-			{
-				float4 clipPos : SV_POSITION;
-				float4 ase_texcoord : TEXCOORD0;
-				float4 ase_color : COLOR;
-				float4 ase_texcoord1 : TEXCOORD1;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			
-			VertexOutput vert( VertexInput v  )
-			{
-				VertexOutput o = (VertexOutput)0;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-				float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-				float4 screenPos = ComputeScreenPos(ase_clipPos);
-				o.ase_texcoord1 = screenPos;
-				
-				o.ase_texcoord.xy = v.ase_texcoord.xy;
-				o.ase_color = v.ase_color;
-				
-				//setting value to unused interpolator channels and avoid initialization warnings
-				o.ase_texcoord.zw = 0;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					float3 defaultVertexValue = v.vertex.xyz;
-				#else
-					float3 defaultVertexValue = float3(0, 0, 0);
-				#endif
-				float3 vertexValue = defaultVertexValue;
-				#ifdef ASE_ABSOLUTE_VERTEX_POS
-					v.vertex.xyz = vertexValue;
-				#else
-					v.vertex.xyz += vertexValue;
-				#endif
-
-				v.ase_normal = v.ase_normal;
-
-				o.clipPos = TransformObjectToHClip(v.vertex.xyz);
-				return o;
-			}
-
-			half4 frag(VertexOutput IN  ) : SV_TARGET
-			{
-				UNITY_SETUP_INSTANCE_ID(IN);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX( IN );
-
-				float2 uv_MainTex = IN.ase_texcoord.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				float4 break13 = ( tex2D( _MainTex, uv_MainTex ) * IN.ase_color * _TintColor );
-				float4 screenPos = IN.ase_texcoord1;
-				float4 ase_screenPosNorm = screenPos / screenPos.w;
-				ase_screenPosNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_screenPosNorm.z : ase_screenPosNorm.z * 0.5 + 0.5;
-				float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH( ase_screenPosNorm.xy ),_ZBufferParams);
-				float distanceDepth16 = abs( ( screenDepth16 - LinearEyeDepth( ase_screenPosNorm.z,_ZBufferParams ) ) / ( _Soft ) );
-				
-				float Alpha = saturate( ( break13.a * saturate( distanceDepth16 ) ) );
-				float AlphaClipThreshold = 0.5;
-
-				#if _AlphaClip
-					clip(Alpha - AlphaClipThreshold);
-				#endif
-
-				#ifdef LOD_FADE_CROSSFADE
-					LODDitheringTransition( IN.clipPos.xyz, unity_LODFade.x );
-				#endif
-				return 0;
-			}
-			ENDHLSL
-		}
-
-	
-	}
-	CustomEditor "UnityEditor.ShaderGraph.PBRMasterGUI"
-	Fallback "Hidden/InternalErrorShader"
-	
+    Properties
+    {
+        [HideInInspector] _AlphaCutoff ("Alpha Cutoff ", Range(0, 1)) = 0.5
+        [HideInInspector] _EmissionColor ("Emission Color", Color) = (1, 1, 1, 1)
+        [HDR]_TintColor ("Tint Color", Color) = (1, 1, 1, 1)
+        _MainTex ("MainTex", 2D) = "white" { }
+        _Soft ("Soft", Range(0, 5)) = 1
+        [HideInInspector] _texcoord ("", 2D) = "white" { }
+        _Border ("Border", Vector) = (5.0, 5.0, 5.0, 5.0)
+        [MaterialToggle] _Slice ("Slice UV", Float) = 0
+    }
+    
+    SubShader
+    {
+        LOD 0
+        
+        
+        Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent" }
+        
+        Cull Off
+        HLSLINCLUDE
+        #pragma target 3.0
+        ENDHLSL
+        
+        Pass
+        {
+            Name "Forward"
+            Tags { "LightMode" = "UniversalForward" }
+            
+            Blend SrcAlpha One
+            ZWrite Off
+            ZTest LEqual
+            Offset 0, 0
+            ColorMask RGBA
+            
+            
+            HLSLPROGRAM
+            
+            #define _RECEIVE_SHADOWS_OFF 1
+            #pragma multi_compile_instancing
+            #define ASE_SRP_VERSION 70201
+            #define REQUIRE_DEPTH_TEXTURE 1
+            
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            
+            
+            
+            sampler2D _MainTex;
+            uniform float4 _CameraDepthTexture_TexelSize;
+            CBUFFER_START(UnityPerMaterial)
+            float4 _MainTex_ST;
+            float4 _MainTex_TexelSize;
+            float4 _TintColor;
+            float _Soft;
+            half4 _Border;
+            half _Slice;
+            CBUFFER_END
+            
+            
+            struct VertexInput
+            {
+                float4 vertex: POSITION;
+                float2 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
+                float2 particleSize: TEXCOORD1;	
+				float borderScale: TEXCOORD2;
+                float4 ase_color: COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                float4 ase_texcoord0: TEXCOORD0;
+                float2 particleSize: TEXCOORD1;
+                float4 ase_color: COLOR;
+                float4 ase_texcoord2: TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            float2 uv9slice(float2 uv, half2 texelSize, half4 ST, half4 border, half borderScale, half2 scaleFilter)
+            {
+                half4 b = min(border * texelSize.xyxy, 0.499.xxxx);
+                half2 s = scaleFilter * ST.xy * borderScale;
+                
+                float2 t = saturate((s * uv - b.xy) / (s - b.xy - b.zw));
+                return lerp(uv * s, 1. - s * (1. - uv), t);
+            }
+            
+            VertexOutput vert(VertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                
+                o.ase_texcoord0 = half4(v.ase_texcoord0.xy, v.borderScale.x, 0.0);
+                o.particleSize.xy = v.particleSize.xy;
+                o.ase_color = v.ase_color;
+                
+                //setting value to unused interpolator channels and avoid initialization warnings
+                
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
+                o.clipPos = vertexInput.positionCS;
+                
+                float4 screenPos = ComputeScreenPos(o.clipPos);
+                o.ase_texcoord2 = screenPos;
+                return o;
+            }
+            
+            half4 frag(VertexOutput IN): SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                
+                float2 uv_MainTex = lerp(IN.ase_texcoord0.xy, uv9slice(IN.ase_texcoord0.xy, /*_MainTex_TexelSize.xy*/0.0625.xx, _MainTex_ST, _Border, IN.ase_texcoord0.z, IN.particleSize.xy * 0.1), _Slice) * _MainTex_ST.xy + _MainTex_ST.zw;
+                float4 break13 = (tex2D(_MainTex, uv_MainTex) * IN.ase_color * _TintColor);
+                float3 appendResult14 = (float3(break13.r, break13.g, break13.b));
+                
+                float4 screenPos = IN.ase_texcoord2;
+                float4 ase_screenPosNorm = screenPos / screenPos.w;
+                ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
+                float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
+                
+                float3 BakedAlbedo = 0;
+                float3 BakedEmission = 0;
+                float3 Color = appendResult14;
+                float Alpha = saturate((break13.a * saturate(distanceDepth16)));
+                float AlphaClipThreshold = 0.5;
+                
+                #if _AlphaClip
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+                
+                
+                #ifdef LOD_FADE_CROSSFADE
+                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                #endif
+                
+                return half4(Color, Alpha);
+            }
+            
+            ENDHLSL
+            
+        }
+    }
+    CustomEditor "UnityEditor.ShaderGraph.PBRMasterGUI"
+    Fallback "Hidden/InternalErrorShader"
 }
 /*ASEBEGIN
 Version=17800
@@ -329,4 +199,4 @@ WireConnection;19;0;18;0
 WireConnection;1;2;14;0
 WireConnection;1;3;19;0
 ASEEND*/
-//CHKSM=6564106BE7BFA4D8F642E88D726338DE2CA59F03
+// CHKSM = 6564106BE7BFA4D8F642E88D726338DE2CA59F03
