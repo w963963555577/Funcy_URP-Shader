@@ -3,17 +3,28 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 public class MobileSSPRRendererFeature : ScriptableRendererFeature
 {
     public static MobileSSPRRendererFeature instance; //for example scene to call, user should add 1 and not more than 1 MobileSSPRRendererFeature anyway so it is safe to use static ref
+    
 
+    [System.Serializable]
+    public class HeightFixerData
+    {
+        public string sceneName = "";
+        public Texture2D horizontalHeightFixerMap;
+        public Vector4 worldSize_Offest_HeightIntensity = Vector4.zero;
+    }
     [System.Serializable]
     public class PassSettings
     {
         [Header("Settings")]
         public bool ShouldRenderSSPR = true;
         public float horizontalReflectionPlaneHeightWS = 0.01f; //default higher than ground a bit, to avoid ZFighting if user placed a ground plane at y=0
+        public HeightFixerData selectedHeightFixerData;
+        public List<HeightFixerData> heightFixerData = new List<HeightFixerData>();
         [Range(0.01f, 1f)]
         public float fadeOutScreenBorderWidthVerticle = 0.25f;
         [Range(0.01f, 1f)]
@@ -162,6 +173,9 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 cb.SetComputeVectorParam(cs, Shader.PropertyToID("_RTSize"), new Vector2(GetRTWidth(), GetRTHeight()));
                 cb.SetComputeFloatParam(cs, Shader.PropertyToID("_HorizontalPlaneHeightWS"), settings.horizontalReflectionPlaneHeightWS);
 
+                var heightFixerData = settings.selectedHeightFixerData;
+                cb.SetComputeVectorParam(cs, Shader.PropertyToID("_WorldSize_Offest_HeightIntensity"), heightFixerData.worldSize_Offest_HeightIntensity);
+
                 cb.SetComputeFloatParam(cs, Shader.PropertyToID("_FadeOutScreenBorderWidthVerticle"), settings.fadeOutScreenBorderWidthVerticle);
                 cb.SetComputeFloatParam(cs, Shader.PropertyToID("_FadeOutScreenBorderWidthHorizontal"), settings.fadeOutScreenBorderWidthHorizontal);
                 cb.SetComputeVectorParam(cs, Shader.PropertyToID("_CameraDirection"), renderingData.cameraData.camera.transform.forward);
@@ -205,7 +219,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                     int kernel_NonMobilePathRenderHashRT = cs.FindKernel("NonMobilePathRenderHashRT");
                     cb.SetComputeTextureParam(cs, kernel_NonMobilePathRenderHashRT, "HashRT", _SSPR_PackedDataRT_rti);
                     cb.SetComputeTextureParam(cs, kernel_NonMobilePathRenderHashRT, "_CameraDepthTexture", new RenderTargetIdentifier("_CameraDepthTexture"));
-
+                    cs.SetTexture(kernel_NonMobilePathRenderHashRT, "_HorizontalHeightFixerMap", heightFixerData.horizontalHeightFixerMap);
                     cb.DispatchCompute(cs, kernel_NonMobilePathRenderHashRT, dispatchThreadGroupXCount, dispatchThreadGroupYCount, dispatchThreadGroupZCount);
 
                     //resolve to ColorRT
@@ -213,6 +227,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                     cb.SetComputeTextureParam(cs, kernel_NonMobilePathResolveColorRT, "_CameraOpaqueTexture", new RenderTargetIdentifier("_CameraOpaqueTexture"));
                     cb.SetComputeTextureParam(cs, kernel_NonMobilePathResolveColorRT, "ColorRT", _SSPR_ColorRT_rti);
                     cb.SetComputeTextureParam(cs, kernel_NonMobilePathResolveColorRT, "HashRT", _SSPR_PackedDataRT_rti);
+                    cs.SetTexture(kernel_NonMobilePathResolveColorRT, "_HorizontalHeightFixerMap", heightFixerData.horizontalHeightFixerMap);
                     cb.DispatchCompute(cs, kernel_NonMobilePathResolveColorRT, dispatchThreadGroupXCount, dispatchThreadGroupYCount, dispatchThreadGroupZCount);
                 }
 
@@ -263,11 +278,25 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
     public override void Create()
     {
         instance = this;
+
+        var currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        Debug.Log(currentScene.name);
+        Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.sceneName == currentScene.name);
+
+        if (Settings.selectedHeightFixerData == null)
+        {
+            Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.sceneName == "Default");
+        }
+#if UNITY_EDITOR
+        UnityEditor.EditorUtility.SetDirty(this);
+#endif
+
         if (!Settings.SSPR_computeShader)
         {
             Debug.LogWarning("You must assign MobileSSPRComputeShader to SSPR_computeShader slot! Abort SSPR rendering.");
             return;
         }
+
 
         m_ScriptablePass = new CustomRenderPass(Settings);
 
