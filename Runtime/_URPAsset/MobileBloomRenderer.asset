@@ -130,16 +130,10 @@ MonoBehaviour:
   Settings:
     ShouldRenderSSPR: 1
     horizontalReflectionPlaneHeightWS: 0.01
-    selectedHeightFixerData:
-      sceneName: Default
-      horizontalHeightFixerMap: {fileID: 2800000, guid: 8ab5721ea2f5c7d45a09294712b6a259,
-        type: 3}
-      worldSize_Offest_HeightIntensity: {x: 0, y: 0, z: 0, w: 0}
+    selectedHeightFixerData: {fileID: 11400000, guid: eee5fa8836ce2754e82ed5854d089a3b,
+      type: 2}
     heightFixerData:
-    - sceneName: Default
-      horizontalHeightFixerMap: {fileID: 2800000, guid: 8ab5721ea2f5c7d45a09294712b6a259,
-        type: 3}
-      worldSize_Offest_HeightIntensity: {x: 0, y: 0, z: 0, w: 0}
+    - {fileID: 11400000, guid: eee5fa8836ce2754e82ed5854d089a3b, type: 2}
     fadeOutScreenBorderWidthVerticle: 0.25
     fadeOutScreenBorderWidthHorizontal: 0.35
     screenLRStretchIntensity: 4

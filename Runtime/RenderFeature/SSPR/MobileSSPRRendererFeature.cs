@@ -8,15 +8,17 @@ using UnityEngine.SceneManagement;
 public class MobileSSPRRendererFeature : ScriptableRendererFeature
 {
     public static MobileSSPRRendererFeature instance; //for example scene to call, user should add 1 and not more than 1 MobileSSPRRendererFeature anyway so it is safe to use static ref
-    
 
-    [System.Serializable]
-    public class HeightFixerData
-    {
-        public string sceneName = "";
+
+#if UNITY_EDITOR
+    [CreateAssetMenu(menuName = "RenderFeature/SSPR/Height Fixer Data")]
+#endif
+    public class HeightFixerData : ScriptableObject
+    {        
         public Texture2D horizontalHeightFixerMap;
         public Vector4 worldSize_Offest_HeightIntensity = Vector4.zero;
     }
+
     [System.Serializable]
     public class PassSettings
     {
@@ -275,21 +277,35 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
 
     CustomRenderPass m_ScriptablePass;
 
+    void IndexHeightFixerData(Scene scene, LoadSceneMode mode)
+    {
+        var currentScene = SceneManager.GetActiveScene();
+        Debug.Log(currentScene.name);
+        Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == currentScene.name);
+
+        if (Settings.selectedHeightFixerData == null)
+        {
+            Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == "Default");
+        }
+
+#if UNITY_EDITOR
+        UnityEditor.EditorUtility.SetDirty(this);
+#endif
+    }
+
     public override void Create()
     {
         instance = this;
 
-        var currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-        Debug.Log(currentScene.name);
-        Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.sceneName == currentScene.name);
-
-        if (Settings.selectedHeightFixerData == null)
+        if (isActive)
         {
-            Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.sceneName == "Default");
+            SceneManager.sceneLoaded += IndexHeightFixerData;
         }
-#if UNITY_EDITOR
-        UnityEditor.EditorUtility.SetDirty(this);
-#endif
+        else
+        {
+            SceneManager.sceneLoaded -= IndexHeightFixerData;
+        }
+
 
         if (!Settings.SSPR_computeShader)
         {
