@@ -5,6 +5,9 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement;
+#endif
 public class MobileSSPRRendererFeature : ScriptableRendererFeature
 {
     public static MobileSSPRRendererFeature instance; //for example scene to call, user should add 1 and not more than 1 MobileSSPRRendererFeature anyway so it is safe to use static ref
@@ -14,7 +17,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
     [CreateAssetMenu(menuName = "RenderFeature/SSPR/Height Fixer Data")]
 #endif
     public class HeightFixerData : ScriptableObject
-    {        
+    {
         public Texture2D horizontalHeightFixerMap;
         public Vector4 worldSize_Offest_HeightIntensity = Vector4.zero;
     }
@@ -280,7 +283,6 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
     void IndexHeightFixerData(Scene scene, LoadSceneMode mode)
     {
         var currentScene = SceneManager.GetActiveScene();
-        Debug.Log(currentScene.name);
         Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == currentScene.name);
 
         if (Settings.selectedHeightFixerData == null)
@@ -296,14 +298,34 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
     public override void Create()
     {
         instance = this;
-
+#if UNITY_EDITOR
+        EditorSceneManager.SceneOpenedCallback editorAction = (s, m) => { IndexHeightFixerData(s, LoadSceneMode.Single); };
+#endif
         if (isActive)
-        {
-            SceneManager.sceneLoaded += IndexHeightFixerData;
+        {            
+            if (Application.isPlaying)
+            {
+                SceneManager.sceneLoaded += IndexHeightFixerData;
+            }
+            else
+            {
+#if UNITY_EDITOR
+                EditorSceneManager.sceneOpened += editorAction;
+#endif
+            }
         }
         else
         {
-            SceneManager.sceneLoaded -= IndexHeightFixerData;
+            if (Application.isPlaying)
+            {
+                SceneManager.sceneLoaded -= IndexHeightFixerData;
+            }
+            else
+            {
+#if UNITY_EDITOR
+                EditorSceneManager.sceneOpened -= editorAction;
+#endif
+            }
         }
 
 
