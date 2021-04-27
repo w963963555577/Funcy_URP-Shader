@@ -107,9 +107,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty floatModel { get; set; }
         MaterialProperty effectiveColor { get; set; }
 
+        MaterialProperty distanceDisslove { get; set; }
 
         MaterialProperty srcBlend { get; set; }
-        MaterialProperty dstBlend { get; set; }
+        MaterialProperty dstBlend { get; set; }        
 
         #endregion
         bool drawBaseMap = false;
@@ -459,6 +460,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
                 materialEditor.ShaderProperty(shadowRamp, shadowRamp.displayName);
                 materialEditor.ShaderProperty(selfShadowRamp, selfShadowRamp.displayName);
+                materialEditor.ShaderProperty(distanceDisslove, distanceDisslove.displayName);                
                 materialEditor.RenderQueueField();
             });
 

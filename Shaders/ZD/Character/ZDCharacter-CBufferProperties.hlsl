@@ -63,6 +63,8 @@ half4 _MouthRect;
 half _FloatModel;
 half4 _EffectiveColor;
 half _FaceLightMapCombineMode;
+
+half _DistanceDisslove;
 CBUFFER_END
 
 TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
@@ -79,9 +81,11 @@ float4 ComputeScreenPos(float4 pos, float projectionSign)
 void DistanceDisslove(float2 screenUV, half vertexDist)
 {
     half as = _ScreenParams.y / _ScreenParams.x;
-    half2 distanceRect = abs(frac(half2(screenUV.x, screenUV.y) * 150.0)) * 0.70707;
+    half2 maskUV = half2(screenUV.x, screenUV.y) * 250.0;
+    half rowID = fmod(floor(maskUV.y), 2.0);
+    half2 distanceRect = abs(frac(lerp(maskUV, maskUV + 0.5, rowID))) * 0.70707;
     
-    half distanceDissloveMask = 1.0 - max(distanceRect.x, distanceRect.y);
-    distanceDissloveMask*=distanceDissloveMask*distanceDissloveMask*distanceDissloveMask;
-    clip(distanceDissloveMask - (1.0 - min(1.0, vertexDist / 0.65)));
+    half distanceDissloveMask = 1.0 - max(distanceRect.x, distanceRect.y) * _DistanceDisslove;
+    distanceDissloveMask *= distanceDissloveMask * distanceDissloveMask * distanceDissloveMask;
+    clip(distanceDissloveMask - (1.0 - min(1.0, vertexDist * 1.5384)));
 }

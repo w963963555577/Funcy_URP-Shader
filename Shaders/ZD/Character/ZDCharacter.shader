@@ -105,6 +105,8 @@ Shader "ZDShader/URP/Character"
         [MaterialToggle] _FaceLightMapCombineMode ("Face LightMap Combined", float) = 0.0
         
         [HDR]_EffectiveColor ("_EffectiveColor", Color) = (1.0, 1.0, 1.0, 1.0)
+
+        [MaterialToggle] _DistanceDisslove ("Distance Disslove", float) = 1
     }
     
     SubShader
