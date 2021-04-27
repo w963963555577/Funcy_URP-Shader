@@ -8,11 +8,13 @@ using System.Linq;
 [InitializeOnLoad]
 public class LatchEditorUpdate 
 {
+    /*
     static LatchEditorUpdate()
     {
-        EditorApplication.delayCall += () => {
-            EditorApplication.update += () => { EditorApplication.ExecuteMenuItem("Edit/Graphics Tier/Shader Hardware Tier 3"); };
 
+        EditorApplication.delayCall += () => {
+            EditorApplication.update += () => { };
+            
             FileModificationWarning.onSavedProject += () =>
             {
                 bool reimport = false;
@@ -28,10 +30,11 @@ public class LatchEditorUpdate
                     }
                 }
 
-            };
+            };            
         };
 
     }    
+*/
 }
 public class FileModificationWarning : AssetModificationProcessor
 {
