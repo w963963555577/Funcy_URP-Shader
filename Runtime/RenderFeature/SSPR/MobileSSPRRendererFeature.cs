@@ -11,16 +11,7 @@ using UnityEditor.SceneManagement;
 public class MobileSSPRRendererFeature : ScriptableRendererFeature
 {
     public static MobileSSPRRendererFeature instance; //for example scene to call, user should add 1 and not more than 1 MobileSSPRRendererFeature anyway so it is safe to use static ref
-
-
-#if UNITY_EDITOR
-    [CreateAssetMenu(menuName = "RenderFeature/SSPR/Height Fixer Data")]
-#endif
-    public class HeightFixerData : ScriptableObject
-    {
-        public Texture2D horizontalHeightFixerMap;
-        public Vector4 worldSize_Offest_HeightIntensity = Vector4.zero;
-    }
+     
 
     [System.Serializable]
     public class PassSettings
@@ -28,8 +19,8 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         [Header("Settings")]
         public bool ShouldRenderSSPR = true;
         public float horizontalReflectionPlaneHeightWS = 0.01f; //default higher than ground a bit, to avoid ZFighting if user placed a ground plane at y=0
-        public HeightFixerData selectedHeightFixerData;
-        public List<HeightFixerData> heightFixerData = new List<HeightFixerData>();
+        public MobileSSPRHeightFixerData selectedHeightFixerData;
+        public List<MobileSSPRHeightFixerData> heightFixerData = new List<MobileSSPRHeightFixerData>();
         [Range(0.01f, 1f)]
         public float fadeOutScreenBorderWidthVerticle = 0.25f;
         [Range(0.01f, 1f)]
