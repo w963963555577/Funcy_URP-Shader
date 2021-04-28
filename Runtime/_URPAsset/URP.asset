@@ -35,10 +35,10 @@ MonoBehaviour:
   m_AdditionalLightsPerObjectLimit: 4
   m_AdditionalLightShadowsSupported: 1
   m_AdditionalLightsShadowmapResolution: 4096
-  m_ShadowDistance: 10
+  m_ShadowDistance: 65
   m_ShadowCascades: 2
   m_Cascade2Split: 0.019110635
-  m_Cascade4Split: {x: 0.058909047, y: 0.22407849, z: 0.47352356}
+  m_Cascade4Split: {x: 0.05253962, y: 0.09820431, z: 0.4735232}
   m_ShadowDepthBias: 1
   m_ShadowNormalBias: 1
   m_SoftShadowsSupported: 1

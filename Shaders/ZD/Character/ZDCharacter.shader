@@ -105,7 +105,7 @@ Shader "ZDShader/URP/Character"
         [MaterialToggle] _FaceLightMapCombineMode ("Face LightMap Combined", float) = 0.0
         
         [HDR]_EffectiveColor ("_EffectiveColor", Color) = (1.0, 1.0, 1.0, 1.0)
-
+        
         [MaterialToggle] _DistanceDisslove ("Distance Disslove", float) = 1
     }
     
@@ -191,7 +191,7 @@ Shader "ZDShader/URP/Character"
                 half dist = distance(float3(0.0, v.vertex.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
                 
-                RTD_OL *= (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z));
+                RTD_OL *= min(widthRange.y * 2.0, dist * widthRange.z)/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
                 
                 float4 positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
                 o.vertex = positionCS / _OutlineEnable;
