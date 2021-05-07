@@ -19,7 +19,8 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         [Header("Settings")]
         public bool ShouldRenderSSPR = true;
         public float horizontalReflectionPlaneHeightWS = 0.01f; //default higher than ground a bit, to avoid ZFighting if user placed a ground plane at y=0
-        public MobileSSPRHeightFixerData selectedHeightFixerData;
+
+        [System.NonSerialized] public MobileSSPRHeightFixerData selectedHeightFixerData;
         public List<MobileSSPRHeightFixerData> heightFixerData = new List<MobileSSPRHeightFixerData>();
         [Range(0.01f, 1f)]
         public float fadeOutScreenBorderWidthVerticle = 0.25f;
@@ -67,6 +68,8 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         const int SHADER_NUMTHREAD_X = 8; //must match compute shader's [numthread(x)]
         const int SHADER_NUMTHREAD_Y = 8; //must match compute shader's [numthread(y)]
 
+        public bool shouldUseSinglePassUnsafeAllowFlickeringDirectResolve = false;
+
         PassSettings settings;
         ComputeShader cs;
         public CustomRenderPass(PassSettings settings)
@@ -85,38 +88,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             return Mathf.CeilToInt(GetRTHeight() * aspect / (float)SHADER_NUMTHREAD_X) * SHADER_NUMTHREAD_X;
         }
 
-        /// <summary>
-        /// If user enabled PerPlatformAutoSafeGuard, this function will return true if we should use mobile path
-        /// </summary>
-        bool ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve()
-        {
-            if (settings.EnablePerPlatformAutoSafeGuard)
-            {
-                //if RInt RT is not supported, use mobile path
-                if (!SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RInt))
-                    return true;
 
-                //tested Metal(even on a Mac) can't use InterlockedMin().
-                //so if metal, use mobile path
-                if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal)
-                    return true;
-#if UNITY_EDITOR
-                //PC(DirectX) can use RenderTextureFormat.RInt + InterlockedMin() without any problem, use Non-Mobile path.
-                //Non-Mobile path will NOT produce any flickering
-                if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
-                    return false;
-#elif UNITY_ANDROID
-                //- samsung galaxy A70(Adreno612) will fail if use RenderTextureFormat.RInt + InterlockedMin() in compute shader
-                //- but Lenovo S5(Adreno506) is correct, WTF???
-                //because behavior is different between android devices, we assume all android are not safe to use RenderTextureFormat.RInt + InterlockedMin() in compute shader
-                //so android always go mobile path
-                return true;
-#endif
-            }
-
-            //let user decide if we still don't know the correct answer
-            return !settings.ShouldRemoveFlickerFinalControl;
-        }
         // This method is called before executing the render pass.
         // It can be used to configure render targets and their clear state. Also to create temporary render target textures.
         // When empty this render pass will render to the active camera render target.
@@ -137,7 +109,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             cmd.GetTemporaryRT(_SSPR_ColorRT_pid, rtd);
 
             //PackedData RT
-            if (ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve())
+            if (shouldUseSinglePassUnsafeAllowFlickeringDirectResolve)
             {
                 //use unsafe method if mobile
                 //posWSy RT (will use this RT for posWSy compare test, just like the concept of regular depth buffer)
@@ -184,7 +156,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 Matrix4x4 VP = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true) * camera.worldToCameraMatrix;
                 cb.SetComputeMatrixParam(cs, "_VPMatrix", VP);
 
-                if (ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve())
+                if (shouldUseSinglePassUnsafeAllowFlickeringDirectResolve)
                 {
                     ////////////////////////////////////////////////
                     //Mobile Path (Android GLES / Metal)
@@ -196,6 +168,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                     cb.SetComputeTextureParam(cs, kernel_MobilePathSinglePassColorRTDirectResolve, "PosWSyRT", _SSPR_PosWSyRT_rti);
                     cb.SetComputeTextureParam(cs, kernel_MobilePathSinglePassColorRTDirectResolve, "_CameraOpaqueTexture", new RenderTargetIdentifier("_CameraOpaqueTexture"));
                     cb.SetComputeTextureParam(cs, kernel_MobilePathSinglePassColorRTDirectResolve, "_CameraDepthTexture", new RenderTargetIdentifier("_CameraDepthTexture"));
+                    cs.SetTexture(kernel_MobilePathSinglePassColorRTDirectResolve, "_HorizontalHeightFixerMap", heightFixerData.horizontalHeightFixerMap);
                     cb.DispatchCompute(cs, kernel_MobilePathSinglePassColorRTDirectResolve, dispatchThreadGroupXCount, dispatchThreadGroupYCount, dispatchThreadGroupZCount);
 
                 }
@@ -262,7 +235,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         {
             cmd.ReleaseTemporaryRT(_SSPR_ColorRT_pid);
 
-            if(ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve())
+            if(shouldUseSinglePassUnsafeAllowFlickeringDirectResolve)
                 cmd.ReleaseTemporaryRT(_SSPR_PosWSyRT_pid);
             else
                 cmd.ReleaseTemporaryRT(_SSPR_PackedDataRT_pid);
@@ -282,18 +255,63 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         }
 
 #if UNITY_EDITOR
+
         UnityEditor.EditorUtility.SetDirty(this);
 #endif
+    }
+
+    /// <summary>
+    /// If user enabled PerPlatformAutoSafeGuard, this function will return true if we should use mobile path
+    /// </summary>
+    bool ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve()
+    {
+        if (Settings.EnablePerPlatformAutoSafeGuard)
+        {
+            //if RInt RT is not supported, use mobile path
+            if (!SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RInt))
+                return true;
+
+            //tested Metal(even on a Mac) can't use InterlockedMin().
+            //so if metal, use mobile path
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal)
+                return true;
+#if UNITY_EDITOR
+            //PC(DirectX) can use RenderTextureFormat.RInt + InterlockedMin() without any problem, use Non-Mobile path.
+            //Non-Mobile path will NOT produce any flickering
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
+                return false;
+#elif UNITY_ANDROID
+                //- samsung galaxy A70(Adreno612) will fail if use RenderTextureFormat.RInt + InterlockedMin() in compute shader
+                //- but Lenovo S5(Adreno506) is correct, WTF???
+                //because behavior is different between android devices, we assume all android are not safe to use RenderTextureFormat.RInt + InterlockedMin() in compute shader
+                //so android always go mobile path
+                return true;
+#endif
+        }
+
+        //let user decide if we still don't know the correct answer
+        return !Settings.ShouldRemoveFlickerFinalControl;
     }
 
     public override void Create()
     {
         instance = this;
+
 #if UNITY_EDITOR
+
+        if (Settings.heightFixerData == null || Settings.heightFixerData.Count < 1)
+        {
+            Settings.heightFixerData = new List<MobileSSPRHeightFixerData>();
+            Settings.heightFixerData.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<MobileSSPRHeightFixerData>("Packages/com.zd.lwrp.funcy/Runtime/_URPAsset/SSRHeightFixerDatas/Default.asset"));
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+
         EditorSceneManager.SceneOpenedCallback editorAction = (s, m) => { IndexHeightFixerData(s, LoadSceneMode.Single); };
 #endif
         if (isActive)
-        {            
+        {
+            IndexHeightFixerData(new Scene(), LoadSceneMode.Single);
+
             if (Application.isPlaying)
             {
                 SceneManager.sceneLoaded += IndexHeightFixerData;
@@ -319,6 +337,8 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             }
         }
 
+        if (Settings.selectedHeightFixerData == null)
+            Settings.selectedHeightFixerData = Settings.heightFixerData[0];
 
         if (!Settings.SSPR_computeShader)
         {
@@ -331,6 +351,8 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
 
         // Configures where the render pass should be injected.
         m_ScriptablePass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;//we must wait _CameraOpaqueTexture & _CameraDepthTexture is usable
+
+        m_ScriptablePass.shouldUseSinglePassUnsafeAllowFlickeringDirectResolve = ShouldUseSinglePassUnsafeAllowFlickeringDirectResolve();
     }
 
     // Here you can inject one or multiple render passes in the renderer.

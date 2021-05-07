@@ -162,7 +162,7 @@ void NonMobilePathRenderHashRT(uint3 id: SV_DispatchThreadID)
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //ConvertScreenIDToPosWS
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    float3 posWS = ConvertScreenIDToPosWS(id);
+    float3 posWS = ConvertScreenIDToPosWS(id.xy);
     _HorizontalPlaneHeightWS = HeightFixer(posWS);
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //if posWS is already under reflection plane (e.g. under water plane),
@@ -244,7 +244,7 @@ void NonMobilePathResolveColorRT(uint3 id: SV_DispatchThreadID)
         return 0;
     }
     */
-    uint packedData = HashRT[id.xy];
+    int packedData = HashRT[id.xy];
     if (packedData == MAX_UINT) //MAX_UINT == max uint
     {
         //if this location is not having any reflection data (still containing clear value, still 0 reflection write), early exit to prevent wrong RT write
@@ -263,7 +263,7 @@ void NonMobilePathResolveColorRT(uint3 id: SV_DispatchThreadID)
     half alphaAsFloatingPoint = alphaAsInt / 255.0;
     
     float2 sampleUV = sampleID.xy / _RTSize;
-    half3 sampledColor = _CameraOpaqueTexture.SampleLevel(LinearClampSampler, sampleUV, 0);
+    half3 sampledColor = _CameraOpaqueTexture.SampleLevel(LinearClampSampler, sampleUV, 0).xyz;
     
     half4 finalColor = half4(sampledColor, alphaAsFloatingPoint) * _FinalTintColor;
     finalColor.a = saturate(finalColor.a);
@@ -288,7 +288,7 @@ void MobilePathSinglePassColorRTDirectResolve(uint3 id: SV_DispatchThreadID)
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //ConvertScreenIDToPosWS
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    float3 posWS = ConvertScreenIDToPosWS(id);
+    float3 posWS = ConvertScreenIDToPosWS(id.xy);
     _HorizontalPlaneHeightWS = HeightFixer(posWS);
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     //if posWS is already under reflection plane (e.g. under water plane),

@@ -130,8 +130,6 @@ MonoBehaviour:
   Settings:
     ShouldRenderSSPR: 1
     horizontalReflectionPlaneHeightWS: 0.01
-    selectedHeightFixerData: {fileID: 11400000, guid: eee5fa8836ce2754e82ed5854d089a3b,
-      type: 2}
     heightFixerData:
     - {fileID: 11400000, guid: eee5fa8836ce2754e82ed5854d089a3b, type: 2}
     fadeOutScreenBorderWidthVerticle: 0.25
