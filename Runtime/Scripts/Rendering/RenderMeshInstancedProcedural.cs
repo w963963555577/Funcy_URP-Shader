@@ -23,7 +23,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
         {
             rg.InitBuffers();
             rg.UpdateBuffer();
-        }        
+        }
     }
 
     public void UpdateObject(int rgIndex, int index)
@@ -61,7 +61,9 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             _ObjectToWorldBuffer = new Buffer(objs.Count, typeof(Matrix4x4));
             _WorldToObjectBuffer = new Buffer(objs.Count, typeof(Matrix4x4), ComputeBufferType.Default);
             boundsBuffer = new Buffer(objs.Count, typeof(Bounds));
-            visibleInstanceOnlyTransformBuffer = new Buffer(objs.Count, typeof(uint), ComputeBufferType.Append); //uint only, per visible grass
+
+            int idBufferCount = Mathf.NextPowerOfTwo(objs.Count);//Because AppendStructuredBuffer<> must be a power of 2
+            visibleInstanceOnlyTransformBuffer = new Buffer(idBufferCount, typeof(uint), ComputeBufferType.Append); //uint only, per visible grass
             visibleTransformIDBuffer = new Buffer(objs.Count, typeof(uint)); //uint only, per visible grass
             visibleTransformID = new uint[objs.Count];
             argsBuffer = new Buffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -150,6 +152,13 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
             if (!activeGroup)
             {
+                /*
+                AsyncGPUReadback.Request(visibleInstanceOnlyTransformBuffer.target, r =>
+                {
+                    if (r.hasError) return;
+                    ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
+                });
+                */
                 ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
                 Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer.target, 0,
                     null, shadowCastingMode, true, reference.gameObject.layer, null, lightProbeUsage, volume);
@@ -179,6 +188,7 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
                     }
                 }
             }
+
 
         }
 
@@ -218,9 +228,10 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
     void LateUpdate()
     {
         if (Camera.main == null) return;
+
         Matrix4x4 v = Camera.main.worldToCameraMatrix;
         Matrix4x4 p = Camera.main.projectionMatrix;
-        Matrix4x4 vp = p * v;
+        
         var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");
         var lightProbeUsage = volume == null ? LightProbeUsage.BlendProbes : LightProbeUsage.UseProxyVolume;
         foreach (var rg in renderGroups)
@@ -256,13 +267,15 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 [InitializeOnLoad,CustomEditor(typeof(RenderMeshInstancedProcedural))]
 public class RenderMeshInstancedProcedural_Editor : Editor
 {
+    
+
     static RenderMeshInstancedProcedural_Editor()
     {
         System.Action updateBuffer = null;
         updateBuffer = () => {
             foreach (var data in FindObjectsOfType<RenderMeshInstancedProcedural>())
             {
-                data.UpdateAllBuffer();
+                data.UpdateAllBuffer();                
             }
         };
 
@@ -308,10 +321,14 @@ public class RenderMeshInstancedProcedural_Editor : Editor
         
     }
     RenderMeshInstancedProcedural data;
+    void Dirty()
+    {
+        EditorUtility.SetDirty(data);
+    }
     private void OnEnable()
     {
         data = target as RenderMeshInstancedProcedural;
-
+        EditorApplication.update += Dirty;
     }
 
     public override void OnInspectorGUI()
@@ -485,6 +502,11 @@ public class RenderMeshInstancedProcedural_Editor : Editor
         }
         EditorGUILayout.EndFadeGroup();
 
+    }
+
+    private void OnDisable()
+    {
+        EditorApplication.update -= Dirty;
     }
     public class FileModificationWarning : AssetModificationProcessor
     {
