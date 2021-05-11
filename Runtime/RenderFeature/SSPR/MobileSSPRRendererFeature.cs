@@ -204,8 +204,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 if(settings.ApplyFillHoleFix)
                 {
                     int kernel_FillHoles = cs.FindKernel("FillHoles");
-                    cb.SetComputeTextureParam(cs, kernel_FillHoles, "ColorRT", _SSPR_ColorRT_rti);
-                    cb.SetComputeTextureParam(cs, kernel_FillHoles, "PackedDataRT", _SSPR_PackedDataRT_rti);
+                    cb.SetComputeTextureParam(cs, kernel_FillHoles, "ColorRT", _SSPR_ColorRT_rti);                    
                     cb.DispatchCompute(cs, kernel_FillHoles, Mathf.CeilToInt(dispatchThreadGroupXCount / 2f), Mathf.CeilToInt(dispatchThreadGroupYCount / 2f), dispatchThreadGroupZCount);
                 }
 
