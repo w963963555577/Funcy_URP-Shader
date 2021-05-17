@@ -700,12 +700,18 @@ Shader "ZDShader/URP/Character"
                 
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
-                
+
+                float specStep = 2.0;                
+                float specularValue = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+
+                /*
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
                 float specularValue1 = BRDFSpecular(1.0, glossMask, i.normalWS.xyz, mainLight.direction, viewDirection) * NdotL;
                 float specularValue2 = pow(dot(i.normalWS.xyz, halfDirection) * 0.5 + 0.5, exp2(lerp(1, 11, (glossMask)))) ;
                 float specularValue = lerp(specularValue2, specularValue1, glossMask);
                 specularValue = smoothstep(0.003, 0.004, specularValue) ;
+                */
+
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
