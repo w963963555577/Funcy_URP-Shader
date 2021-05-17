@@ -705,7 +705,7 @@ Shader "ZDShader/URP/Character"
                 float specularValue1 = BRDFSpecular(1.0, _Gloss, i.normalWS.xyz, mainLight.direction, viewDirection) * NdotL;
                 float specularValue2 = pow(dot(i.normalWS.xyz, halfDirection) * 0.5 + 0.5, exp2(lerp(1, 11, (_Gloss)))) ;
                 float specularValue = lerp(specularValue2, specularValue1, _Gloss * glossMask);
-                
+                specularValue = smoothstep(0.003, 0.004, specularValue) ;
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
@@ -759,7 +759,7 @@ Shader "ZDShader/URP/Character"
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
                 
                 refractionShadowArea = saturate(refractionShadowArea);
-                refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp) , 0.5 + (1.0 - _ShadowRamp) * 0.25, saturate(1.0 - refractionShadowArea));
+                refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp) * 0.25, saturate(1.0 - refractionShadowArea));
                 refractionShadowArea = saturate((1.0 - refractionShadowArea)) ;
                 
                 selfShadow = smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
