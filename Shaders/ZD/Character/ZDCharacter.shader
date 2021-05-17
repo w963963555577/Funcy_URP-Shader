@@ -696,15 +696,15 @@ Shader "ZDShader/URP/Character"
                     #endif
                     
                 #endif
-
-  
+                
+                
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
                 
-                                
-                float specularValue1 = floor(BRDFSpecular(1.0, _Gloss, i.normalWS.xyz, mainLight.direction, viewDirection) * 3.0 * NdotL) * 0.33;
-                float specularValue2 = floor(pow(dot(i.normalWS.xyz, halfDirection) * 0.5 + 0.5, exp2(lerp(1, 11, (_Gloss )))) * 3.0) * 0.33;
-                float specularValue = lerp(specularValue2, specularValue1, _Gloss* glossMask);
+                
+                float specularValue1 = BRDFSpecular(1.0, _Gloss, i.normalWS.xyz, mainLight.direction, viewDirection) * NdotL;
+                float specularValue2 = pow(dot(i.normalWS.xyz, halfDirection) * 0.5 + 0.5, exp2(lerp(1, 11, (_Gloss)))) ;
+                float specularValue = lerp(specularValue2, specularValue1, _Gloss * glossMask);
                 
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
@@ -759,14 +759,14 @@ Shader "ZDShader/URP/Character"
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
                 
                 refractionShadowArea = saturate(refractionShadowArea);
-                refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp) - _SubsurfaceScattering * 0.25, 0.5 + (1.0 - _ShadowRamp) * 0.25 + _SubsurfaceScattering, saturate(1.0 - refractionShadowArea));
+                refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp) , 0.5 + (1.0 - _ShadowRamp) * 0.25, saturate(1.0 - refractionShadowArea));
                 refractionShadowArea = saturate((1.0 - refractionShadowArea)) ;
                 
                 selfShadow = smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
                 selfShadow = 1.0 - selfShadow;
                 
                 float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
-                PBRShadowArea = floor(PBRShadowArea * 2.0) * 0.5;
+                //PBRShadowArea = PBRShadowArea;
                 PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
                 
                 

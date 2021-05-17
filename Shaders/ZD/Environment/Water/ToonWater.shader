@@ -4,29 +4,28 @@ Shader "ZDShader/URP/Environment/ToonWater"
 {
     Properties
     {
-        _Color ("Color", Color) = (0, 0, 0, 0)
-        _ColorFar ("ColorFar", Color) = (0, 0, 0, 0)
-        [NoScaleOffset]_NormalMap ("NormalMap", 2D) = "white" { }
-        _RefractionScale ("Refraction Scale (1=1 meter)", Float) = 1
-        _RefractionIntensity ("Refraction Intensity", Range(0, 1)) = 1
-        _WaveSpeed ("WaveSpeed", Range(0.01, 2.5)) = 0.5
-        _WaveDirection ("Wave Angle (World Y axis)", Range(0, 360)) = 0.5
-        [HDR]_FoamColor ("FoamColor", Color) = (0, 0, 0, 0)
+        _Color ("Color", Color) = (0.18, 0.45, 0.57, 1)
+        _ColorFar ("ColorFar", Color) = (0.21, 0.57, 0.55, 1)
+        [NoScaleOffset]_NormalMap ("NormalMap", 2D) = "(0.0,0.0,0.5,0.0)" { }
+        _RefractionScale ("Refraction Scale (1=1 meter)", Float) = 7.2
+        _RefractionIntensity ("Refraction Intensity", Range(0, 1)) = .05
+        _WaveSpeed ("WaveSpeed", Range(0.01, 2.5)) = 1
+        _WaveDirection ("Wave Angle (World Y axis)", Range(0, 360)) = 232
+        [HDR]_FoamColor ("FoamColor", Color) = (0.54, 0.69, 0.81, 1)
         [NoScaleOffset]_FoamMap ("FoamMap", 2D) = "white" { }
-        _FoamScale ("Foam Scale (1=1 meter)", Float) = 1
-        _Reflection ("Reflection", Range(0, 1)) = 0
-        _Depth ("Depth", Float) = 1
-        _Specular ("Specular", Range(0, 1)) = 0
-        _DepthArea ("DepthArea", Float) = 0
-        _DepthHard ("DepthHard", Float) = 0
-        [HDR]_SpecularColor ("SpecularColor", Color) = (1, 1, 1, 0)
+        _FoamScale ("Foam Scale (1=1 meter)", Float) = 10
+        _Reflection ("Reflection", Range(0, 1)) = 0.5
+        _Depth ("Depth", Float) = 23.65
+        _Specular ("Specular", Range(0, 1)) = 0.337
+        _DepthArea ("DepthArea", Float) = 2.63
+        _DepthHard ("DepthHard", Float) = 7.3
+        [HDR]_SpecularColor ("SpecularColor", Color) = (.01, .12, .30, 1)
         _RampMap ("Ramp Map", 2D) = "white" { }
     }
     
     SubShader
     {
-        Tags { "RenderPipeline" = "UniversalPipeline" }
-        
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Transparent" "IgnoreProjector" = "True" }
         
         Pass
         {
@@ -208,13 +207,21 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 float4 tex2DNode21 = tex2D(_NormalMap, uv_Ref186);
                 float2 temp_output_35_0 = ((tex2DNode2).rg - (tex2DNode21).rg);
                 float3 appendResult299 = (float3(temp_output_35_0, 0.5));
-                float dotResult288 = dot(normalizeResult293, (appendResult299 / 0.3));
+                float dotResult288 = dot(normalizeResult293, (appendResult299 * 3.33));
+                //---
+                float ramp1 = tex2D(_RampMap, uv_Ref085 / _RefractionScale).r;
+                float ramp2 = tex2D(_RampMap, uv_Ref186 / _RefractionScale).r;
+                float ramp = min(ramp1, ramp2);
+                
                 float4 screenPos = IN.ase_texcoord2;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float screenDepth112 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                float distanceDepth112 = abs((screenDepth112 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Depth));
-                float temp_output_115_0 = saturate(distanceDepth112);
+                float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams) - screenPos.w;
+                float smDisDepth = (screenDepth16 + (ramp - 0.5)) / _Depth;
+                
+                
+                //
+                float temp_output_115_0 = saturate(smDisDepth);
                 float2 appendResult31 = (float2(ase_screenPosNorm.x, ase_screenPosNorm.y));
                 float4 lerpResult207 = lerp(_Color, _ColorFar, pow(temp_output_115_0, 1.5));
                 float4 ase_grabScreenPos = ASE_ComputeGrabScreenPos(screenPos);
@@ -241,15 +248,15 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 
                 half4 ssrColor = 0.0;
                 
-                #if _MobileSSPR                                      
+                #if _MobileSSPR
                     ssrColor = SAMPLE_TEXTURE2D(_MobileSSPR_ColorRT, LinearClampSampler, screenUV + temp_output_35_0 * _RefractionIntensity);
                 #endif
                 
-                                                
+                
                 float2 uv_Foam0134 = (panner11 / _FoamScale);
                 float2 uv_Foam1135 = (panner23 / _FoamScale);
-                float screenDepth52 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                float distanceDepth52 = abs((screenDepth52 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_DepthArea));
+                float screenDepth52 = screenDepth16;
+                float distanceDepth52 = ((screenDepth52) / (_DepthArea));
                 float depthArea90 = (pow(saturate((1.0 - distanceDepth52)), _DepthHard) * 5.0);
                 float3 ase_worldNormal = IN.ase_texcoord3.xyz;
                 float fresnelNdotV129 = dot(ase_worldNormal, ase_worldViewDir);
