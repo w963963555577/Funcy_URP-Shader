@@ -18,6 +18,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
         _Distance ("Distance", Range(0, 1)) = 0.5
         
         _PositionMask ("PositionMask", 2D) = "white" { }
+        
+        [Toggle]_ViewRendererMode ("View Renderer Mode", Range(0, 1)) = 0
         [HideInInspector] _texcoord ("", 2D) = "white" { }
     }
     
@@ -89,32 +91,9 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 #endif
             };
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _PositionMask_ST;
-            float4 _BaseMap_ST;
-            float4 _BlendColor_SelfShadow;
-            float4 _BlendColor_Dark;
-            float4 _BlendColor_Mid;
-            float4 _BlendColor_Light;
-            float4 _SpecColor;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            
-            float _LambertOffset;
-            float _ClipThreshod;
-            float _SpecularOffset;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            
-            #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
+            #include "SpecTree-CBufferProperties.hlsl"
             
             TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
-            
             
             
             VertexOutput vert(VertexInput v)
@@ -127,11 +106,18 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                     UNITY_TRANSFER_INSTANCE_ID(v, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 #endif
+                float3 viewOffset = float3(remap(v.ase_texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
+                viewOffset = mul(viewOffset, UNITY_MATRIX_V);
                 
                 float4 offset = v.vertex;
                 #ifdef _DrawMeshInstancedProcedural
+                    viewOffset = mul(viewOffset, _ObjectToWorldBuffer[id]);
+                    v.vertex.xyz += normalize(viewOffset) * _ViewRendererMode;
                     v.vertex = WindAnimation(v.vertex, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
+                    
                 #else
+                    viewOffset = mul(viewOffset, GetObjectToWorldMatrix());
+                    v.vertex.xyz += normalize(viewOffset) * _ViewRendererMode;
                     v.vertex = WindAnimation(v.vertex, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 #endif
                 offset -= v.vertex;
@@ -197,6 +183,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 float lightFresnel = smoothstep(0.0, 1.0, saturate(dot(viewDirection, - (ase_worldNormal * 0.82 - mainLight.direction))));
                 
                 float temp_output_47_0 = saturate((dotResult41 + _LambertOffset));
+                
                 float smoothstepResult82 = smoothstep(0.0, 0.5, temp_output_47_0);
                 float4 lerpResult83 = lerp(_BlendColor_Dark, _BlendColor_Mid, smoothstepResult82);
                 float smoothstepResult80 = smoothstep(0.5, 1.0, temp_output_47_0);
@@ -213,7 +200,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 float temp_output_3_0_g4 = (baseColor.a - saturate((1.5 * _ClipThreshod)));
                 float temp_output_200_0 = saturate((dotResult41 + (_SpecularOffset * - 1.0)));
                 
-                return saturate(((baseColor * lerpResult145) + (saturate(((saturate((temp_output_3_0_g5 / fwidth(temp_output_3_0_g5))) - saturate((temp_output_3_0_g4 / fwidth(temp_output_3_0_g4)))) * temp_output_200_0 * temp_output_147_0 * baseColor.a)) * _SpecColor))).rgb;
+                return(baseColor * lerpResult145).rgb + _SpecColor.rgb * _ViewRendererMode * smoothstep(0.8, 0.81, 1.0 - pow(dot(viewDirection, ase_worldNormal), 2.0)).xxx * temp_output_47_0 ;
             }
             
             half4 frag(VertexOutput IN): SV_Target
@@ -242,7 +229,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 
                 Color = MixFog(Color, IN.fogFactor);
                 
-                return half4(Color, Alpha);
+                return MixGlobalFog(half4(Color, Alpha), IN.worldPos);
             }
             
             ENDHLSL
@@ -288,29 +275,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _PositionMask_ST;
-            float4 _BaseMap_ST;
-            float4 _BlendColor_SelfShadow;
-            float4 _BlendColor_Dark;
-            float4 _BlendColor_Mid;
-            float4 _BlendColor_Light;
-            float4 _SpecColor;
-            float _Speed;
-            float _Amount;
-            float _Distance;
+            #include "SpecTree-CBufferProperties.hlsl"
             
-            float _LambertOffset;
-            float _ClipThreshod;
-            float _SpecularOffset;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            
-            #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -340,9 +306,13 @@ Shader "ZDShader/URP/Environment/SpecialTree"
             
             float4 GetShadowPositionHClip(Attributes input)
             {
+                float3 viewOffset = float3(remap(input.texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
+                viewOffset = mul(viewOffset, UNITY_MATRIX_V);
+                
                 #ifdef _DrawMeshInstancedProcedural
                     uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
-                    
+                    viewOffset = mul(viewOffset, _ObjectToWorldBuffer[id]);
+                    input.positionOS.xyz += normalize(viewOffset) * _ViewRendererMode;
                     float3 positionWS = mul(_ObjectToWorldBuffer[id], float4(input.positionOS.xyz, 1.0)).xyz;
                     float3 normalWS = float3(0, 0, 0);
                     
@@ -352,6 +322,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                         normalWS = SafeNormalize(mul(input.normalOS, (real3x3)_WorldToObjectBuffer[id]));
                     #endif
                 #else
+                    viewOffset = mul(viewOffset, GetObjectToWorldMatrix());
+                    input.positionOS.xyz += normalize(viewOffset) * _ViewRendererMode;
                     float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                     float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                     
@@ -399,8 +371,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 #else
                     half alpha = color.a;
                 #endif
-                                
-                clip(alpha - cutoff);                
+                
+                clip(alpha - cutoff);
                 
                 return alpha;
             }
@@ -454,29 +426,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _PositionMask_ST;
-            float4 _BaseMap_ST;
-            float4 _BlendColor_SelfShadow;
-            float4 _BlendColor_Dark;
-            float4 _BlendColor_Mid;
-            float4 _BlendColor_Light;
-            float4 _SpecColor;
-            float _Speed;
-            float _Amount;
-            float _Distance;
-            
-            float _LambertOffset;
-            float _ClipThreshod;
-            float _SpecularOffset;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            
-            #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
+            #include "SpecTree-CBufferProperties.hlsl"
             
             struct Attributes
             {
@@ -510,10 +460,16 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                     UNITY_SETUP_INSTANCE_ID(input);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 #endif
+                float3 viewOffset = float3(remap(input.texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
+                viewOffset = mul(viewOffset, UNITY_MATRIX_V);
                 
                 #ifdef _DrawMeshInstancedProcedural
+                    viewOffset = mul(viewOffset, _ObjectToWorldBuffer[id]);
+                    input.position.xyz += normalize(viewOffset) * _ViewRendererMode;
                     input.position = WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]);
                 #else
+                    viewOffset = mul(viewOffset, GetObjectToWorldMatrix());
+                    input.position.xyz += normalize(viewOffset) * _ViewRendererMode;
                     input.position = WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 #endif
                 
@@ -537,8 +493,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 #else
                     half alpha = color.a;
                 #endif
-                                
-                clip(alpha - cutoff);                
+                
+                clip(alpha - cutoff);
                 
                 return alpha;
             }
@@ -580,28 +536,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _PositionMask_ST;
-            float4 _BaseMap_ST;
-            float4 _BlendColor_SelfShadow;
-            float4 _BlendColor_Dark;
-            float4 _BlendColor_Mid;
-            float4 _BlendColor_Light;
-            float4 _SpecColor;
-            float _Speed;
-            float _Amount;
-            float _Distance;
+            #include "SpecTree-CBufferProperties.hlsl"
             
-            float _LambertOffset;
-            float _ClipThreshod;
-            float _SpecularOffset;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            #include "../../../../ShaderLibrary/VertexAnimation.hlsl"
             int _ObjectId;
             int _PassValue;
             
@@ -620,9 +556,8 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 float2 uv: TEXCOORD0;
                 DECLARE_LIGHTMAP_OR_SH(lightmapUV, vertexSH, 1);
                 
-                #ifdef _ADDITIONAL_LIGHTS
-                    float3 positionWS: TEXCOORD2;
-                #endif
+                
+                float3 positionWS: TEXCOORD2;
                 
                 #ifdef _NORMALMAP
                     float4 normalWS: TEXCOORD3;    // xyz: normal, w: viewDir.x
@@ -654,6 +589,11 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 //WindAnimation
+                float3 viewOffset = float3(remap(input.texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
+                viewOffset = mul(viewOffset, UNITY_MATRIX_V);
+                viewOffset = mul(viewOffset, GetObjectToWorldMatrix());
+                input.positionOS.xyz += normalize(viewOffset) * _ViewRendererMode;
+                
                 input.positionOS = WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 output.positionOS = input.positionOS;
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
@@ -744,12 +684,14 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                 
                 half4 color = UniversalFragmentPBR(inputData, albedoAlpha.rgb, 0, 0, 0, 0, 0, alpha);
                 clip(color.a - 0.5);
+                
                 return float4(_ObjectId, _PassValue, 1.0, 1.0);
             }
             
             ENDHLSL
             
         }
+        
         //UsePass "Universal Render Pipeline/Lit/Meta"
     }
 }
