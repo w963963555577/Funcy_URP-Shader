@@ -19,7 +19,7 @@ Shader "ZDShader/URP/Environment/Waterfall1"
     SubShader
     {
         LOD 0
-                
+        
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent-1" }
         
         Cull Back
@@ -58,10 +58,10 @@ Shader "ZDShader/URP/Environment/Waterfall1"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            #include "../../../../ShaderLibrary/GlobalFog.hlsl"
             
             #define ASE_NEEDS_VERT_NORMAL
-            
-            
+                        
             sampler2D _MainTex;
             uniform float4 _CameraDepthTexture_TexelSize;
             CBUFFER_START(UnityPerMaterial)
@@ -93,6 +93,7 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                 float4 ase_texcoord1: TEXCOORD1;
                 float4 ase_texcoord2: TEXCOORD2;
                 float4 ase_texcoord3: TEXCOORD3;
+                float3 positionWS: TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -114,13 +115,10 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                 float2 panner12 = (1.0 * _Time.y * float2(0.2, 0.8) + temp_output_49_0);
                 float temp_output_13_0 = max(tex2DNode5.r, tex2Dlod(_MainTex, float4(panner12, 0, 0.0)).g);
                 float3 temp_output_16_0 = (v.ase_normal * max((_VertexMax * ((sin((((v.ase_texcoord.y * TWO_PI) * 2.0) + mulTime18 + transform54.x + transform54.y + transform54.z)) * 0.3) + (temp_output_25_0 * temp_output_25_0) + (temp_output_13_0 * 0.5))), _VertexMin));
-                
+                o.positionWS = mul(GetObjectToWorldMatrix(), v.vertex);
                 float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
                 o.ase_texcoord1.xyz = ase_worldNormal;
                 
-                float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
-                float4 screenPos = ComputeScreenPos(ase_clipPos);
-                o.ase_texcoord3 = screenPos;
                 
                 o.ase_texcoord2.xy = v.ase_texcoord.xy;
                 
@@ -142,6 +140,8 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
                 o.clipPos = vertexInput.positionCS;
+                float4 screenPos = ComputeScreenPos(vertexInput.positionCS);
+                o.ase_texcoord3 = screenPos;
                 #ifdef ASE_FOG
                     o.fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
                 #endif
@@ -166,8 +166,8 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                 float4 screenPos = IN.ase_texcoord3;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float screenDepth51 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                float distanceDepth51 = abs((screenDepth51 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
+                float screenDepth51 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams) - screenPos.w;
+                float distanceDepth51 = abs((screenDepth51) / (_Soft));
                 
                 float3 BakedAlbedo = 0;
                 float3 BakedEmission = 0;
@@ -187,14 +187,12 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                     LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
                 #endif
                 
-                return half4(Color, Alpha);
+                return MixGlobalFog(half4(Color, Alpha), IN.positionWS);
             }
             
             ENDHLSL
             
         }
-        
-
     }
     CustomEditor "UnityEditor.ShaderGraph.PBRMasterGUI"
     Fallback "Hidden/InternalErrorShader"

@@ -136,31 +136,7 @@ Shader "ZDShader/URP/PBR-Base"
                 TEXTURE2D(_MobileSSPR_ColorRT);
                 sampler LinearClampSampler;
                 
-                CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                half4 _BaseColor;
-                half4 _SpecColor;
-                half4 _EmissionColor;
-                half _Cutoff;
-                half _Smoothness;
-                half _Metallic;
-                half _BumpScale;
-                half _OcclusionStrength;
-                half _SSPREnabled;
-                half _FlowEmissionEnabled;
-                half4 _PositionMask_ST;
-                half _WindEnabled;
-                half _Speed;
-                half _Amount;
-                half _Distance;
-                #ifdef _DrawMeshInstancedProcedural
-                    StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                    StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                    StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-                #endif
-                CBUFFER_END
-                
-                #include "../../../ShaderLibrary/VertexAnimation.hlsl"
+                #include "LitShader-CBufferProperties.hlsl"
                 
                 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
                 TEXTURE2D(_MetallicGlossMap);   SAMPLER(sampler_MetallicGlossMap);
@@ -272,9 +248,9 @@ Shader "ZDShader/URP/PBR-Base"
                     float4 uv: TEXCOORD0;
                     DECLARE_LIGHTMAP_OR_SH(lightmapUV, vertexSH, 1);
                     
-                    #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
-                        float3 positionWS: TEXCOORD2;
-                    #endif
+                    
+                    float3 positionWS: TEXCOORD2;
+                    
                     
                     #ifdef _NORMALMAP
                         float4 normalWS: TEXCOORD3;    // xyz: normal, w: viewDir.x
@@ -306,9 +282,9 @@ Shader "ZDShader/URP/PBR-Base"
                 {
                     inputData = (InputData)0;
                     
-                    #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
-                        inputData.positionWS = input.positionWS;
-                    #endif
+                    
+                    inputData.positionWS = input.positionWS;
+                    
                     
                     #ifdef _NORMALMAP
                         half3 viewDirWS = half3(input.normalWS.w, input.tangentWS.w, input.bitangentWS.w);
@@ -425,9 +401,9 @@ Shader "ZDShader/URP/PBR-Base"
                     
                     output.fogFactorAndVertexLight = half4(fogFactor, vertexLight);
                     
-                    #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
-                        output.positionWS = vertexInput.positionWS;
-                    #endif
+                    
+                    output.positionWS = vertexInput.positionWS;
+                    
                     
                     #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                         output.shadowCoord = GetShadowCoord(vertexInput);
@@ -521,7 +497,7 @@ Shader "ZDShader/URP/PBR-Base"
                     screenUV);
                     
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
-                    
+                    color = MixGlobalFog(color, input.positionWS);
                     return color;
                 }
                 
@@ -570,31 +546,8 @@ Shader "ZDShader/URP/PBR-Base"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
-            half4 _BaseColor;
-            half4 _SpecColor;
-            half4 _EmissionColor;
-            half _Cutoff;
-            half _Smoothness;
-            half _Metallic;
-            half _BumpScale;
-            half _OcclusionStrength;
-            half _SSPREnabled;
-            half _FlowEmissionEnabled;
-            half4 _PositionMask_ST;
-            half _WindEnabled;
-            half _Speed;
-            half _Amount;
-            half _Distance;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
+            #include "LitShader-CBufferProperties.hlsl"
             
-            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -721,31 +674,7 @@ Shader "ZDShader/URP/PBR-Base"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
-            half4 _BaseColor;
-            half4 _SpecColor;
-            half4 _EmissionColor;
-            half _Cutoff;
-            half _Smoothness;
-            half _Metallic;
-            half _BumpScale;
-            half _OcclusionStrength;
-            half _SSPREnabled;
-            half _FlowEmissionEnabled;
-            half4 _PositionMask_ST;
-            half _WindEnabled;
-            half _Speed;
-            half _Amount;
-            half _Distance;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            
-            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
+            #include "LitShader-CBufferProperties.hlsl"
             
             struct Attributes
             {
@@ -846,31 +775,7 @@ Shader "ZDShader/URP/PBR-Base"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
-            half4 _BaseColor;
-            half4 _SpecColor;
-            half4 _EmissionColor;
-            half _Cutoff;
-            half _Smoothness;
-            half _Metallic;
-            half _BumpScale;
-            half _OcclusionStrength;
-            half _SSPREnabled;
-            half _FlowEmissionEnabled;
-            half4 _PositionMask_ST;
-            half _WindEnabled;
-            half _Speed;
-            half _Amount;
-            half _Distance;
-            #ifdef _DrawMeshInstancedProcedural
-                StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-                StructuredBuffer<float4x4> _WorldToObjectBuffer;
-                StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
-            #endif
-            CBUFFER_END
-            
-            #include "../../../ShaderLibrary/VertexAnimation.hlsl"
+            #include "LitShader-CBufferProperties.hlsl"
             
             struct Attributes
             {
