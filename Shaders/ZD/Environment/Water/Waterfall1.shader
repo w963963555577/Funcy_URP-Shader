@@ -115,7 +115,7 @@ Shader "ZDShader/URP/Environment/Waterfall1"
                 float2 panner12 = (1.0 * _Time.y * float2(0.2, 0.8) + temp_output_49_0);
                 float temp_output_13_0 = max(tex2DNode5.r, tex2Dlod(_MainTex, float4(panner12, 0, 0.0)).g);
                 float3 temp_output_16_0 = (v.ase_normal * max((_VertexMax * ((sin((((v.ase_texcoord.y * TWO_PI) * 2.0) + mulTime18 + transform54.x + transform54.y + transform54.z)) * 0.3) + (temp_output_25_0 * temp_output_25_0) + (temp_output_13_0 * 0.5))), _VertexMin));
-                o.positionWS = mul(GetObjectToWorldMatrix(), v.vertex);
+                o.positionWS = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
                 float3 ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
                 o.ase_texcoord1.xyz = ase_worldNormal;
                 

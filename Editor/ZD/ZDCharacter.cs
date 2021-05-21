@@ -379,7 +379,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 if (drawBaseMap)
                 {
                     EditorGUI.BeginDisabledGroup(true);
-                    //EditorGUI.DrawTextureTransparent();
+                    EditorGUILayout.ObjectField(diffuse.textureValue, typeof(Texture2D), false, GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.8f), GUILayout.Height(EditorGUIUtility.currentViewWidth * 0.8f));
                     EditorGUI.EndDisabledGroup();
                 }
             });

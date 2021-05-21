@@ -65,7 +65,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
             struct VertexInput
             {
                 float4 vertex: POSITION;
-                float3 ase_normal: NORMAL;
+                float3 normal: NORMAL;
                 float4 ase_texcoord: TEXCOORD0;
                 
                 #ifdef _DrawMeshInstancedProcedural
@@ -107,31 +107,31 @@ Shader "ZDShader/URP/Environment/SpecialTree"
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 #endif
                 float3 viewOffset = float3(remap(v.ase_texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
-                viewOffset = mul(viewOffset, UNITY_MATRIX_V);
+                viewOffset = mul(float4(viewOffset.xyz, 0.0), UNITY_MATRIX_V).xyz;
                 
                 float4 offset = v.vertex;
                 #ifdef _DrawMeshInstancedProcedural
-                    viewOffset = mul(viewOffset, _ObjectToWorldBuffer[id]);
+                    viewOffset = mul(float4(viewOffset.xyz, 0.0), _ObjectToWorldBuffer[id]).xyz;
                     v.vertex.xyz += normalize(viewOffset) * _ViewRendererMode;
                     v.vertex = WindAnimation(v.vertex, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]);
                     
                 #else
-                    viewOffset = mul(viewOffset, GetObjectToWorldMatrix());
+                    viewOffset = mul(float4(viewOffset.xyz, 0.0), GetObjectToWorldMatrix()).xyz;
                     v.vertex.xyz += normalize(viewOffset) * _ViewRendererMode;
                     v.vertex = WindAnimation(v.vertex, GetObjectToWorldMatrix(), GetWorldToObjectMatrix());
                 #endif
                 offset -= v.vertex;
-                v.ase_normal = v.ase_normal + offset * 0.5;
+                v.normal = v.normal + offset.xyz * 0.5;
                 
                 float3 ase_worldNormal = float3(0.0, 0.0, 0.0);
                 #ifdef _DrawMeshInstancedProcedural
                     #ifdef UNITY_ASSUME_UNIFORM_SCALING
-                        ase_worldNormal = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], v.ase_normal));
+                        ase_worldNormal = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], v.normal));
                     #else
-                        ase_worldNormal = SafeNormalize(mul(v.ase_normal, (real3x3)_WorldToObjectBuffer[id]));
+                        ase_worldNormal = SafeNormalize(mul(v.normal, (real3x3)_WorldToObjectBuffer[id]));
                     #endif
                 #else
-                    ase_worldNormal = TransformObjectToWorldNormal(v.ase_normal);
+                    ase_worldNormal = TransformObjectToWorldNormal(v.normal);
                 #endif
                 
                 o.ase_texcoord4.xyz = ase_worldNormal;

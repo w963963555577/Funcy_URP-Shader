@@ -171,7 +171,7 @@ Shader "ZDShader/URP/Character"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0));
+                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -361,7 +361,7 @@ Shader "ZDShader/URP/Character"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 
-                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0));
+                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
                 
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -702,7 +702,7 @@ Shader "ZDShader/URP/Character"
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
 
                 float specStep = 2.0;                
-                float specularValue = floor(pow(max(0, dot(i.normalWS, halfDirection)), exp2(lerp(1, 11, (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                float specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
 
                 /*
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
