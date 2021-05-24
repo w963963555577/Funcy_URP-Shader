@@ -1,7 +1,15 @@
 {
   "name": "com.zd.lwrp.funcy",
-  "description": "\u9019\u662f Funcy \u7684 Shader Package\n\u88e1\u9762\u6709\u5404\u7a2e Tutorial.",
+  "description": "這是 Funcy 的 Shader Package\n裡面有各種 Tutorial.",
   "version": "1.0.0",
+  "keywords": [
+    "key",
+    "words",
+    "used",
+    "for",
+    "package",
+    "search"
+  ],
   "unity": "2019.3",
   "unityRelease": "0f6",
   "displayName": "_Funcy URP",
