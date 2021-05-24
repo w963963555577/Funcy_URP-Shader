@@ -50,6 +50,10 @@ namespace Funcy.Graphics
                 buffer = null;
             }
         }
+        public static void Dispose(params Buffer[] buffers)
+        {
+            foreach (var b in buffers) b.Dispose();
+        }
         public static void DisposeAll()
         {
             foreach (var b in buffers) b.Dispose();

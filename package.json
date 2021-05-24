@@ -10,13 +10,18 @@
     "com.unity.mathematics": "1.1.0",
     "com.unity.rendering.hybrid": "0.5.2-preview.4"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/w963963555577/Funcy_URP-Shader.git"
-  },
+  "category": "w963963555577",
   "author": {
     "name": "FuncyLi",
     "email": "w963963555577@gmail.com",
-    "url": "https://github.com/w963963555577"
+    "url": "https://funcy-tech-art.xyz/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com:w963963555577/Funcy_URP-Shader.git",
+    "directory": "com.zd.lwrp.funcy"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@w963963555577"
   }
 }
