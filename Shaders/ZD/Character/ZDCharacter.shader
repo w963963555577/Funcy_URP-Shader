@@ -29,10 +29,29 @@ Shader "ZDShader/URP/Character"
         [HDR]_SpecularColor ("SpecularColor", Color) = (0.6176471, 0.6145149, 0.5722318, 1)
         _ShadowRamp ("Shadow Ramp", Range(0, 1)) = 1
         _SelfShadowRamp ("Self Shadow Ramp", Range(0, 1)) = 0.8
-        _Picker_0 ("Picker_0", Color) = (0.9686275, 0.8039216, 0.7882354, 1)
-        _Picker_1 ("Picker_1", Color) = (0.5764706, 0.6235294, 0.8705883, 1)
-        _ShadowColor0 ("ShadowColor0", Color) = (1, 0.7344488, 0.514151, 1)
-        _ShadowColor1 ("ShadowColor1", Color) = (0.3160377, 0.4365495, 1, 1)
+        
+        _Picker_0 ("Picker_0", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_1 ("Picker_1", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_2 ("Picker_2", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_3 ("Picker_3", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_4 ("Picker_4", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_5 ("Picker_5", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_6 ("Picker_6", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_7 ("Picker_7", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_8 ("Picker_8", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_9 ("Picker_9", Color) = (0.0, 0.5, 0.0, 0.0)
+        
+        _ShadowColor0 ("ShadowColor0", Color) = (1, 0.7344488, 0.514151, 0.1)
+        _ShadowColor1 ("ShadowColor1", Color) = (0.3160377, 0.4365495, 1, 0.1)
+        _ShadowColor2 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor3 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor4 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor5 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor6 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor7 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor8 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor9 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        
         _ShadowColorElse ("ShadowColorElse", Color) = (0.5471698, 0.5471698, 0.5471698, 1)
         
         [Toggle(_OutlineEnable)] _OutlineEnable ("Enable Outline", float) = 1
@@ -85,8 +104,8 @@ Shader "ZDShader/URP/Character"
         [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
         
         [IntRange]_SelectExpressionMap ("Select Map", Range(0, 1)) = 0
-        [NoScaleOffset]_ExpressionMap ("Face Sheet", 2D) = "white" { }
-        [NoScaleOffset]_ExpressionQMap ("Q Face Sheet", 2D) = "white" { }
+        [NoScaleOffset]_ExpressionMap ("Face Sheet", 2D) = "black" { }
+        [NoScaleOffset]_ExpressionQMap ("Q Face Sheet", 2D) = "black" { }
         
         [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
         [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
@@ -260,6 +279,19 @@ Shader "ZDShader/URP/Character"
             #if _ExpressionEnable
                 #pragma shader_feature_local _ExpressionFormat_Wink
                 #pragma shader_feature_local _ExpressionFormat_FaceSheet
+            #endif
+            
+            #ifdef SHADER_API_D3D11
+                #pragma shader_feature_local _PickerDebug_0
+                #pragma shader_feature_local _PickerDebug_1
+                #pragma shader_feature_local _PickerDebug_2
+                #pragma shader_feature_local _PickerDebug_3
+                #pragma shader_feature_local _PickerDebug_4
+                #pragma shader_feature_local _PickerDebug_5
+                #pragma shader_feature_local _PickerDebug_6
+                #pragma shader_feature_local _PickerDebug_7
+                #pragma shader_feature_local _PickerDebug_8
+                #pragma shader_feature_local _PickerDebug_9
             #endif
             
             #pragma multi_compile_fog
@@ -650,6 +682,55 @@ Shader "ZDShader/URP/Character"
                 float fresnel = max(1.0 - dot(viewDirection, normalDirection), saturate(dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
                 
+                
+                //ShadowReplacer
+                float shadowArea0 = CaculateShadowArea(_diffuse_var, _Picker_0, _ShadowColor0.a);
+                float shadowArea1 = CaculateShadowArea(_diffuse_var, _Picker_1, _ShadowColor1.a);
+                float shadowArea2 = CaculateShadowArea(_diffuse_var, _Picker_2, _ShadowColor2.a);
+                float shadowArea3 = CaculateShadowArea(_diffuse_var, _Picker_3, _ShadowColor3.a);
+                float shadowArea4 = CaculateShadowArea(_diffuse_var, _Picker_4, _ShadowColor4.a);
+                float shadowArea5 = CaculateShadowArea(_diffuse_var, _Picker_5, _ShadowColor5.a);
+                float shadowArea6 = CaculateShadowArea(_diffuse_var, _Picker_6, _ShadowColor6.a);
+                float shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
+                float shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
+                float shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
+                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9);
+                float shadowAreaElse = (1.0 - shadowTotalArea);
+                
+                
+                #ifdef SHADER_API_D3D11
+                    #if _PickerDebug_0
+                        return float4(shadowArea0.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_1
+                        return float4(shadowArea1.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_2
+                        return float4(shadowArea2.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_3
+                        return float4(shadowArea3.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_4
+                        return float4(shadowArea4.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_5
+                        return float4(shadowArea5.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_6
+                        return float4(shadowArea6.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_7
+                        return float4(shadowArea7.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_8
+                        return float4(shadowArea8.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_9
+                        return float4(shadowArea9.xxx, 1.0);
+                    #endif
+                #endif
+                
                 #if _ExpressionEnable
                     
                     half maskBlur = 0.01;
@@ -700,28 +781,23 @@ Shader "ZDShader/URP/Character"
                 
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
-
-                float specStep = 2.0;                
+                
+                float specStep = 2.0;
                 float specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
-
-                /*
+                
+                /*BDRF Specular but in this shader was nonconformity
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
                 float specularValue1 = BRDFSpecular(1.0, glossMask, i.normalWS.xyz, mainLight.direction, viewDirection) * NdotL;
                 float specularValue2 = pow(dot(i.normalWS.xyz, halfDirection) * 0.5 + 0.5, exp2(lerp(1, 11, (glossMask)))) ;
                 float specularValue = lerp(specularValue2, specularValue1, glossMask);
                 specularValue = smoothstep(0.003, 0.004, specularValue) ;
                 */
-
+                
                 float4 _SpecularColor_var = _SpecularColor;
                 float specularMask = _ESSGMask_var.b;
                 float4 _Color_var = _Color;
                 
-                float4 _Picker_1_var = _Picker_1;
-                float shadowStrength = 5.0;
-                float shadowPow1 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_1_var.rgb))), shadowStrength);
-                float4 _Picker_0_var = _Picker_0;
-                float shadowPow0 = pow((1.0 - saturate(distance(_diffuse_var.rgb, _Picker_0_var.rgb))), shadowStrength);
-                float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
+                
                 
                 #if _DiscolorationSystem
                     //Discoloration
@@ -759,6 +835,7 @@ Shader "ZDShader/URP/Character"
                 selfShadow = saturate(selfShadow);
                 
                 //PBRShadowArea
+                float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
                 float refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
                 half uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
                 
@@ -772,28 +849,28 @@ Shader "ZDShader/URP/Character"
                 selfShadow = 1.0 - selfShadow;
                 
                 float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
-                //PBRShadowArea = PBRShadowArea;
                 PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
                 
                 
-                float node_8468 = 2.0;
-                float shadowArea0 = saturate(((1.0 - shadowPow1) * shadowPow0 * node_8468)) ;
-                float4 _ShadowColor0_var = _ShadowColor0;
-                float shadowArea1 = saturate((shadowPow1 * (1.0 - shadowPow0) * node_8468)) ;
-                float shadowAreaElse = (1.0 - saturate(shadowArea0 + shadowArea1));
-                float4 _ShadowColor1_var = _ShadowColor1;
-                float4 _ShadowColorElse_var = _ShadowColorElse;
+                
                 float4 _EmissionColor_var = _EmissionColor;
                 float emissionMask = _ESSGMask_var.r;
                 float emMask = emissionMask;
                 float3 _EmissionxBase_var = lerp(emMask, (_diffuse_var.rgb * emMask), _EmissionxBase);
                 float _EmissionOn_var = _EmissionOn;
-                
                 float _Flash_var = (1.0 - max(0, dot(normalDirection, viewDirection))) * _Flash;
                 float3 specularColor = _SpecularColor_var.rgb * specularValue * specularMask;
                 
-                float shadowTotal = saturate(shadowArea0 + shadowArea1 + shadowAreaElse) * (1.0 - PBRShadowArea);
-                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * saturate(shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb + shadowAreaElse * _ShadowColorElse.rgb), shadowTotal);
+                
+                //MixShadowReplacer
+                float3 shadowColor = shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb +
+                shadowArea2 * _ShadowColor2.rgb + shadowArea3 * _ShadowColor3.rgb +
+                shadowArea4 * _ShadowColor4.rgb + shadowArea5 * _ShadowColor5.rgb +
+                shadowArea6 * _ShadowColor6.rgb + shadowArea7 * _ShadowColor7.rgb +
+                shadowArea8 * _ShadowColor8.rgb + shadowArea9 * _ShadowColor9.rgb +
+                shadowAreaElse * _ShadowColorElse.rgb;
+                
+                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
                 
                 
                 half clampMask = 1.0 - smoothstep(0.99, 1.0, abs(i.effectcoord.y - 0.5) * 2.0);

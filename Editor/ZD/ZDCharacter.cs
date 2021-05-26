@@ -52,10 +52,29 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty outlineWidthControl { get; set; }
 
         MaterialProperty picker_0 { get; set; }
-        MaterialProperty shadowColor0 { get; set; }
         MaterialProperty picker_1 { get; set; }
+        MaterialProperty picker_2 { get; set; }
+        MaterialProperty picker_3 { get; set; }
+        MaterialProperty picker_4 { get; set; }
+        MaterialProperty picker_5 { get; set; }
+        MaterialProperty picker_6 { get; set; }
+        MaterialProperty picker_7 { get; set; }
+        MaterialProperty picker_8 { get; set; }
+        MaterialProperty picker_9 { get; set; }
+        MaterialProperty shadowColor0 { get; set; }        
         MaterialProperty shadowColor1 { get; set; }
+        MaterialProperty shadowColor2 { get; set; }
+        MaterialProperty shadowColor3 { get; set; }
+        MaterialProperty shadowColor4 { get; set; }
+        MaterialProperty shadowColor5 { get; set; }
+        MaterialProperty shadowColor6 { get; set; }
+        MaterialProperty shadowColor7 { get; set; }
+        MaterialProperty shadowColor8 { get; set; }
+        MaterialProperty shadowColor9 { get; set; }
         MaterialProperty shadowColorElse { get; set; }
+
+        MaterialProperty[] shadowPickerList = new MaterialProperty[10];
+        MaterialProperty[] shadowColorList = new MaterialProperty[10];
 
         MaterialProperty customLightColor { get; set; }
         MaterialProperty customLightIntensity { get; set; }
@@ -124,7 +143,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 discolorationColor_0, discolorationColor_1,discolorationColor_2, discolorationColor_3,
                 discolorationColor_4, discolorationColor_5,discolorationColor_6, discolorationColor_7,
                 discolorationColor_8,discolorationColor_9
-            };           
+            };
+            shadowPickerList = new MaterialProperty[] {
+                picker_0,picker_1,picker_2,picker_3,picker_4,
+                picker_5,picker_6,picker_7,picker_8,picker_9
+            };
+            shadowColorList = new MaterialProperty[] {
+                shadowColor0,shadowColor1,shadowColor2,shadowColor3,shadowColor4,
+                shadowColor5,shadowColor6,shadowColor7,shadowColor8,shadowColor9
+            };
         }
 
 
@@ -339,41 +366,48 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawArea("Shadow Replacer", () => {
-
+                
                 GUILayout.BeginHorizontal();
                 {
                     GUILayout.Label("Pick color",EditorStyles.boldLabel);
                     GUILayout.FlexibleSpace();
-                    GUILayout.Label("Replace shadow color", EditorStyles.boldLabel);
+                    GUILayout.Label("Replace color", EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
+                    GUILayout.Label("Debug Pick Area", EditorStyles.boldLabel);
                 }
                 GUILayout.EndHorizontal();                
 
                 Rect baseRect = GUILayoutUtility.GetLastRect();
                 var current = baseRect;
-
-                for (int i = 0; i < 4; i++) GUILayout.Space(10);
-
-                #region Start Picker
-                {
-                    current.y += 16; current.width /= 3.0f;
-                    materialEditor.ColorProperty(current, picker_0, "");
-                    current = baseRect;
-                    current.y += 16; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
-                    materialEditor.ColorProperty(current, shadowColor0, "");
-                }
-                #endregion // Start Picker
-
-                #region Start Picker
-                {
-                    current = baseRect;
-                    current.y += 32; current.width /= 3.0f;
-                    materialEditor.ColorProperty(current, picker_1, "");
-                    current = baseRect;
-                    current.y += 32; current.width /= 3.0f; current.x = baseRect.x + baseRect.width - current.width;
-                    materialEditor.ColorProperty(current, shadowColor1, "");
-                }
-                #endregion // Start Picker
                 
+
+                #region Start Picker
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        GUILayout.Space(15);
+                        current = baseRect;
+                        current.y += 16 * (i + 1); current.width /= 4.0f;
+                        materialEditor.ColorProperty(current, shadowPickerList[i], "");
+                        current = baseRect;
+                        current.y += 16 * (i + 1); current.width /= 4.0f; current.x = baseRect.x + baseRect.width * 0.5f  - 60;
+                        materialEditor.ColorProperty(current, shadowColorList[i], "");
+                        current = baseRect;
+                        current.y += 16 * (i + 1); current.width /= 4.0f; current.x = baseRect.x + baseRect.width - 20;
+                        string keywordName = string.Format("_PickerDebug_{0}", i);
+                        bool debugArea = mat.IsKeywordEnabled(keywordName);
+                        bool isChanged = EditorGUI.Toggle(current, debugArea);
+                        if(isChanged != debugArea)
+                        {
+                            if (isChanged)
+                            { mat.EnableKeyword(keywordName); }
+                            else
+                            { mat.DisableKeyword(keywordName); }
+                        }
+                    }
+                }
+                #endregion 
+                GUILayout.Space(20);
                 materialEditor.ShaderProperty(shadowColorElse, "Else Area");
                 drawBaseMap = EditorGUILayout.Toggle("Draw Base Map", drawBaseMap);
                 if (drawBaseMap)
