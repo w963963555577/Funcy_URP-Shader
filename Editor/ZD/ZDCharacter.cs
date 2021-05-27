@@ -437,6 +437,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                         materialEditor.ColorProperty(current, shadowColorList[i], "");
                         current = baseRect;
                         current.y += 16 * (i + 1); current.width /= 4.0f; current.x = baseRect.x + baseRect.width - 20;
+
                         string keywordName = string.Format("_PickerDebug_{0}", i);
                         bool debugArea = mat.IsKeywordEnabled(keywordName);
                         bool isChanged = EditorGUI.Toggle(current, debugArea);
@@ -555,12 +556,23 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             });
 
             DrawArea("Settings",()=> {
+
                 materialEditor.ShaderProperty(receiveShadow, receiveShadow.displayName); 
                 materialEditor.ShaderProperty(shadowRefraction, shadowRefraction.displayName);
                 materialEditor.ShaderProperty(shadowOffset, shadowOffset.displayName);
                 materialEditor.ShaderProperty(shadowRamp, shadowRamp.displayName);
                 materialEditor.ShaderProperty(selfShadowRamp, selfShadowRamp.displayName);
-                materialEditor.ShaderProperty(distanceDisslove, distanceDisslove.displayName);                
+                materialEditor.ShaderProperty(distanceDisslove, distanceDisslove.displayName);
+                string keywordName = "_Desaturation";
+                bool debugArea = mat.IsKeywordEnabled(keywordName);
+                bool isChanged = EditorGUILayout.Toggle("Desaturation", debugArea);
+                if (isChanged != debugArea)
+                {
+                    if (isChanged)
+                    { mat.EnableKeyword(keywordName); }
+                    else
+                    { mat.DisableKeyword(keywordName); }
+                }
                 materialEditor.RenderQueueField();
             });
 

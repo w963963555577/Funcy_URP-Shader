@@ -292,6 +292,8 @@ Shader "ZDShader/URP/Character"
                 #pragma shader_feature_local _PickerDebug_7
                 #pragma shader_feature_local _PickerDebug_8
                 #pragma shader_feature_local _PickerDebug_9
+                
+                #pragma shader_feature_local _Desaturation
             #endif
             
             #pragma multi_compile_fog
@@ -523,26 +525,24 @@ Shader "ZDShader/URP/Character"
                 
                 return min(_SelfShadow_UV1_var, 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01));
             }
+            half3 RGB2HSV(half3 c)
+            {
+                float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+                float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
+                float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+                
+                float d = q.x - min(q.w, q.y);
+                float e = 1.0e-10;
+                return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+            }
             
+            half3 HSV2RGB(half3 c)
+            {
+                float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+                float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
+                return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
+            }
             #if _DiscolorationSystem
-                half3 RGB2HSV(half3 c)
-                {
-                    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-                    float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
-                    float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
-                    
-                    float d = q.x - min(q.w, q.y);
-                    float e = 1.0e-10;
-                    return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-                }
-                
-                half3 HSV2RGB(half3 c)
-                {
-                    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                    float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
-                    return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
-                }
-                
                 void Step8Color(half gray, half2 eyeAreaReplace, half2 browReplace, half2 mouthReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
                 {
                     float gray_oneminus = (1.0 - gray);
@@ -920,6 +920,14 @@ Shader "ZDShader/URP/Character"
                 
                 half alphaMinus = 1.0 - _EffectiveColor.a;
                 effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                
+                #ifdef SHADER_API_D3D11
+                    #if _Desaturation
+                        float3 s = RGB2HSV(finalColor.rgb);
+                        s.g = 0.0;
+                        return float4(HSV2RGB(s), _Color.a * effectiveDisslive.a);
+                    #endif
+                #endif
                 
                 float4 finalRGBA = float4(finalColor, _Color.a * effectiveDisslive.a);
                 
