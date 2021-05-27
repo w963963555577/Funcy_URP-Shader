@@ -124,10 +124,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     public class ShadowReplacer
     {
         public ColorJson picker0, picker1, picker2, picker3, picker4, picker5, picker6, picker7, picker8, picker9;
-        public ColorJson shadowColor0, shadowColor1, shadowColor2, shadowColor3, shadowColor4, shadowColor5, shadowColor6, shadowColor7, shadowColor8, shadowColor9;
+        public ColorJson shadowColor0, shadowColor1, shadowColor2, shadowColor3, shadowColor4, shadowColor5, shadowColor6, shadowColor7, shadowColor8, shadowColor9, shadowColorElse;
         public static void Copy(Material m)
         {
-            ShadowReplacer discolorationSystem = new ShadowReplacer()
+            ShadowReplacer shadowReplacer = new ShadowReplacer()
             {                                
                 picker0 = m.GetColor("_Picker_0").ToColorJson(),
                 picker1 = m.GetColor("_Picker_1").ToColorJson(),
@@ -149,9 +149,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 shadowColor7 = m.GetColor("_ShadowColor7").ToColorJson(),
                 shadowColor8 = m.GetColor("_ShadowColor8").ToColorJson(),
                 shadowColor9 = m.GetColor("_ShadowColor9").ToColorJson(),
+                shadowColorElse = m.GetColor("_ShadowColorElse").ToColorJson(),
             };
 
-            var json = JsonMapper.ToJson(discolorationSystem);
+            var json = JsonMapper.ToJson(shadowReplacer);
 
             EditorPrefs.SetString("ZDCharacter-ShadowReplacer", json);
         }
@@ -187,7 +188,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_ShadowColor7", shadowReplacer.shadowColor7.ToColor());
             m.SetColor("_ShadowColor8", shadowReplacer.shadowColor8.ToColor());
             m.SetColor("_ShadowColor9", shadowReplacer.shadowColor9.ToColor());
-
+            m.SetColor("_ShadowColorElse", shadowReplacer.shadowColorElse.ToColor());
             AssetDatabase.SaveAssets();
         }
     }
