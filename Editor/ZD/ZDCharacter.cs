@@ -291,13 +291,31 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.Space(10);
                 GUILayout.EndVertical();
 
-
-
-
-
-
                 materialEditor.ShaderProperty(flash, flash.displayName);
+            },
+            () =>
+            {
+                GenericMenu menu = new GenericMenu();
+
+                menu.AddItem(new GUIContent("Copy Effective"), false, () => {
+                    Effective.Copy(mat);
+                });
+                if (Effective.CanPaste())
+                {
+                    menu.AddItem(new GUIContent("Paste Effective"), false, () => {
+                        Effective.Paste(mat);
+                    });
+                }
+                else
+                {
+                    menu.AddDisabledItem(new GUIContent("Paste  Effective"));
+                }
+
+                menu.ShowAsContext();
+
+                Event.current.Use();
             });
+
 
             DrawArea("Outline", () =>
             {
@@ -326,6 +344,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 }
                 
             });
+
+
 
             DrawArea("Discoloration System", () =>
             {
@@ -363,7 +383,30 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                     }
                 }
                 EditorGUI.EndDisabledGroup();
+            },
+            () => 
+            {
+                GenericMenu menu = new GenericMenu();
+                
+                menu.AddItem(new GUIContent("Copy Discoloration"), false, () => {
+                    DiscolorationSystem.Copy(mat);
+                });
+                if(DiscolorationSystem.CanPaste())
+                {
+                    menu.AddItem(new GUIContent("Paste Discoloration"), false, () => {
+                        DiscolorationSystem.Paste(mat);
+                    });
+                }
+                else
+                {
+                    menu.AddDisabledItem(new GUIContent("Paste  Discoloration"));
+                }                
+
+                menu.ShowAsContext();
+
+                Event.current.Use();
             });
+
 
             DrawArea("Shadow Replacer", () => {
                 
@@ -416,7 +459,30 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                     EditorGUILayout.ObjectField(diffuse.textureValue, typeof(Texture2D), false, GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.8f), GUILayout.Height(EditorGUIUtility.currentViewWidth * 0.8f));
                     EditorGUI.EndDisabledGroup();
                 }
+            },
+            () =>
+            {
+                GenericMenu menu = new GenericMenu();
+
+                menu.AddItem(new GUIContent("Copy ShadowReplacer"), false, () => {
+                    ShadowReplacer.Copy(mat);
+                });
+                if (ShadowReplacer.CanPaste())
+                {
+                    menu.AddItem(new GUIContent("Paste ShadowReplacer"), false, () => {
+                        ShadowReplacer.Paste(mat);
+                    });
+                }
+                else
+                {
+                    menu.AddDisabledItem(new GUIContent("Paste  ShadowReplacer"));
+                }
+
+                menu.ShowAsContext();
+
+                Event.current.Use();
             });
+
 
             DrawArea("Expression System", () =>
             {

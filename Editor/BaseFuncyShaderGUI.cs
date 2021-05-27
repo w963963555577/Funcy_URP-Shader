@@ -106,7 +106,7 @@ namespace UnityEditor
             }
         }
         [SerializeField] List<AnimBoolNameId> animBools = new List<AnimBoolNameId>();
-        public void DrawArea(string text, Action onGUI, float fadeSpeed = 3.0f, string style = "ShurikenModuleTitle")
+        public void DrawArea(string text, Action onGUI, Action onComtextMenu = null, float fadeSpeed = 3.0f, string style = "ShurikenModuleTitle")
         {
             string key = text;
             bool state = EditorPrefs.GetBool(key, true);
@@ -135,12 +135,21 @@ namespace UnityEditor
                 else text = "\u25BA " + text;
                 if (GUILayout.Button(text, style))
                 {
-                    state = !state;
-                    currentAnimBool.animBool.target = state;
-                    EditorPrefs.SetBool(key, state);
+                    if (onComtextMenu != null && Event.current.button == 1)
+                    {                        
+                        onComtextMenu?.Invoke();                        
+                    }
+                    else
+                    {
+                        state = !state;
+                        currentAnimBool.animBool.target = state;
+                        EditorPrefs.SetBool(key, state);
+                    }                    
                 }
+
             }
-            GUILayout.EndHorizontal();
+            GUILayout.EndHorizontal();            
+
             GUI.backgroundColor = Color.white;
 
             if (currentAnimBool == null) return;

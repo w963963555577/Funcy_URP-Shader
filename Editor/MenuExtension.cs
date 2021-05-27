@@ -218,24 +218,75 @@ public class MenuExtension
                  ColorToSheetString(shadowColor3)
                 );
         }
-        [MenuItem("Assets/ZD/複製角色RGB", true)]
-        public static bool CopyDiscolorationInfo_Validator()
-        {           
-            return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/LWRP/Character";
+
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste Effective", true)]
+        public static bool PasteEffective_Validator()
+        {
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.Effective.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
         }
-        [MenuItem("Assets/ZD/複製角色RGB", false, 1001)]
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste Effective", false, 1001)]
+        public static void PasteEffectiveSystem()
+        {
+            foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
+            {
+                var m = ((Material)mo);
+                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.Effective.Paste(m);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste DiscolorationSystem", true)]
+        public static bool PasteDiscolorationSystem_Validator()
+        {
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.DiscolorationSystem.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+        }
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste DiscolorationSystem", false, 1002)]
+        public static void PasteDiscolorationSystem()
+        {
+            foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
+            {
+                var m = ((Material)mo);
+                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.DiscolorationSystem.Paste(m);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste ShadowReplacer", true)]
+        public static bool PasteShadowReplacer_Validator()
+        {
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ShadowReplacer.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+        }
+        [MenuItem("Assets/ZD/Charater Shader Materials/Paste ShadowReplacer", false, 1003)]
+        public static void PasteShadowReplacer()
+        {
+            foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
+            {
+                var m = ((Material)mo);
+                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ShadowReplacer.Paste(m);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("Assets/ZD/Excel/複製角色RGB到表格", true)]
+        public static bool CopyDiscolorationInfo_Validator()
+        {
+            return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+        }
+        [MenuItem("Assets/ZD/Excel/複製角色RGB到表格", false, 1005)]
         public static void CopyDiscolorationInfo()
         {
             Material referenceMaterial = Selection.activeObject as Material;
             GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial);
         }
 
-        [MenuItem("Assets/ZD/複製所有角色RGB", true)]
+        [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", true)]
         public static bool CopyAllDiscolorationInfo_Validator()
         {
             return Selection.activeObject is DefaultAsset && AssetDatabase.GetAssetPath(Selection.activeObject) == "Assets/02.Arts/Models/Combines";
         }
-        [MenuItem("Assets/ZD/複製所有角色RGB", false, 1001)]
+        [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", false, 1005)]
         public static void CopyAllDiscolorationInfo()
         {
             var dirs = Directory.GetDirectories(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"));
