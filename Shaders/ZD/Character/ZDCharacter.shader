@@ -863,8 +863,9 @@ Shader "ZDShader/URP/Character"
                 //return float4(overexposed.xxx, 1.0);
                 shadowColor.z = endOfBrightness;
                 
-                shadowColor.rgb = HSV2RGB(shadowColor.xyz);
                 shadowColor.y = lerp(shadowColor.y, _diffuse_hsv.y, 1.0 - _ShadowColorElse.a);
+                shadowColor.rgb = HSV2RGB(shadowColor.xyz);
+                
                 
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
                 
