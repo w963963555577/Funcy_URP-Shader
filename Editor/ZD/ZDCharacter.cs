@@ -452,7 +452,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 }
                 #endregion 
                 GUILayout.Space(20);
+
                 materialEditor.ShaderProperty(shadowColorElse, "Else Area");
+                GUILayout.Label("Alpha Chanel is mix with diffuse color saturation");
+                GUILayout.Label("Alpha = 0 as 100%, Alpha = 1 as 0%");
+
                 drawBaseMap = EditorGUILayout.Toggle("Draw Base Map", drawBaseMap);
                 if (drawBaseMap)
                 {

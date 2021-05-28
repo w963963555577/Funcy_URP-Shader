@@ -51,7 +51,6 @@ Shader "ZDShader/URP/Character"
         _ShadowColor7 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
         _ShadowColor8 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
         _ShadowColor9 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        
         _ShadowColorElse ("ShadowColorElse", Color) = (0.5471698, 0.5471698, 0.5471698, 1)
         
         [Toggle(_OutlineEnable)] _OutlineEnable ("Enable Outline", float) = 1
@@ -762,6 +761,7 @@ Shader "ZDShader/URP/Character"
                     
                 #endif
                 
+                float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
                 
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
@@ -853,9 +853,16 @@ Shader "ZDShader/URP/Character"
                 shadowArea6 * _ShadowColor6.rgb + shadowArea7 * _ShadowColor7.rgb +
                 shadowArea8 * _ShadowColor8.rgb + shadowArea9 * _ShadowColor9.rgb +
                 shadowAreaElse * _ShadowColorElse.rgb;
+                
                 shadowColor.xyz = RGB2HSV(shadowColor.rgb);
-                shadowColor.z = min(1.0, shadowColor.z);
+                
+                float endOfBrightness = min(1.0, shadowColor.z);
+                float overexposed = shadowColor.z - endOfBrightness;
+                //return float4(overexposed.xxx, 1.0);
+                shadowColor.z = endOfBrightness;
+                
                 shadowColor.rgb = HSV2RGB(shadowColor.xyz);
+                shadowColor.y = lerp(shadowColor.y, _diffuse_hsv.y, 1.0 - _ShadowColorElse.a);
                 
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
                 
