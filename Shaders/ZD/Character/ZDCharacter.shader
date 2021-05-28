@@ -761,7 +761,6 @@ Shader "ZDShader/URP/Character"
                     
                 #endif
                 
-                float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
                 
                 float3 lightColor = mainLight.color.rgb;
                 float3 halfDirection = normalize(viewDirection + mainLight.direction);
@@ -815,6 +814,9 @@ Shader "ZDShader/URP/Character"
                     _diffuse_var.rgb = lerp(HSV2RGB(half3(colorHSV_A.rg, colorHSV_B.b * (step_var.a + 1.0) + max(0, step_var.a))), mupArea, skinArea + eyeArea + blackArea);
                     
                 #endif
+                
+                float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
+                
                 
                 selfShadow = saturate(selfShadow);
                 
