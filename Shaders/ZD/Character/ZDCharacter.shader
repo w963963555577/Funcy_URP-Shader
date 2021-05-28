@@ -525,23 +525,7 @@ Shader "ZDShader/URP/Character"
                 
                 return min(_SelfShadow_UV1_var, 1.0 - smoothstep(_SelfMask_UV1_var.r - 0.01, _SelfMask_UV1_var.r + 0.01, angle01));
             }
-            half3 RGB2HSV(half3 c)
-            {
-                float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-                float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
-                float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
-                
-                float d = q.x - min(q.w, q.y);
-                float e = 1.0e-10;
-                return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-            }
             
-            half3 HSV2RGB(half3 c)
-            {
-                float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
-                return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
-            }
             #if _DiscolorationSystem
                 void Step8Color(half gray, half2 eyeAreaReplace, half2 browReplace, half2 mouthReplace, out float4 color, out float blackArea, out float skinArea, out float eyeArea)
                 {
@@ -869,6 +853,9 @@ Shader "ZDShader/URP/Character"
                 shadowArea6 * _ShadowColor6.rgb + shadowArea7 * _ShadowColor7.rgb +
                 shadowArea8 * _ShadowColor8.rgb + shadowArea9 * _ShadowColor9.rgb +
                 shadowAreaElse * _ShadowColorElse.rgb;
+                shadowColor.xyz = RGB2HSV(shadowColor.rgb);
+                shadowColor.z = min(1.0, shadowColor.z);
+                shadowColor.rgb = HSV2RGB(shadowColor.xyz);
                 
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
                 
