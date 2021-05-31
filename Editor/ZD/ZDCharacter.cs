@@ -61,6 +61,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty picker_7 { get; set; }
         MaterialProperty picker_8 { get; set; }
         MaterialProperty picker_9 { get; set; }
+        MaterialProperty picker_10 { get; set; }
+        MaterialProperty picker_11 { get; set; }
         MaterialProperty shadowColor0 { get; set; }        
         MaterialProperty shadowColor1 { get; set; }
         MaterialProperty shadowColor2 { get; set; }
@@ -71,10 +73,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty shadowColor7 { get; set; }
         MaterialProperty shadowColor8 { get; set; }
         MaterialProperty shadowColor9 { get; set; }
+        MaterialProperty shadowColor10 { get; set; }
+        MaterialProperty shadowColor11 { get; set; }
         MaterialProperty shadowColorElse { get; set; }
 
-        MaterialProperty[] shadowPickerList = new MaterialProperty[10];
-        MaterialProperty[] shadowColorList = new MaterialProperty[10];
+        MaterialProperty[] shadowPickerList = new MaterialProperty[12];
+        MaterialProperty[] shadowColorList = new MaterialProperty[12];
 
         MaterialProperty customLightColor { get; set; }
         MaterialProperty customLightIntensity { get; set; }
@@ -146,11 +150,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             };
             shadowPickerList = new MaterialProperty[] {
                 picker_0,picker_1,picker_2,picker_3,picker_4,
-                picker_5,picker_6,picker_7,picker_8,picker_9
+                picker_5,picker_6,picker_7,picker_8,picker_9,picker_10,picker_11
             };
             shadowColorList = new MaterialProperty[] {
                 shadowColor0,shadowColor1,shadowColor2,shadowColor3,shadowColor4,
-                shadowColor5,shadowColor6,shadowColor7,shadowColor8,shadowColor9
+                shadowColor5,shadowColor6,shadowColor7,shadowColor8,shadowColor9,shadowColor10,shadowColor11
             };
         }
 
@@ -426,7 +430,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
                 #region Start Picker
                 {
-                    for (int i = 0; i < 10; i++)
+                    for (int i = 0; i < 12; i++)
                     {
                         GUILayout.Space(15);
                         current = baseRect;

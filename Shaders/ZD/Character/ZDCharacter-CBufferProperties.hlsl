@@ -21,6 +21,8 @@ half4 _Picker_6;
 half4 _Picker_7;
 half4 _Picker_8;
 half4 _Picker_9;
+half4 _Picker_10;
+half4 _Picker_11;
 
 half4 _ShadowColor0;
 half4 _ShadowColor1;
@@ -32,6 +34,8 @@ half4 _ShadowColor6;
 half4 _ShadowColor7;
 half4 _ShadowColor8;
 half4 _ShadowColor9;
+half4 _ShadowColor10;
+half4 _ShadowColor11;
 
 half4 _ShadowColorElse;
 half _Cutoff;

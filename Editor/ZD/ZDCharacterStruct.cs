@@ -4,9 +4,17 @@ using UnityEngine;
 using LitJson;
 namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
-    public class ReleaseEditorPrefs
+    [InitializeOnLoad]
+    public class ReleaseEditorPrefs : Editor
     {
-
+        static ReleaseEditorPrefs()
+        {
+            EditorApplication.quitting += () => {
+                EditorPrefs.DeleteKey("ZDCharacter-Effective");
+                EditorPrefs.DeleteKey("ZDCharacter-DiscolorationSystem");
+                EditorPrefs.DeleteKey("ZDCharacter-ShadowReplacer");
+            };
+        }
     }
     public class ColorJson
     {
@@ -123,8 +131,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     [System.Serializable]
     public class ShadowReplacer
     {
-        public ColorJson picker0, picker1, picker2, picker3, picker4, picker5, picker6, picker7, picker8, picker9;
-        public ColorJson shadowColor0, shadowColor1, shadowColor2, shadowColor3, shadowColor4, shadowColor5, shadowColor6, shadowColor7, shadowColor8, shadowColor9, shadowColorElse;
+        public ColorJson picker0, picker1, picker2, picker3, picker4, picker5, picker6, picker7, picker8, picker9, picker10, picker11;
+        public ColorJson shadowColor0, shadowColor1, shadowColor2, shadowColor3, shadowColor4, shadowColor5, shadowColor6, shadowColor7, shadowColor8, shadowColor9, shadowColor10, shadowColor11, shadowColorElse;
         public static void Copy(Material m)
         {
             ShadowReplacer shadowReplacer = new ShadowReplacer()
@@ -139,6 +147,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 picker7 = m.GetColor("_Picker_7").ToColorJson(),
                 picker8 = m.GetColor("_Picker_8").ToColorJson(),
                 picker9 = m.GetColor("_Picker_9").ToColorJson(),
+                picker10 = m.GetColor("_Picker_10").ToColorJson(),
+                picker11 = m.GetColor("_Picker_11").ToColorJson(),
                 shadowColor0 = m.GetColor("_ShadowColor0").ToColorJson(),
                 shadowColor1 = m.GetColor("_ShadowColor1").ToColorJson(),
                 shadowColor2 = m.GetColor("_ShadowColor2").ToColorJson(),
@@ -149,6 +159,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 shadowColor7 = m.GetColor("_ShadowColor7").ToColorJson(),
                 shadowColor8 = m.GetColor("_ShadowColor8").ToColorJson(),
                 shadowColor9 = m.GetColor("_ShadowColor9").ToColorJson(),
+                shadowColor10 = m.GetColor("_ShadowColor10").ToColorJson(),
+                shadowColor11 = m.GetColor("_ShadowColor11").ToColorJson(),
                 shadowColorElse = m.GetColor("_ShadowColorElse").ToColorJson(),
             };
 
@@ -177,6 +189,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_Picker_7", shadowReplacer.picker7.ToColor());
             m.SetColor("_Picker_8", shadowReplacer.picker8.ToColor());
             m.SetColor("_Picker_9", shadowReplacer.picker9.ToColor());
+            m.SetColor("_Picker_10", shadowReplacer.picker10.ToColor());
+            m.SetColor("_Picker_11", shadowReplacer.picker11.ToColor());
 
             m.SetColor("_ShadowColor0", shadowReplacer.shadowColor0.ToColor());
             m.SetColor("_ShadowColor1", shadowReplacer.shadowColor1.ToColor());
@@ -188,12 +202,13 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_ShadowColor7", shadowReplacer.shadowColor7.ToColor());
             m.SetColor("_ShadowColor8", shadowReplacer.shadowColor8.ToColor());
             m.SetColor("_ShadowColor9", shadowReplacer.shadowColor9.ToColor());
+            m.SetColor("_ShadowColor10", shadowReplacer.shadowColor10.ToColor());
+            m.SetColor("_ShadowColor11", shadowReplacer.shadowColor11.ToColor());
             m.SetColor("_ShadowColorElse", shadowReplacer.shadowColorElse.ToColor());
             AssetDatabase.SaveAssets();
         }
     }
     #endregion ShadowReplacer
-
 
 
     public static class Extension

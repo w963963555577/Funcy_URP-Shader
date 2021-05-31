@@ -40,17 +40,21 @@ Shader "ZDShader/URP/Character"
         _Picker_7 ("Picker_7", Color) = (0.0, 0.5, 0.0, 0.0)
         _Picker_8 ("Picker_8", Color) = (0.0, 0.5, 0.0, 0.0)
         _Picker_9 ("Picker_9", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_10 ("Picker_10", Color) = (0.0, 0.5, 0.0, 0.0)
+        _Picker_11 ("Picker_11", Color) = (0.0, 0.5, 0.0, 0.0)
         
-        _ShadowColor0 ("ShadowColor0", Color) = (1, 0.7344488, 0.514151, 0.1)
-        _ShadowColor1 ("ShadowColor1", Color) = (0.3160377, 0.4365495, 1, 0.1)
-        _ShadowColor2 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor3 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor4 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor5 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor6 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor7 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor8 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
-        _ShadowColor9 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.1)
+        _ShadowColor0 ("ShadowColor0", Color) = (1, 0.7344488, 0.514151, 0.0)
+        _ShadowColor1 ("ShadowColor1", Color) = (0.3160377, 0.4365495, 1, 0.0)
+        _ShadowColor2 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor3 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor4 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor5 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor6 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor7 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor8 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor9 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor10 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ShadowColor11 ("ShadowColor1", Color) = (0.0, 0.0, 0.0, 0.0)
         _ShadowColorElse ("ShadowColorElse", Color) = (0.5471698, 0.5471698, 0.5471698, 1)
         
         [Toggle(_OutlineEnable)] _OutlineEnable ("Enable Outline", float) = 1
@@ -189,7 +193,7 @@ Shader "ZDShader/URP/Character"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
+                //half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -291,7 +295,8 @@ Shader "ZDShader/URP/Character"
                 #pragma shader_feature_local _PickerDebug_7
                 #pragma shader_feature_local _PickerDebug_8
                 #pragma shader_feature_local _PickerDebug_9
-                
+                #pragma shader_feature_local _PickerDebug_10
+                #pragma shader_feature_local _PickerDebug_11
                 #pragma shader_feature_local _Desaturation
             #endif
             
@@ -372,8 +377,8 @@ Shader "ZDShader/URP/Character"
                 
                 float2 GetMouthArea(float2 uv, float mouthCount, float selectMouth, half2 offsetScale)
                 {
-                    float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) / 4.0) * 0.5 + 1.0) / 2.0;
-                    float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) / 2.0) + 1.5) / (mouthCount / 2.0);
+                    float pX = (uv.x * 0.5 + floor((selectMouth - 1.0) * 0.25) * 0.5 + 1.0) * 0.5;
+                    float pY = (uv.y * 0.5 + (mouthCount - fmod(selectMouth - 1.0, 4.0) * 0.5) + 1.5) / (mouthCount * 0.5);
                     return float2(pX, pY);
                 }
                 
@@ -394,7 +399,7 @@ Shader "ZDShader/URP/Character"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 
-                half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
+                //half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
                 
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -422,8 +427,8 @@ Shader "ZDShader/URP/Character"
                 half index = _SelfMaskDirection;
                 half3 dirPZPY = half3(0, 0, 1);half3 upPZPY = half3(0, 1, 0);
                 half3 dirPYNX = half3(0, 1, 0);half3 upPYNX = half3(-1, 0, 0);
-                half3 useDir = lerp(dirPZPY, dirPYNX, saturate(index));
-                half3 useUp = lerp(upPZPY, upPYNX, saturate(index));
+                half3 useDir = lerp(dirPZPY, dirPYNX, min(1, index));
+                half3 useUp = lerp(upPZPY, upPYNX, min(1, index));
                 output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
                 output.objectDirection.y = 0;
                 
@@ -532,19 +537,19 @@ Shader "ZDShader/URP/Character"
                     #if _ExpressionEnable
                         float eyeCenter = smoothstep(0.5, 1.0, eyeAreaReplace.x) * eyeAreaReplace.y;
                     #endif
-                    float grayArea_9 = saturate((smoothstep(0.90, 1.00, gray) * 2.0));
-                    float grayArea_8 = saturate((smoothstep(0.70, 0.80, gray) * 2.0));
-                    float grayArea_7 = saturate((smoothstep(0.60, 0.70, gray) * 2.0));
-                    float grayArea_6 = saturate((smoothstep(0.45, 0.60, gray) * 2.0));
-                    float grayArea_5 = saturate((smoothstep(0.35, 0.45, gray) * 2.0));
+                    float grayArea_9 = min(1.0, (smoothstep(0.90, 1.00, gray) * 2.0));
+                    float grayArea_8 = min(1.0, (smoothstep(0.70, 0.80, gray) * 2.0));
+                    float grayArea_7 = min(1.0, (smoothstep(0.60, 0.70, gray) * 2.0));
+                    float grayArea_6 = min(1.0, (smoothstep(0.45, 0.60, gray) * 2.0));
+                    float grayArea_5 = min(1.0, (smoothstep(0.35, 0.45, gray) * 2.0));
                     float grayArea_4 = 1.00 - grayArea_5;
-                    float grayArea_3 = saturate((smoothstep(0.70, 0.80, gray_oneminus) * 2.0));
-                    float grayArea_2 = saturate((smoothstep(0.80, 0.90, gray_oneminus) * 2.0));
-                    float grayArea_1 = saturate((smoothstep(0.90, 0.95, gray_oneminus) * 2.0));
+                    float grayArea_3 = min(1.0, (smoothstep(0.70, 0.80, gray_oneminus) * 2.0));
+                    float grayArea_2 = min(1.0, (smoothstep(0.80, 0.90, gray_oneminus) * 2.0));
+                    float grayArea_1 = min(1.0, (smoothstep(0.90, 0.95, gray_oneminus) * 2.0));
                     
-                    float grayArea_0 = saturate((smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
+                    float grayArea_0 = min(1.0, (smoothstep(0.95, 1.00, gray_oneminus) * 2.0));
                     #if _ExpressionEnable
-                        grayArea_0 = max(grayArea_0, saturate(smoothstep(0.4, 0.5, eyeAreaReplace.x) * eyeAreaReplace.y - eyeCenter));
+                        grayArea_0 = max(grayArea_0, min(1.0, smoothstep(0.4, 0.5, eyeAreaReplace.x) * eyeAreaReplace.y - eyeCenter));
                         #if _ExpressionFormat_FaceSheet
                             grayArea_0 = max(grayArea_0, smoothstep(0.5, 1.0, browReplace.x) * browReplace.y);
                             grayArea_0 = max(grayArea_0, smoothstep(0.5, 1.0, mouthReplace.x) * mouthReplace.y);
@@ -601,8 +606,8 @@ Shader "ZDShader/URP/Character"
             {
                 float3 halfDir = SafeNormalize(float3(lightDirectionWS) + float3(viewDirectionWS));
                 
-                float NoH = saturate(dot(normalWS, halfDir));
-                half LoH = saturate(dot(lightDirectionWS, halfDir));
+                float NoH = max(0.0, dot(normalWS, halfDir));
+                half LoH = max(0.0, dot(lightDirectionWS, halfDir));
                 
                 half perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(smoothness);
                 half roughness = max(PerceptualRoughnessToRoughness(perceptualRoughness), HALF_MIN);
@@ -662,7 +667,7 @@ Shader "ZDShader/URP/Character"
                 
                 half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
-                float fresnel = max(1.0 - dot(viewDirection, normalDirection), saturate(dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
+                float fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
                 
                 
@@ -677,7 +682,9 @@ Shader "ZDShader/URP/Character"
                 float shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
                 float shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
                 float shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
-                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9);
+                float shadowArea10 = CaculateShadowArea(_diffuse_var, _Picker_10, _ShadowColor10.a);
+                float shadowArea11 = CaculateShadowArea(_diffuse_var, _Picker_11, _ShadowColor11.a);
+                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9 + shadowArea10 + shadowArea11);
                 float shadowAreaElse = (1.0 - shadowTotalArea);
                 
                 
@@ -711,6 +718,12 @@ Shader "ZDShader/URP/Character"
                     #endif
                     #if _PickerDebug_9
                         return float4(shadowArea9.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_10
+                        return float4(shadowArea10.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_11
+                        return float4(shadowArea11.xxx, 1.0);
                     #endif
                 #endif
                 
@@ -748,15 +761,15 @@ Shader "ZDShader/URP/Character"
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a * saturate(_SelectMouth));
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a * min(1.0, _SelectMouth));
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a) * saturate(_SelectFace));
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a) * min(1.0, _SelectFace));
                     #endif
                     
                     #if _ExpressionFormat_FaceSheet
-                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a * saturate(_SelectBrow));
+                        _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a * min(1.0, _SelectBrow));
                     #endif
                     
                 #endif
@@ -815,7 +828,6 @@ Shader "ZDShader/URP/Character"
                     
                 #endif
                 
-                //selfShadow = saturate(selfShadow);
                 
                 //PBRShadowArea
                 float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
@@ -823,13 +835,9 @@ Shader "ZDShader/URP/Character"
                 half uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
                 
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
+                refractionShadowArea = 1.0 - smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp) * 0.25, 1.0 - refractionShadowArea);
+                selfShadow = 1.0 - smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
                 
-                refractionShadowArea = saturate(refractionShadowArea);
-                refractionShadowArea = smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp) * 0.25, saturate(1.0 - refractionShadowArea));
-                refractionShadowArea = saturate((1.0 - refractionShadowArea)) ;
-                
-                selfShadow = smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
-                selfShadow = 1.0 - selfShadow;
                 
                 float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
                 PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
@@ -846,25 +854,28 @@ Shader "ZDShader/URP/Character"
                 
                 
                 //MixShadowReplacer
+                float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
                 
                 float3 shadowColor = shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb +
                 shadowArea2 * _ShadowColor2.rgb + shadowArea3 * _ShadowColor3.rgb +
                 shadowArea4 * _ShadowColor4.rgb + shadowArea5 * _ShadowColor5.rgb +
                 shadowArea6 * _ShadowColor6.rgb + shadowArea7 * _ShadowColor7.rgb +
                 shadowArea8 * _ShadowColor8.rgb + shadowArea9 * _ShadowColor9.rgb +
+                shadowArea10 * _ShadowColor10.rgb + shadowArea11 * _ShadowColor11.rgb +
                 shadowAreaElse * _ShadowColorElse.rgb;
                 
                 shadowColor.xyz = RGB2HSV(shadowColor.rgb);
                 
                 float endOfBrightness = min(1.0, shadowColor.z);
                 float overexposed = shadowColor.z - endOfBrightness;
-                shadowColor.z = lerp(shadowColor.z, shadowColor.z * 0.1, overexposed);
+                //return float4(overexposed.xxx, 1.0);
+                shadowColor.z = endOfBrightness;
                 
+                //shadowColor.y = lerp(shadowColor.y, _diffuse_hsv.y, 1.0 - _ShadowColorElse.a);
                 shadowColor.rgb = HSV2RGB(shadowColor.xyz);
                 
-                shadowColor.rgb = lerp(shadowColor.rgb, _diffuse_var.rgb, overexposed * (1.0 - _ShadowColorElse.a));
                 
-                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor.rgb, 1.0 - PBRShadowArea);
+                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
                 
                 
                 half clampMask = 1.0 - smoothstep(0.99, 1.0, abs(i.effectcoord.y - 0.5) * 2.0);
@@ -882,8 +893,8 @@ Shader "ZDShader/URP/Character"
                 emissive = lerp(emissive, lerp(emissive, float3(1, 1, 1), _EdgeLightIntensity), fresnelArea);
                 
                 //Fog
-                float fogFactor = i.positionWSAndFogFactor.w;
-                
+                float fogFactor = i.positionWSAndFogFactor.w * i.positionWSAndFogFactor.w;
+                fogFactor *= fogFactor;
                 // Additional lights loop
                 #ifdef _ADDITIONAL_LIGHTS
                     
@@ -904,10 +915,9 @@ Shader "ZDShader/URP/Character"
                     emissive += additionalLightColor * diffuseColor;
                 #endif
                 
-                
                 float3 finalColor = emissive.rgb;
                 
-                finalColor = MixFog(finalColor, pow(fogFactor, 4.0));
+                finalColor = MixFog(finalColor, fogFactor);
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv01.xy * 0.5);
                 half4 effectiveDisslive = _EffectiveColor;
