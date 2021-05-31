@@ -210,11 +210,11 @@ Shader "ZDShader/URP/Character"
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
-                half dist = distance(float3(0.0, v.vertex.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
                 
                 RTD_OL *= min(widthRange.y * 2.0, dist * widthRange.z)/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
-                
+                dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 float4 positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
                 o.vertex = positionCS / _OutlineEnable;
                 o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
@@ -446,7 +446,7 @@ Shader "ZDShader/URP/Character"
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                 output.lightXZDirection.xyz = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 
-                output.vertexDist = distance(float3(0.0, input.positionOS.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 
                 output.positionCS = vertexInput.positionCS;
                 float4 positionSS = ComputeScreenPos(vertexInput.positionCS, _ProjectionParams.x);
@@ -1116,7 +1116,7 @@ Shader "ZDShader/URP/Character"
                 input.position.xyz = mul(GetWorldToObjectMatrix(), float4(positionWS, 0.0)).xyz;
                 output.positionCS = TransformObjectToHClip(input.position.xyz);
                 output.positionSS = ComputeScreenPos(output.positionCS, _ProjectionParams.x);
-                output.vertexDist = distance(float3(0.0, input.position.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 return output;
             }
             

@@ -122,7 +122,7 @@ half3 HSV2RGB(half3 c)
 void DistanceDisslove(float2 screenUV, half vertexDist)
 {
     half as = _ScreenParams.y / _ScreenParams.x;
-    half2 maskUV = half2(screenUV.x, screenUV.y) * 250.0;
+    half2 maskUV = half2(screenUV.x*as, screenUV.y) * 200.0;
     half rowID = fmod(floor(maskUV.y), 2.0);
     half2 distanceRect = abs(frac(lerp(maskUV, maskUV + 0.5, rowID))) * 0.70707;
     
