@@ -815,10 +815,7 @@ Shader "ZDShader/URP/Character"
                     
                 #endif
                 
-                float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
-                
-                
-                selfShadow = saturate(selfShadow);
+                //selfShadow = saturate(selfShadow);
                 
                 //PBRShadowArea
                 float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
@@ -849,6 +846,7 @@ Shader "ZDShader/URP/Character"
                 
                 
                 //MixShadowReplacer
+                
                 float3 shadowColor = shadowArea0 * _ShadowColor0.rgb + shadowArea1 * _ShadowColor1.rgb +
                 shadowArea2 * _ShadowColor2.rgb + shadowArea3 * _ShadowColor3.rgb +
                 shadowArea4 * _ShadowColor4.rgb + shadowArea5 * _ShadowColor5.rgb +
@@ -860,14 +858,13 @@ Shader "ZDShader/URP/Character"
                 
                 float endOfBrightness = min(1.0, shadowColor.z);
                 float overexposed = shadowColor.z - endOfBrightness;
-                //return float4(overexposed.xxx, 1.0);
-                shadowColor.z = endOfBrightness;
+                shadowColor.z = lerp(shadowColor.z, shadowColor.z * 0.1, overexposed);
                 
-                shadowColor.y = lerp(shadowColor.y, _diffuse_hsv.y, 1.0 - _ShadowColorElse.a);
                 shadowColor.rgb = HSV2RGB(shadowColor.xyz);
                 
+                shadowColor.rgb = lerp(shadowColor.rgb, _diffuse_var.rgb, overexposed * (1.0 - _ShadowColorElse.a));
                 
-                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
+                float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor.rgb, 1.0 - PBRShadowArea);
                 
                 
                 half clampMask = 1.0 - smoothstep(0.99, 1.0, abs(i.effectcoord.y - 0.5) * 2.0);

@@ -99,7 +99,7 @@ float4 ComputeScreenPos(float4 pos, float projectionSign)
 
 half3 RGB2HSV(half3 c)
 {
-    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    float4 K = float4(0.0, -0.3333333333333333, 0.6666666666666667, -1.0);
     float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
     float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
     
@@ -110,7 +110,7 @@ half3 RGB2HSV(half3 c)
 
 half3 HSV2RGB(half3 c)
 {
-    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float4 K = float4(1.0, 0.6666666666666667, 0.3333333333333333, 3.0);
     float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
 }
