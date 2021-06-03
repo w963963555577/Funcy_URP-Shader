@@ -99,7 +99,7 @@ Shader "ZDShader/URP/Character"
         _ShadowOffset ("Shadow Offset", Range(0, 1)) = 0.6
         
         
-        _OutlineColor ("Color", Color) = (0.0075, 0.0006, 0.0006, 1)
+        [HDR]_OutlineColor ("Color", Color) = (0.0075, 0.0006, 0.0006, 1)
         _DiffuseBlend ("Diffuse Blend", Range(0, 1)) = 0.2
         _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur ("Outline Ctrl Properties", Vector) = (0.0, 0.5, 0.5, 0.0)
         
@@ -667,65 +667,11 @@ Shader "ZDShader/URP/Character"
                 
                 half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
-                float fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, - (normalDirection * 0.82 - mainLight.direction)))) ;
+                float fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
                 
                 
-                //ShadowReplacer
-                float shadowArea0 = CaculateShadowArea(_diffuse_var, _Picker_0, _ShadowColor0.a);
-                float shadowArea1 = CaculateShadowArea(_diffuse_var, _Picker_1, _ShadowColor1.a);
-                float shadowArea2 = CaculateShadowArea(_diffuse_var, _Picker_2, _ShadowColor2.a);
-                float shadowArea3 = CaculateShadowArea(_diffuse_var, _Picker_3, _ShadowColor3.a);
-                float shadowArea4 = CaculateShadowArea(_diffuse_var, _Picker_4, _ShadowColor4.a);
-                float shadowArea5 = CaculateShadowArea(_diffuse_var, _Picker_5, _ShadowColor5.a);
-                float shadowArea6 = CaculateShadowArea(_diffuse_var, _Picker_6, _ShadowColor6.a);
-                float shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
-                float shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
-                float shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
-                float shadowArea10 = CaculateShadowArea(_diffuse_var, _Picker_10, _ShadowColor10.a);
-                float shadowArea11 = CaculateShadowArea(_diffuse_var, _Picker_11, _ShadowColor11.a);
-                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9 + shadowArea10 + shadowArea11);
-                float shadowAreaElse = (1.0 - shadowTotalArea);
                 
-                
-                #ifdef SHADER_API_D3D11
-                    #if _PickerDebug_0
-                        return float4(shadowArea0.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_1
-                        return float4(shadowArea1.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_2
-                        return float4(shadowArea2.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_3
-                        return float4(shadowArea3.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_4
-                        return float4(shadowArea4.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_5
-                        return float4(shadowArea5.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_6
-                        return float4(shadowArea6.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_7
-                        return float4(shadowArea7.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_8
-                        return float4(shadowArea8.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_9
-                        return float4(shadowArea9.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_10
-                        return float4(shadowArea10.xxx, 1.0);
-                    #endif
-                    #if _PickerDebug_11
-                        return float4(shadowArea11.xxx, 1.0);
-                    #endif
-                #endif
                 
                 #if _ExpressionEnable
                     
@@ -827,6 +773,60 @@ Shader "ZDShader/URP/Character"
                     _diffuse_var.rgb = lerp(HSV2RGB(half3(colorHSV_A.rg, colorHSV_B.b * (step_var.a + 1.0) + max(0, step_var.a))), mupArea, skinArea + eyeArea + blackArea);
                     
                 #endif
+                //ShadowReplacer
+                float shadowArea0 = CaculateShadowArea(_diffuse_var, _Picker_0, _ShadowColor0.a);
+                float shadowArea1 = CaculateShadowArea(_diffuse_var, _Picker_1, _ShadowColor1.a);
+                float shadowArea2 = CaculateShadowArea(_diffuse_var, _Picker_2, _ShadowColor2.a);
+                float shadowArea3 = CaculateShadowArea(_diffuse_var, _Picker_3, _ShadowColor3.a);
+                float shadowArea4 = CaculateShadowArea(_diffuse_var, _Picker_4, _ShadowColor4.a);
+                float shadowArea5 = CaculateShadowArea(_diffuse_var, _Picker_5, _ShadowColor5.a);
+                float shadowArea6 = CaculateShadowArea(_diffuse_var, _Picker_6, _ShadowColor6.a);
+                float shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
+                float shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
+                float shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
+                float shadowArea10 = CaculateShadowArea(_diffuse_var, _Picker_10, _ShadowColor10.a);
+                float shadowArea11 = CaculateShadowArea(_diffuse_var, _Picker_11, _ShadowColor11.a);
+                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9 + shadowArea10 + shadowArea11);
+                float shadowAreaElse = (1.0 - shadowTotalArea);
+                #ifdef SHADER_API_D3D11
+                    #if _PickerDebug_0
+                        return float4(shadowArea0.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_1
+                        return float4(shadowArea1.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_2
+                        return float4(shadowArea2.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_3
+                        return float4(shadowArea3.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_4
+                        return float4(shadowArea4.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_5
+                        return float4(shadowArea5.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_6
+                        return float4(shadowArea6.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_7
+                        return float4(shadowArea7.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_8
+                        return float4(shadowArea8.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_9
+                        return float4(shadowArea9.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_10
+                        return float4(shadowArea10.xxx, 1.0);
+                    #endif
+                    #if _PickerDebug_11
+                        return float4(shadowArea11.xxx, 1.0);
+                    #endif
+                #endif
+                
                 
                 
                 //PBRShadowArea
@@ -889,8 +889,8 @@ Shader "ZDShader/URP/Character"
                 ;
                 
                 
-                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1 - _EdgeLightWidth * 0.7, fresnel);
-                emissive = lerp(emissive, lerp(emissive, float3(1, 1, 1), _EdgeLightIntensity), fresnelArea);
+                half fresnelArea = smoothstep(1.0 - _EdgeLightWidth, 1.0 - _EdgeLightWidth * 0.7, fresnel);
+                emissive = lerp(emissive, float3(1, 1, 1), fresnelArea * _EdgeLightIntensity);
                 
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w * i.positionWSAndFogFactor.w;
