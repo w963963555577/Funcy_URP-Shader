@@ -59,7 +59,7 @@
                 col.rgb += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + float2(i, -i) * res).rgb;
                 col.rgb += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + float2(-i, i) * res).rgb;
                 col.rgb += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + float2(-i, -i) * res).rgb;
-                col.rgb /= 5.0f;
+                col.rgb *= 0.2f;
                 
                 return col;
             }

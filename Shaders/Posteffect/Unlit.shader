@@ -4,17 +4,18 @@ Shader "Hidden/Renderfeature/Unlit"
 {
     SubShader
     {
-        Tags { "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent" }
         
         Pass
         {
+            Blend SrcAlpha OneMinusSrcAlpha
             HLSLPROGRAM
             
             #pragma vertex vert
             #pragma fragment frag
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            
+            #pragma multi_compile_instancing
             struct VertexData
             {
                 float4 positionOS: POSITION;
@@ -31,16 +32,16 @@ Shader "Hidden/Renderfeature/Unlit"
             {
                 FragmentData o = (FragmentData)0;
                 o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
-
+                
                 o.uv = v.uv;
                 
                 return o;
             }
-
+            
             half4 frag(FragmentData input): SV_Target
             {
-                float2 uv = input.uv;                
-                return 1.0;
+                float2 uv = input.uv;
+                return half4(1.0.xxx, 1.0);
             }
             ENDHLSL
             
