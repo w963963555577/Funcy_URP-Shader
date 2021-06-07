@@ -11,15 +11,21 @@ public class AstralPossession : ScriptableRendererFeature
     {
         public RenderPassEvent Event = RenderPassEvent.AfterRenderingTransparents;
         
-
         public Material blurMaterial;
         public Material blitMaterial = null;
 
-        [Range(2, 15)]
-        public int blurPasses = 6;
+        public BlurProperties blurProperties;
+        [System.Serializable]
+        public class BlurProperties
+        {
+            [Range(2, 15)]
+            public int blurPasses = 6;
 
-        [Range(1, 4)]
-        public int downsample = 2;
+            [Range(1, 4)]
+            public int downsample = 4;
+        }
+
+        public float floatModelIntensity = 0.1f;
 
         public string silhouettesMap = "_Silhouettes";
         public string soulMap = "_SoulMap";
@@ -85,19 +91,13 @@ public class AstralPossession : ScriptableRendererFeature
             ConfigureTarget(tmpRT2);
         }
 
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+
+        void BlurMap(CommandBuffer cmd, RenderTargetIdentifier id, string globalTextureName)
         {
-            CommandBuffer cmd = CommandBufferPool.Get(tag);
-            RenderTextureDescriptor opaqueDesc = renderingData.cameraData.cameraTargetDescriptor;
-            opaqueDesc.depthBufferBits = 0;
-
-            cmd.GetTemporaryRT(cameraColorID, opaqueDesc, FilterMode.Bilinear);
-            cmd.CopyTexture(source, cameraColorRT);
-
             // first pass
             // cmd.GetTemporaryRT(tmpId1, opaqueDesc, FilterMode.Bilinear);
             cmd.SetGlobalFloat("_offset", 1.5f);
-            cmd.Blit(silhouettesRT, tmpRT1, blurMaterial);
+            cmd.Blit(id, tmpRT1, blurMaterial);
 
             for (var i = 1; i < passes - 1; i++)
             {
@@ -113,9 +113,21 @@ public class AstralPossession : ScriptableRendererFeature
             // final pass
             cmd.SetGlobalFloat("_offset", 0.5f + passes - 1f);
             cmd.Blit(tmpRT1, tmpRT2, blurMaterial);
-            cmd.SetGlobalTexture(settings.soulMap, tmpRT2);
+            cmd.SetGlobalTexture(globalTextureName, tmpRT2);
+        }
 
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        {
+            CommandBuffer cmd = CommandBufferPool.Get(tag);
+            RenderTextureDescriptor opaqueDesc = renderingData.cameraData.cameraTargetDescriptor;
+            opaqueDesc.depthBufferBits = 0;
 
+            cmd.GetTemporaryRT(cameraColorID, opaqueDesc, FilterMode.Bilinear);
+            cmd.CopyTexture(source, cameraColorRT);
+
+            BlurMap(cmd, silhouettesRT, settings.soulMap);
+
+            cmd.SetGlobalFloat("_FlowModel",settings.floatModelIntensity);
 
             cmd.Blit(cameraColorRT, source, blitMaterial, 0);
             
@@ -140,8 +152,8 @@ public class AstralPossession : ScriptableRendererFeature
     public override void Create()
     {
         pass = new Pass(settings, this.name);
-        pass.passes = settings.blurPasses;
-        pass.downsample = settings.downsample;
+        pass.passes = settings.blurProperties.blurPasses;
+        pass.downsample = settings.blurProperties.downsample;
     }
 
     public override void AddRenderPasses(UnityEngine.Rendering.Universal.ScriptableRenderer renderer, ref UnityEngine.Rendering.Universal.RenderingData renderingData)

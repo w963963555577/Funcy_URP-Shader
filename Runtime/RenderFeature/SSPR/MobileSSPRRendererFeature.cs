@@ -62,8 +62,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         RenderTargetIdentifier _SSPR_ColorRT_rti = new RenderTargetIdentifier(_SSPR_ColorRT_pid);
         RenderTargetIdentifier _SSPR_PackedDataRT_rti = new RenderTargetIdentifier(_SSPR_PackedDataRT_pid);
         RenderTargetIdentifier _SSPR_PosWSyRT_rti = new RenderTargetIdentifier(_SSPR_PosWSyRT_pid);
-
-        ShaderTagId lightMode_SSPR_sti = new ShaderTagId("MobileSSPR");//reflection plane renderer's material's shader must use this LightMode
+        
 
         const int SHADER_NUMTHREAD_X = 8; //must match compute shader's [numthread(x)]
         const int SHADER_NUMTHREAD_Y = 8; //must match compute shader's [numthread(y)]
@@ -222,11 +221,6 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             context.ExecuteCommandBuffer(cb);
             CommandBufferPool.Release(cb);
 
-            //======================================================================
-            //draw objects(e.g. reflective wet ground plane) with lightmode "MobileSSPR", which will sample _MobileSSPR_ColorRT
-            DrawingSettings drawingSettings = CreateDrawingSettings(lightMode_SSPR_sti, ref renderingData, SortingCriteria.CommonOpaque);
-            FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.all);
-            context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
         }
 
         /// Cleanup any allocated resources that were created during the execution of this render pass.

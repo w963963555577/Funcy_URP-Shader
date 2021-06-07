@@ -79,18 +79,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
             drawSettings.enableDynamicBatching = true; // default value is true. please change it before draw call if needed.
             drawSettings.enableInstancing = material.enableInstancing;
             drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
-            switch(settings.renderObjectType)
-            {
-                case Settings.RenderObjectType.Transparent:
-                    m_FilteringSettings.renderQueueRange = RenderQueueRange.transparent;
-                    break;
-                case Settings.RenderObjectType.Opaque:
-                    m_FilteringSettings.renderQueueRange = RenderQueueRange.opaque;
-                    break;
-                default:
-                    m_FilteringSettings.renderQueueRange = RenderQueueRange.all;
-                    break;
-            }
+
             
             context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref m_FilteringSettings);
             
@@ -117,7 +106,20 @@ public class CustomShadingTexture : ScriptableRendererFeature
 
     public override void Create()
     {
-        pass = new Pass(RenderQueueRange.opaque, settings, settings.material, this.name);
+        RenderQueueRange queueRange;
+        switch (settings.renderObjectType)
+        {
+            case Settings.RenderObjectType.Transparent:
+                queueRange = RenderQueueRange.transparent;
+                break;
+            case Settings.RenderObjectType.Opaque:
+                queueRange = RenderQueueRange.opaque;
+                break;
+            default:
+                queueRange = RenderQueueRange.all;
+                break;
+        }
+        pass = new Pass(queueRange, settings, settings.material, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
         texture.Init(settings.sampleTextureName);
     }
