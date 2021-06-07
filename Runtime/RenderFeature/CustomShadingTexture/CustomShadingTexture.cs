@@ -12,6 +12,12 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public Material material;
         public string drawLightModel = "UniversalForward";
         public string sampleTextureName = "_CustomMap";
+
+        public RenderObjectType renderObjectType = RenderObjectType.Opaque;
+        public enum RenderObjectType { Opaque, Transparent, All }
+        public RenderQueueRange renderQueueRange;
+
+
     }
 
     public Settings settings = new Settings();
@@ -57,8 +63,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
 
-            var sortFlags = /*renderingData.cameraData.defaultOpaqueSortFlags*/  SortingCriteria.CommonTransparent;
-
+            var sortFlags = renderingData.cameraData.defaultOpaqueSortFlags;
             var drawSettings = CreateDrawingSettings(m_ShaderTagId, ref renderingData, sortFlags);
             drawSettings.perObjectData = PerObjectData.None;
             
@@ -74,13 +79,16 @@ public class CustomShadingTexture : ScriptableRendererFeature
             drawSettings.enableDynamicBatching = true; // default value is true. please change it before draw call if needed.
             drawSettings.enableInstancing = material.enableInstancing;
             drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
-            switch(renderPassEvent)
+            switch(settings.renderObjectType)
             {
-                case RenderPassEvent.AfterRenderingTransparents:
+                case Settings.RenderObjectType.Transparent:
                     m_FilteringSettings.renderQueueRange = RenderQueueRange.transparent;
                     break;
-                default:
+                case Settings.RenderObjectType.Opaque:
                     m_FilteringSettings.renderQueueRange = RenderQueueRange.opaque;
+                    break;
+                default:
+                    m_FilteringSettings.renderQueueRange = RenderQueueRange.all;
                     break;
             }
             
@@ -109,9 +117,8 @@ public class CustomShadingTexture : ScriptableRendererFeature
 
     public override void Create()
     {
-
         pass = new Pass(RenderQueueRange.opaque, settings, settings.material, this.name);
-        pass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
+        pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
         texture.Init(settings.sampleTextureName);
     }
 
