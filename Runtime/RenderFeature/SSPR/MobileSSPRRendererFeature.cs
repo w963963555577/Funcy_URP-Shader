@@ -6,6 +6,7 @@ using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 public class MobileSSPRRendererFeature : ScriptableRendererFeature
@@ -313,6 +314,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             {
 #if UNITY_EDITOR
                 EditorSceneManager.sceneOpened += editorAction;
+                EditorApplication.update += Dirty;
 #endif
             }
         }
@@ -326,6 +328,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             {
 #if UNITY_EDITOR
                 EditorSceneManager.sceneOpened -= editorAction;
+                EditorApplication.update -= Dirty;
 #endif
             }
         }
@@ -354,6 +357,13 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
     {
         renderer.EnqueuePass(m_ScriptablePass);
     }
+
+#if UNITY_EDITOR
+    void Dirty()
+    {
+        EditorUtility.SetDirty(this);
+    }
+#endif
 }
 
 
