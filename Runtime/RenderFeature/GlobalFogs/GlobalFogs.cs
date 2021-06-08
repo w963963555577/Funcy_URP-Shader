@@ -42,9 +42,9 @@ public class GlobalFogs : ScriptableRendererFeature
     public class PassSettings
     {
         public bool isActive = false;
-        public Vector3 worldPosition = Vector3.zero;
-        public float distance = 50.0f;
-        public Color color = Color.gray;
+        [System.NonSerialized] public Vector3 worldPosition = Vector3.zero;
+        [System.NonSerialized] public float distance = 999.0f;
+        [System.NonSerialized] public Color color = new Color(0.5754717f, 0.01390948f, 0.0f, 0.0f);
         public Texture2D noiseMap;
         public float mapScale = 1.0f;
     }
