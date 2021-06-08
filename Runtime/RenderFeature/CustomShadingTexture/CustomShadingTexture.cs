@@ -16,7 +16,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public RenderObjectType renderObjectType = RenderObjectType.Opaque;
         public enum RenderObjectType { Opaque, Transparent, All }
         public RenderQueueRange renderQueueRange;
-
+        public Vector2Int limitQueueRange = new Vector2Int(3000, 3000);
 
     }
 
@@ -119,6 +119,9 @@ public class CustomShadingTexture : ScriptableRendererFeature
                 queueRange = RenderQueueRange.all;
                 break;
         }
+        queueRange.lowerBound = settings.limitQueueRange.x;
+        queueRange.upperBound = settings.limitQueueRange.y;
+
         pass = new Pass(queueRange, settings, settings.material, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
         texture.Init(settings.sampleTextureName);
