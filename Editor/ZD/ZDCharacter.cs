@@ -11,15 +11,6 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
     [InitializeOnLoad]
     internal class ZDCharacter : BaseFuncyShaderGUI
     {
-        static List<Material> zdCharacterMaterials = new List<Material>();
-        static ZDCharacter()
-        {
-            EditorApplication.delayCall += () => {
-                EditorApplication.update += () => {
-                    zdCharacterMaterials = Resources.FindObjectsOfTypeAll<Material>().ToList().FindAll(m => m.shader == Shader.Find("ZDShader/LWRP/Character"));
-                };
-            };
-        }
 
         #region Properties
         MaterialProperty diffuse { get; set; }
@@ -338,15 +329,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 materialEditor.ShaderProperty(diffuseBlend, diffuseBlend.displayName);
                 materialEditor.ShaderProperty(outlineColor, outlineColor.displayName);
 
-                foreach (var m in zdCharacterMaterials)
-                {
-                    if (m != mat)
-                    {
-                        m.SetVector(outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.name, outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue);
-                        m.SetFloat(diffuseBlend.name, diffuseBlend.floatValue);                        
-                    }
-                }
-                
+
             });
 
 

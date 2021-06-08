@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if ZD_ART_EDITOR
 using LitJson;
+#endif
 namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 {
     [InitializeOnLoad]
@@ -43,10 +45,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 emissionColor = m.GetColor("_EmissionColor").ToColorJson(),
                 specularColor = m.GetColor("_SpecularColor").ToColorJson(),
             };
-
+            #if ZD_ART_EDITOR
             var json = JsonMapper.ToJson(effective);
-
             EditorPrefs.SetString("ZDCharacter-Effective", json);
+            #endif
         }
 
         public static bool CanPaste()
@@ -56,6 +58,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         }
         public static void Paste(Material m)
         {
+            #if ZD_ART_EDITOR
             string json = EditorPrefs.GetString("ZDCharacter-Effective");
             var effective = JsonMapper.ToObject<Effective>(json);
 
@@ -69,11 +72,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_SpecularColor", effective.specularColor.ToColor());
 
             AssetDatabase.SaveAssets();
+            #endif
         }
     }
-    #endregion ShadowReplacer
+#endregion ShadowReplacer
 
-    #region DiscolorationSystem
+#region DiscolorationSystem
     [System.Serializable]
     public class DiscolorationSystem
     {
@@ -96,10 +100,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 headressColor1 = m.GetColor("_DiscolorationColor_8").ToColorJson(),
                 headressColor2 = m.GetColor("_DiscolorationColor_9").ToColorJson(),
             };
-
+            #if ZD_ART_EDITOR
             var json = JsonMapper.ToJson(discolorationSystem);
             
             EditorPrefs.SetString("ZDCharacter-DiscolorationSystem", json);
+            #endif
         }
 
         public static bool CanPaste()
@@ -109,6 +114,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         }
         public static void Paste(Material m)
         {
+            #if ZD_ART_EDITOR
             string json = EditorPrefs.GetString("ZDCharacter-DiscolorationSystem");
             var discolorationSystem = JsonMapper.ToObject<DiscolorationSystem>(json);
             m.SetFloat("_DiscolorationSystem", discolorationSystem.enable);
@@ -123,11 +129,12 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_DiscolorationColor_8", discolorationSystem.headressColor1.ToColor());
             m.SetColor("_DiscolorationColor_9", discolorationSystem.headressColor2.ToColor());
             AssetDatabase.SaveAssets();
+            #endif
         }
     }
-    #endregion DiscolorationSystem
+#endregion DiscolorationSystem
 
-    #region ShadowReplacer
+#region ShadowReplacer
     [System.Serializable]
     public class ShadowReplacer
     {
@@ -163,10 +170,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 shadowColor11 = m.GetColor("_ShadowColor11").ToColorJson(),
                 shadowColorElse = m.GetColor("_ShadowColorElse").ToColorJson(),
             };
-
+#if ZD_ART_EDITOR
             var json = JsonMapper.ToJson(shadowReplacer);
 
             EditorPrefs.SetString("ZDCharacter-ShadowReplacer", json);
+#endif
         }
 
         public static bool CanPaste()
@@ -176,6 +184,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         }
         public static void Paste(Material m)
         {
+            #if ZD_ART_EDITOR
             string json = EditorPrefs.GetString("ZDCharacter-ShadowReplacer");
             var shadowReplacer = JsonMapper.ToObject<ShadowReplacer>(json);
             
@@ -206,9 +215,10 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             m.SetColor("_ShadowColor11", shadowReplacer.shadowColor11.ToColor());
             m.SetColor("_ShadowColorElse", shadowReplacer.shadowColorElse.ToColor());
             AssetDatabase.SaveAssets();
+            #endif
         }
     }
-    #endregion ShadowReplacer
+#endregion ShadowReplacer
 
 
     public static class Extension
