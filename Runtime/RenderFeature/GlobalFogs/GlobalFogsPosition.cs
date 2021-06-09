@@ -13,7 +13,7 @@ public class GlobalFogsPosition : MonoBehaviour
     [SerializeField]GlobalFogs globalFogs;
     private void OnEnable()
     {
-        globalFogs = GlobalFogs.GetActive();
+        if (globalFogs == null) return;
         globalFogs.Settings.isActive = true;
     }
     // Start is called before the first frame update
@@ -30,7 +30,8 @@ public class GlobalFogsPosition : MonoBehaviour
         globalFogs.Settings.color = color;
     }
     private void OnDisable()
-    {        
+    {
+        if (globalFogs == null) return;
         globalFogs.Settings.isActive = false;
     }
 

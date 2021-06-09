@@ -11,37 +11,11 @@ using System.Reflection;
 using UnityEditor.SceneManagement;
 #endif
 public class GlobalFogs : ScriptableRendererFeature
-{    
-    public static GlobalFogs GetActive()
-    {
-        GlobalFogs result = null;
-        UniversalRenderPipelineAsset pipelineAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-
-        FieldInfo fieldInfo = pipelineAsset.GetType().GetField("m_RendererDataList", BindingFlags.Instance | BindingFlags.NonPublic);
-        ScriptableRendererData[] rendererDatas = fieldInfo.GetValue(pipelineAsset) as ScriptableRendererData[];
-
-
-        for (int i = 0; i < rendererDatas.Length; i++)
-        {
-            ScriptableRendererData srd = rendererDatas[i];
-
-            foreach (var rendereFeature in srd.rendererFeatures)
-            {
-                if (rendereFeature.GetType() == typeof(GlobalFogs))
-                {
-                    result = (GlobalFogs)rendereFeature;
-                    return result;
-                }
-            }
-
-        }
-        return result;
-    }
-
+{        
     [System.Serializable]
     public class PassSettings
     {
-        public bool isActive = false;
+        [System.NonSerialized] public bool isActive = false;
         [System.NonSerialized] public Vector3 worldPosition = Vector3.zero;
         [System.NonSerialized] public float distance = 999.0f;
         [System.NonSerialized] public Color color = new Color(0.5754717f, 0.01390948f, 0.0f, 0.0f);
