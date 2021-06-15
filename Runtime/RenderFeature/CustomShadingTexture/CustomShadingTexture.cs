@@ -12,6 +12,8 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public Material material;
         public string drawLightModel = "UniversalForward";
         public string sampleTextureName = "_CustomMap";
+        public FilterMode filterMode = FilterMode.Point;
+        [Range(1, 10)] public int downSample = 1;
 
         public RenderObjectType renderObjectType = RenderObjectType.Opaque;
         public enum RenderObjectType { Opaque, Transparent, All }
@@ -37,6 +39,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
             settings = set;
             m_FilteringSettings = new FilteringSettings(renderQueueRange, set.layerMask);
             this.material = material;
+
         }
 
         public void Setup(RenderTargetHandle destination)
@@ -50,8 +53,9 @@ public class CustomShadingTexture : ScriptableRendererFeature
             RenderTextureDescriptor descriptor = cameraTextureDescriptor;
             descriptor.depthBufferBits = 32;
             descriptor.colorFormat = RenderTextureFormat.ARGB32;
-
-            cmd.GetTemporaryRT(destination.id, descriptor, FilterMode.Point);
+            descriptor.width /=  settings.downSample;
+            descriptor.height /= settings.downSample;
+            cmd.GetTemporaryRT(destination.id, descriptor, settings.filterMode);
             ConfigureTarget(destination.Identifier());
             ConfigureClear(ClearFlag.All, Color.black);
         }
@@ -121,6 +125,9 @@ public class CustomShadingTexture : ScriptableRendererFeature
         }
         queueRange.lowerBound = settings.limitQueueRange.x;
         queueRange.upperBound = settings.limitQueueRange.y;
+
+        if (!settings.material)
+            settings.material = CoreUtils.CreateEngineMaterial("Universal Render Pipeline/Unlit");
 
         pass = new Pass(queueRange, settings, settings.material, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
