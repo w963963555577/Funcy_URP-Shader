@@ -79,9 +79,13 @@ public class CustomShadingTexture : ScriptableRendererFeature
                 context.StartMultiEye(camera);
             }
 
-            drawSettings.overrideMaterial = material;
-            drawSettings.enableDynamicBatching = true; // default value is true. please change it before draw call if needed.
-            drawSettings.enableInstancing = material.enableInstancing;
+            if(material)
+            {
+                drawSettings.overrideMaterial = material;
+                drawSettings.enableInstancing = material.enableInstancing;
+            }
+            
+            drawSettings.enableDynamicBatching = true; // default value is true. please change it before draw call if needed.            
             drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
 
             
@@ -125,9 +129,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
         }
         queueRange.lowerBound = settings.limitQueueRange.x;
         queueRange.upperBound = settings.limitQueueRange.y;
-
-        if (!settings.material)
-            settings.material = CoreUtils.CreateEngineMaterial("Universal Render Pipeline/Unlit");
+        
 
         pass = new Pass(queueRange, settings, settings.material, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
