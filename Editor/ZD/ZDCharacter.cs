@@ -95,7 +95,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty discolorationSystem { get; set; }
         MaterialProperty discolorationColorCount { get; set; }
 
-        MaterialProperty outlineWidth_MinWidth_MaxWidth_Dist_DistBlur { get; set; }
+        MaterialProperty outlineDistBlur { get; set; }
 
         MaterialProperty outlineColor { get; set; }
         MaterialProperty diffuseBlend { get; set; }
@@ -318,11 +318,11 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 GUILayout.Space(10);
                 materialEditor.TexturePropertySingleLine("Width Mask".ToGUIContent(), outlineWidthControl);
                 
-                Vector4 outCtrlProperties = outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue;
+                Vector4 outCtrlProperties = outlineDistBlur.vectorValue;
                 outCtrlProperties.x = EditorGUILayout.FloatField("Min Width",outCtrlProperties.x);
                 outCtrlProperties.y = EditorGUILayout.FloatField("Max Width", outCtrlProperties.y);
                 outCtrlProperties.z = EditorGUILayout.FloatField("Fade Length Scale", outCtrlProperties.z);
-                outlineWidth_MinWidth_MaxWidth_Dist_DistBlur.vectorValue = outCtrlProperties;
+                outlineDistBlur.vectorValue = outCtrlProperties;
 
                 //materialEditor.ShaderProperty(outliineCtrlProperties, outliineCtrlProperties.displayName);
 

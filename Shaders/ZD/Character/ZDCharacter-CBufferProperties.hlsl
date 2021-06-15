@@ -72,7 +72,7 @@ float4 _OutlineColor;
 float _DiffuseBlend;
 
 half _OutlineEnable;
-half4 _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+half4 _OutlineDistBlur;
 
 half _SelectExpressionMap;
 half _SelectMouth;

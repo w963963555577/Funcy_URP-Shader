@@ -101,7 +101,7 @@ Shader "ZDShader/URP/Character"
         
         [HDR]_OutlineColor ("Color", Color) = (0.0075, 0.0006, 0.0006, 1)
         _DiffuseBlend ("Diffuse Blend", Range(0, 1)) = 0.2
-        _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur ("Outline Ctrl Properties", Vector) = (0.0, 0.5, 0.5, 0.0)
+        _OutlineDistBlur ("Outline Ctrl Properties", Vector) = (0.05, 1.0, 0.3, 0.0)
         
         //Expression
         [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
@@ -211,9 +211,9 @@ Shader "ZDShader/URP/Character"
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
                 half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
-                half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+                half4 widthRange = _OutlineDistBlur;
                 
-                RTD_OL *= min(widthRange.y * 2.0, dist * widthRange.z)/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
+                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z))/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
                 dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 float4 positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
                 o.vertex = positionCS / _OutlineEnable;
@@ -1210,9 +1210,9 @@ Shader "ZDShader/URP/Character"
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
                 half dist = distance(float3(0.0, v.vertex.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
-                half4 widthRange = _OutlineWidth_MinWidth_MaxWidth_Dist_DistBlur;
+                half4 widthRange = _OutlineDistBlur;
                 
-                RTD_OL *= min(widthRange.y * 2.0, dist * widthRange.z)/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
+                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z))/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
                 
                 o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz) / _OutlineEnable;
                 o.uv = v.uv;
