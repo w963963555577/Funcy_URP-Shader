@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -31,7 +32,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
 
         private Material material = null;
         private FilteringSettings m_FilteringSettings;
-        ShaderTagId m_ShaderTagId ;
+        ShaderTagId m_ShaderTagId;
         string tag;
 
         public Pass(RenderQueueRange renderQueueRange, Settings set, Material material, string tag)
