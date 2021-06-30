@@ -31,9 +31,9 @@ public class VertexRectToShader : BaseMeshEffect
                 tmp1 = targetGraphic.anchoredPosition;
                 graphic.SetVerticesDirty();
             }
-            if (tmp2 != targetGraphic.sizeDelta)
+            if (tmp2 != targetGraphic.rect.size)
             {
-                tmp2 = targetGraphic.sizeDelta;
+                tmp2 = targetGraphic.rect.size;
                 graphic.SetVerticesDirty();
             }
             if (tmp3 != refBlur)
