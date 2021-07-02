@@ -12,6 +12,7 @@ Shader "ZDShader/URP/Particles/Additive"
         [HideInInspector] _texcoord ("", 2D) = "white" { }
         _Border ("Border", Vector) = (5.0, 5.0, 5.0, 5.0)
         [MaterialToggle] _Slice ("Slice UV", Float) = 0
+        _Panner ("Panner", Vector) = (0.0, 0.0, 0.0, 0.0)
     }
     
     SubShader
@@ -69,6 +70,7 @@ Shader "ZDShader/URP/Particles/Additive"
             float _Soft;
             half4 _Border;
             half _Slice;
+            half4 _Panner;
             CBUFFER_END
             
             
@@ -76,8 +78,8 @@ Shader "ZDShader/URP/Particles/Additive"
             {
                 float4 vertex: POSITION;
                 float2 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
-                float2 particleSize: TEXCOORD1;	
-				float borderScale: TEXCOORD2;
+                float2 particleSize: TEXCOORD1;
+                float borderScale: TEXCOORD2;
                 float4 ase_color: COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -130,7 +132,7 @@ Shader "ZDShader/URP/Particles/Additive"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
                 
                 float2 uv_MainTex = lerp(IN.ase_texcoord0.xy, uv9slice(IN.ase_texcoord0.xy, /*_MainTex_TexelSize.xy*/0.0625.xx, _MainTex_ST, _Border, IN.ase_texcoord0.z, IN.particleSize.xy * 0.1), _Slice) * _MainTex_ST.xy + _MainTex_ST.zw;
-                float4 break13 = (tex2D(_MainTex, uv_MainTex) * IN.ase_color * _TintColor);
+                float4 break13 = (tex2D(_MainTex, uv_MainTex + _Panner.xy * _Time.y * _Panner.z) * IN.ase_color * _TintColor);
                 float3 appendResult14 = (float3(break13.r, break13.g, break13.b));
                 
                 float4 screenPos = IN.ase_texcoord2;
