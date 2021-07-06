@@ -132,7 +132,7 @@ Shader "ZDShader/UI/Effect/Flow"
                 
                 half2 maskRect = abs(rotate2D(i.uv - 0.5, 0.0.xx, _AngleDirection * deg2rad)) * 2.0 * i.uv2.xy;
                 
-                col.rgb += col.rgb * max(i.uv3.x, sin((sin(maskRect.x * 2.0 * 6.28 - _Time.y * 3.0))) * i.uv3.y) * col.a;
+                col.rgb += col.rgb * max(i.uv3.x, sin((sin(lerp(maskRect.x, length(maskRect), i.uv1.x) * 2.0 * 6.28 - _Time.y * 3.0))) * i.uv3.y) * col.a;
 
                 #ifdef UNITY_UI_CLIP_RECT
                     col.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
