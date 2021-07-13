@@ -30,7 +30,7 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
         
         //Hide Property
         [HideInInspector]_StencilRef ("_StencilRef", Float) = 0
-        [HideInInspector]_StencilComp ("_StencilComp", Float) = 0 //0 = disable        
+        [HideInInspector]_StencilComp ("_StencilComp", Float) = 0 //0 = disable
     }
     
     SubShader
@@ -62,7 +62,7 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-                                    
+            
             
             struct appdata
             {
@@ -143,7 +143,10 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
                 #if defined(UNITY_SINGLE_PASS_STEREO)
                     i.screenUV.xy = UnityStereoTransformScreenSpaceTex(i.screenUV.xy);
                 #endif
-                float sceneCameraSpaceDepth = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(i.screenUV), _ZBufferParams);
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(i.screenUV), _ZBufferParams);
+                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(i.screenUV), _ZBufferParams);
+                
+                float sceneCameraSpaceDepth = min(depthQ, depthT);
                 float3 decalSpaceScenePos = i.cameraPosOS + i.viewRayOS * sceneCameraSpaceDepth;
                 
                 float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
@@ -161,9 +164,9 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
                 // sample the decal texture
                 return decalSpaceUV.xy;
             }
-
+            
             #include "Shapes.hlsl"
-
+            
             half4 frag(v2f i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);

@@ -255,9 +255,12 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 float4 screenPos = IN.ase_texcoord2;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                screenDepth16 = ((((simplePerlin2D10 - 1.0)) + screenDepth16) - screenPos.w);
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(ase_screenPosNorm.xy), _ZBufferParams);
                 
+                float screenDepth16 = min(depthQ, depthT);
+                screenDepth16 = ((((simplePerlin2D10 - 1.0)) + screenDepth16) - screenPos.w);
+                //return float4(screenDepth16.xxx, 1.0);
                 float smDisDepth = screenDepth16 / _Depth;
                 smDisDepth = min(1.0, smDisDepth);
                 
