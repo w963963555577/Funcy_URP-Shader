@@ -6,6 +6,12 @@ using UnityEngine.Rendering.Universal;
 public class CustomScreenTexture : ScriptableRendererFeature
 {
     [System.Serializable]
+    public class GlobalRenderTexture
+    {
+        public RenderTexture rt;
+        public string name = "";
+    }
+    [System.Serializable]
     public class Settings
     {
         [Range(0, 6)] public int mipmapCount = 0;
@@ -24,6 +30,9 @@ public class CustomScreenTexture : ScriptableRendererFeature
         public Material grabMaterial = null;
         public int frameBufferUsePass = 0;
         public string grabTextureName = "_CustomScreenTextureColorRT";
+
+        public List<GlobalRenderTexture> globalRenderTextures = new List<GlobalRenderTexture>();
+        
     }
 
     public Settings settings = new Settings();
@@ -93,7 +102,10 @@ public class CustomScreenTexture : ScriptableRendererFeature
                 }                    
             }
 
-
+            foreach(var gt in settings.globalRenderTextures)
+            {
+                cmd.SetGlobalTexture(gt.name, gt.rt);
+            }
 
 
             context.ExecuteCommandBuffer(cmd);

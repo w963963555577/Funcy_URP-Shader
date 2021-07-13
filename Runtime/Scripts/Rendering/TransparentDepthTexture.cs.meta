@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: dba0739b44461004ba0355b1b9a71b1a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - depthCamera: {fileID: 7441461133341419938, guid: 2bdb41d5544e627439f467ed420b24e0,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
