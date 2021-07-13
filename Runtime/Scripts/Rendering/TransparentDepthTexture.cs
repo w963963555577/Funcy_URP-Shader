@@ -8,10 +8,10 @@ public class TransparentDepthTexture : MonoBehaviour
 {
     [HideInInspector] [SerializeField] Camera depthCamera;
     [SerializeField] Camera currentCamera;
-
+    Camera origCamera;
     private void OnEnable()
     {
-        
+        origCamera = GetComponent<Camera>();
     }
     
     void Update()
@@ -19,9 +19,12 @@ public class TransparentDepthTexture : MonoBehaviour
         if(currentCamera == null)
         {
             currentCamera = Instantiate(depthCamera, transform);            
-            currentCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;             
+            currentCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;
+            return;
         }
-
+        currentCamera.fieldOfView = origCamera.fieldOfView;
+        currentCamera.nearClipPlane = origCamera.nearClipPlane; 
+        currentCamera.farClipPlane = origCamera.farClipPlane;
     }
     private void OnDisable()
     {
