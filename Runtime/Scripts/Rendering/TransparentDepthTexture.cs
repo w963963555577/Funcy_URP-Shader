@@ -1,13 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 [ExecuteAlways]
 [RequireComponent(typeof(Camera))]
 public class TransparentDepthTexture : MonoBehaviour
 {
     [HideInInspector] [SerializeField] Camera depthCamera;
-    [SerializeField] Camera currentCamera;
+    [HideInInspector][SerializeField] Camera currentCamera;
     Camera origCamera;
     private void OnEnable()
     {
@@ -31,3 +33,17 @@ public class TransparentDepthTexture : MonoBehaviour
         DestroyImmediate(currentCamera.gameObject);
     }
 }
+#if UNITY_EDITOR
+[CustomEditor(typeof(TransparentDepthTexture))]
+public class TransparentDepthTexture_Editor : Editor
+{
+    private void OnEnable()
+    {
+        
+    }
+    public override void OnInspectorGUI()
+    {
+        
+    }
+}
+#endif

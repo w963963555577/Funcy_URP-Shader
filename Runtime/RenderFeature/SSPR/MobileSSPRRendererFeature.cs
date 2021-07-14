@@ -248,6 +248,16 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == "Default");
         }
 
+        var mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            if(!mainCamera.GetComponent<TransparentDepthTexture>())
+            {
+                var d= mainCamera.gameObject.AddComponent<TransparentDepthTexture>();
+                d.hideFlags = HideFlags.HideAndDontSave;
+            }
+        }
+
 #if UNITY_EDITOR
 
         UnityEditor.EditorUtility.SetDirty(this);
