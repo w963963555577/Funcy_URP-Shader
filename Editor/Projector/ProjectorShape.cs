@@ -19,8 +19,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty rectanglePivot { get; set; }
         MaterialProperty falloff { get; set; }
 
-        MaterialProperty projectionAngleDiscardThreshold { get; set; }
-        MaterialProperty projectionAngleDiscardEnable { get; set; }
+        
+        
 
         public ShapeType shapeType = ShapeType.CircleSector;
         public enum ShapeType {None, CircleSector, Rectangle }
@@ -38,9 +38,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
             rectangleWidth = FindProperty("_RectangleWidth", props);
             rectangleHeight = FindProperty("_RectangleHeight", props);
             rectanglePivot = FindProperty("_RectanglePivot", props);
-            falloff = FindProperty("_Falloff", props);
-            projectionAngleDiscardThreshold = FindProperty("_ProjectionAngleDiscardThreshold", props);
-            projectionAngleDiscardEnable = FindProperty("_ProjectionAngleDiscardEnable", props);            
+            falloff = FindProperty("_Falloff", props);            
+            
         }
 
         [SerializeField]Transform lightTransform, lightTransfrom_Tmp; 

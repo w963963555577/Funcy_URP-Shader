@@ -33,8 +33,8 @@ half4 CircleSector(float2 centerUV)
     
     float areaCol = lerp((1.0 - areaPart), 1.0, _CircleAngle);
     areaCol = lerp(areaCol, circle, saturate(_CircleAngle - 0.7070707));
-    areaCol = pow(areaCol, _Falloff);
-    result.rgb = (areaCol + circleControlable).rrr * _Color;
+    areaCol = pow(abs(areaCol), _Falloff);
+    result.rgb = (areaCol + circleControlable).xxx * _Color.rgb;
     
     arc1 = (atan2(centerUV.y, centerUV.x) / PI + 1.0);
     arc2 = (atan2(-centerUV.y, centerUV.x) / PI + 1.0);
@@ -60,7 +60,7 @@ half4 Rectangle(float2 uv)
     float2 absUV = abs(uvS - 0.5h) * 1.4141414h ;
     
     float area = pow((saturate(absUV.r + absUV.g)), pow(_Falloff, 0.5h));
-    result.rgb = area.rrr * _Color;
+    result.rgb = area.rrr * _Color.rgb;
     float alpha = (1.0h - step(1.0h, area)) * area;
     result.a = alpha * 0.35;
     result.a += alpha * 0.65 * smoothstep(1.0 - _Amount - 0.005, 1.0 - _Amount + 0.005, uv.y);

@@ -25,8 +25,8 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
         _Falloff ("Fall Off", Float) = 4
         
         
-        [HideInInspector][Toggle(_ProjectionAngleDiscardEnable)] _ProjectionAngleDiscardEnable ("_ProjectionAngleDiscardEnable (default = on)", float) = 1
-        [HideInInspector]_ProjectionAngleDiscardThreshold ("_ProjectionAngleDiscardThreshold (default = 0)", range(-1, 1)) = 0
+        
+        
         
         //Hide Property
         [HideInInspector]_StencilRef ("_StencilRef", Float) = 0
@@ -57,7 +57,7 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
             #pragma target 3.0
             
             
-            #pragma shader_feature_local _ProjectionAngleDiscardEnable
+            
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -83,7 +83,6 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
             
             
             CBUFFER_START(UnityPerMaterial)
-            float _ProjectionAngleDiscardThreshold;
             half4 _Color;
             half _Amount;
             
@@ -104,11 +103,9 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
             
             CBUFFER_END
             
-            // Tranforms position from object to camera space
-            inline float3 ObjectToViewPos(float3 pos)
-            {
-                return mul(UNITY_MATRIX_V, mul(GetObjectToWorldMatrix(), float4(pos, 1.0))).xyz;
-            }
+            #include "Shapes.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/ProjectorUV.hlsl"
+            
             
             v2f vert(appdata v)
             {
@@ -118,61 +115,23 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
-                o.vertex = TransformObjectToHClip(v.vertex);
+                o.vertex = TransformObjectToHClip(v.vertex.xyz);
                 o.screenUV = ComputeScreenPos(o.vertex, _ProjectionParams.x);
                 
-                float3 viewRay = ObjectToViewPos(v.vertex);
-                
-                o.viewRayOS.w = viewRay.z;
-                
-                viewRay *= -1;
-                float4x4 ViewToObjectMatrix = mul(GetWorldToObjectMatrix(), UNITY_MATRIX_I_V);
-                
-                o.viewRayOS.xyz = mul((float3x3)ViewToObjectMatrix, viewRay);
-                o.cameraPosOS = mul(ViewToObjectMatrix, float4(0.0h, 0.0h, 0.0h, 1.0h)).xyz;
-                
+                float4x4 o2w = GetObjectToWorldMatrix();
+                float4x4 w2o = GetWorldToObjectMatrix();
+                InitProjectorVertexData(v.vertex, o2w, w2o, o.viewRayOS, o.cameraPosOS);
                 
                 return o;
             }
             
-            
-            float2 projectorUV(v2f i)
-            {
-                i.viewRayOS /= i.viewRayOS.w;
-                i.screenUV = i.screenUV / i.screenUV.w;
-                #if defined(UNITY_SINGLE_PASS_STEREO)
-                    i.screenUV.xy = UnityStereoTransformScreenSpaceTex(i.screenUV.xy);
-                #endif
-                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(i.screenUV), _ZBufferParams);
-                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(i.screenUV), _ZBufferParams);
-                
-                float sceneCameraSpaceDepth = min(depthQ, depthT);
-                float3 decalSpaceScenePos = i.cameraPosOS + i.viewRayOS * sceneCameraSpaceDepth;
-                
-                float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
-                
-                float mask = (abs(decalSpaceScenePos.x) < 0.5) * (abs(decalSpaceScenePos.y) < 0.5) * (abs(decalSpaceScenePos.z) < 0.5);
-                
-                
-                float3 decalSpaceHardNormal = normalize(cross(ddx(decalSpaceScenePos), ddy(decalSpaceScenePos)));
-                mask *= decalSpaceHardNormal.z > _ProjectionAngleDiscardThreshold ? 1.0: 0.0;//compare scene hard normal with decal projector's dir, decalSpaceHardNormal.z equals dot(decalForwardDir,sceneHardNormalDir)
-                
-                //call discard
-                clip(mask - 0.5);//if ZWrite is off, clip() is fast enough on mobile, because it won't access the DepthBuffer, so no pipeline stall.
-                //===================================================
-                
-                // sample the decal texture
-                return decalSpaceUV.xy;
-            }
-            
-            #include "Shapes.hlsl"
             
             half4 frag(v2f i): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
-                float2 uv = projectorUV(i);
+                float2 uv = projectorUV(i.viewRayOS, i.cameraPosOS, i.screenUV, 1.0.xx, 0.0);
                 
                 float4 col = float4(0.0h, 0.0h, 0.0h, 0.0h);
                 
