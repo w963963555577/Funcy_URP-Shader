@@ -24,13 +24,15 @@ public class TransparentDepthTexture : MonoBehaviour
             currentCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;
             return;
         }
+
         currentCamera.fieldOfView = origCamera.fieldOfView;
         currentCamera.nearClipPlane = origCamera.nearClipPlane; 
         currentCamera.farClipPlane = origCamera.farClipPlane;
     }
     private void OnDisable()
     {
-        DestroyImmediate(currentCamera.gameObject);
+        if (currentCamera != null)
+            DestroyImmediate(currentCamera.gameObject);
     }
 }
 #if UNITY_EDITOR
