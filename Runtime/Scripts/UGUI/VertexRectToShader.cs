@@ -8,6 +8,8 @@ public class VertexRectToShader : BaseMeshEffect
     public RectTransform targetGraphic;
 
     public Vector2 refBlur = new Vector2(0.9f, 0.1f);
+    public List<RectTransform> parents = new List<RectTransform>();
+    Vector2[] pTmp;
     protected override void Awake()
     {
         base.Awake();
@@ -22,13 +24,19 @@ public class VertexRectToShader : BaseMeshEffect
         }        
     }
     Vector2 tmp1, tmp2, tmp3;
+    Vector2 currentPosition;
     private void Update()
     {
         if (targetGraphic)
         {
-            if (tmp1 != targetGraphic.anchoredPosition)
+            currentPosition = targetGraphic.anchoredPosition;
+            foreach(var p in parents)
             {
-                tmp1 = targetGraphic.anchoredPosition;
+                currentPosition += p.anchoredPosition;
+            }
+            if (tmp1 != currentPosition)
+            {
+                tmp1 = currentPosition;
                 graphic.SetVerticesDirty();
             }
             if (tmp2 != targetGraphic.rect.size)
@@ -54,7 +62,7 @@ public class VertexRectToShader : BaseMeshEffect
         for (int i = 0; i < helper.currentVertCount; i++)
         {
             helper.PopulateUIVertex(ref vertex, i);
-            vertex.uv1 = targetGraphic.anchoredPosition;
+            vertex.uv1 = currentPosition;
             vertex.uv2 = targetGraphic.rect.size;
             vertex.uv3 = refBlur;
             helper.SetUIVertex(vertex, i);            
