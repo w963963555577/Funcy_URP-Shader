@@ -8,8 +8,8 @@ using UnityEditor;
 [RequireComponent(typeof(Camera))]
 public class TransparentDepthTexture : MonoBehaviour
 {
-    [HideInInspector] [SerializeField] Camera depthCamera;
-    [HideInInspector][SerializeField] Camera currentCamera;
+    [SerializeField] Camera depthCamera;
+    [SerializeField] Camera currentCamera;
     Camera origCamera;
     private void OnEnable()
     {
@@ -17,8 +17,11 @@ public class TransparentDepthTexture : MonoBehaviour
     }
     
     void Update()
-    { 
-        if(currentCamera == null)
+    {
+#if UNITY_EDITOR
+        depthCamera = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.zd.lwrp.funcy/Runtime/Prefab/DepthCamera").GetComponent<Camera>();
+#endif
+        if (currentCamera == null && depthCamera != null)
         {
             currentCamera = Instantiate(depthCamera, transform);            
             currentCamera.gameObject.hideFlags = HideFlags.HideAndDontSave;

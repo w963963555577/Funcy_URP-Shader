@@ -248,6 +248,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == "Default");
         }
 
+#if UNITY_EDITOR
         var mainCamera = Camera.main;
         if (mainCamera != null)
         {
@@ -257,8 +258,6 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 d.hideFlags = HideFlags.HideAndDontSave;
             }
         }
-
-#if UNITY_EDITOR
 
         UnityEditor.EditorUtility.SetDirty(this);
 #endif

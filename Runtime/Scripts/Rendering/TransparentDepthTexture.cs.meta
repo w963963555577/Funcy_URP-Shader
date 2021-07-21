@@ -4,8 +4,8 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
-  - depthCamera: {fileID: 7441461133341419938, guid: 2bdb41d5544e627439f467ed420b24e0,
-      type: 3}
+  - depthCamera: {instanceID: 0}
+  - currentCamera: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
