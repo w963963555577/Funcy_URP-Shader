@@ -248,7 +248,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
             Settings.selectedHeightFixerData = Settings.heightFixerData.Find(x => x.name == "Default");
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && ZD_ART_EDITOR
         var mainCamera = Camera.main;
         if (mainCamera != null)
         {
