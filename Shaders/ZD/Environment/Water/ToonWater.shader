@@ -113,6 +113,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 float4 ase_normal: NORMAL;
                 float4 tangent: TANGENT;
                 float2 texcoord: TEXCOORD0;
+                float4 color: COLOR0;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -126,6 +127,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 float4 positionWS: TEXCOORD1;
                 float4 ase_texcoord2: TEXCOORD2;
                 float4 normalWS: TEXCOORD3;
+                float4 color: TEXCOORD4;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -213,7 +215,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                     v.vertex.xyz += vertexValue;
                 #endif
                 
-                v.ase_normal = v.ase_normal ;
+                o.color = v.color;
                 o.position = TransformObjectToHClip(v.vertex.xyz);
                 
                 o.fogCoord = ComputeFogFactor(o.position.z);
@@ -259,7 +261,8 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(ase_screenPosNorm.xy), _ZBufferParams);
                 
                 float screenDepth16 = min(depthQ, depthT);
-                screenDepth16 = ((((simplePerlin2D10 - 1.0)) + screenDepth16) - screenPos.w);
+                
+                screenDepth16 = (simplePerlin2D10 - 1.0) * IN.color.a + screenDepth16 - screenPos.w;
                 //return float4(screenDepth16.xxx, 1.0);
                 float smDisDepth = screenDepth16 / _Depth;
                 smDisDepth = min(1.0, smDisDepth);
