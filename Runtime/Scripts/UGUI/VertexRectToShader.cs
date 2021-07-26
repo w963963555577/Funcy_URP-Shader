@@ -9,21 +9,16 @@ public class VertexRectToShader : BaseMeshEffect
 
     public Vector2 refBlur = new Vector2(0.9f, 0.1f);
     public List<RectTransform> parents = new List<RectTransform>();
-    Vector2[] pTmp;
+    
     protected override void Awake()
     {
         base.Awake();
     }
     protected override void OnEnable()
     {
-        if (targetGraphic)
-        {
-            tmp1 = targetGraphic.anchoredPosition;
-            tmp2 = targetGraphic.sizeDelta;
-            tmp3 = refBlur;
-        }        
+    
     }
-    Vector2 tmp1, tmp2, tmp3;
+    Vector2 tmp1 = Vector2.one * -99999, tmp2 = Vector2.one * -99999, tmp3 = Vector2.one * -99999;
     Vector2 currentPosition;
     private void Update()
     {
