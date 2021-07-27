@@ -1,4 +1,4 @@
-﻿Shader "ZDShader/URP/Particles/PortalEffect"
+﻿Shader "ZDShader/URP/Particles/Custom Effects/PortalEffect"
 {
     Properties
     {

@@ -138,6 +138,7 @@ Shader "ZDShader/URP/Particles/Additive"
                 float4 screenPos = IN.ase_texcoord2;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
+                
                 float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
                 float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
                 
