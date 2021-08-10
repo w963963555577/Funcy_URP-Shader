@@ -2,6 +2,7 @@ Shader "ZDShader/URP/Character"
 {
     Properties
     {
+        _BoneMatrixMap ("Bone Matrix Map", 2DArray) = "black" { }
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (1.0, 1.0, 1.0, 1)
         
@@ -157,6 +158,8 @@ Shader "ZDShader/URP/Character"
             // GPU Instancing
             #pragma multi_compile_instancing
             #pragma multi_compile _ _AlphaClip
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            #pragma shader_feature_local _AnimationInstancing
             
             #pragma target 3.0
             
@@ -168,7 +171,17 @@ Shader "ZDShader/URP/Character"
                 float3 normal: NORMAL;
                 float2 uv: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                
+                #ifndef _SKINBONE_ATTACHED
+                    float4 boneWeight: BLENDWEIGHTS;
+                    uint4 boneIndex: BLENDINDICES;
+                #endif
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct v2f
@@ -178,22 +191,38 @@ Shader "ZDShader/URP/Character"
                 float4 positionSS: TEXCOORD1;
                 float vertexDist: TEXCOORD2;
                 
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
             
-            #include "ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
                 v2f o;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid = _VisibleInstanceOnlyTransformIDBuffer[v.mid];
+                #else
+                    uint mid = 0;
+                    UNITY_SETUP_INSTANCE_ID(v);
+                    UNITY_TRANSFER_INSTANCE_ID(v, o);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                #endif
                 
-                //half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
+                #if _AnimationInstancing
+                    float4x4 am = AnimationInstancingMatrix(v.boneIndex, v.boneWeight, mid);
+                    float4 positionOS = mul(am, v.vertex);
+                    float3 normalOS = mul((float3x3)am, v.normal);
+                    
+                    v.vertex = positionOS;
+                    v.normal = normalOS.xyz;
+                #endif
+                
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -210,14 +239,33 @@ Shader "ZDShader/URP/Character"
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
-                half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #ifdef _DrawMeshInstancedProcedural
+                    half dist = distance(v.vertex.xyz, mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
                 half4 widthRange = _OutlineDistProp;
                 
-                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z))/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
-                dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
-                float4 positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
+                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z));
+                #ifdef _DrawMeshInstancedProcedural
+                    dist = distance(0.0.xxx, mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
+                
+                float4 positionCS;
+                #ifdef _DrawMeshInstancedProcedural
+                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(v.vertex.xyz + _OEM * RTD_OL, 1.0)).xyz;
+                    positionCS = TransformWorldToHClip(float4(positionWS, 1).xyz);
+                #else
+                    positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
+                #endif
+                
+                
                 o.vertex = positionCS / _OutlineEnable;
                 o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
+                
+                
                 o.uv = v.uv;
                 o.vertexDist = dist;
                 return o;
@@ -225,13 +273,17 @@ Shader "ZDShader/URP/Character"
             
             half4 frag(v2f i): SV_Target
             {
-                UNITY_SETUP_INSTANCE_ID(i);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_INSTANCE_ID(i);
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                #endif
                 
                 float2 screenUV = i.positionSS.xy / i.positionSS.w;
-                
-                DistanceDisslove(screenUV, i.vertexDist);
-                
+                #if _DrawMeshInstancedProcedural
+                #else
+                    DistanceDisslove(screenUV, i.vertexDist);
+                #endif
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
                 half4 effectiveDisslive = _EffectiveColor;
                 
@@ -246,6 +298,7 @@ Shader "ZDShader/URP/Character"
             ENDHLSL
             
         }
+        
         
         Pass
         {
@@ -278,7 +331,6 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile _ _DiscolorationSystem
             #pragma shader_feature_local _ExpressionEnable
             
-            
             #if _ExpressionEnable
                 #pragma shader_feature_local _ExpressionFormat_Wink
                 #pragma shader_feature_local _ExpressionFormat_FaceSheet
@@ -302,6 +354,8 @@ Shader "ZDShader/URP/Character"
             
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            #pragma shader_feature_local _AnimationInstancing
             
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
@@ -313,7 +367,7 @@ Shader "ZDShader/URP/Character"
             
             sampler2D _diffuse;
             
-            #include "ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             
             TEXTURE2D(_mask);                       SAMPLER(sampler_mask);
@@ -331,7 +385,17 @@ Shader "ZDShader/URP/Character"
                 float2 uv1: TEXCOORD1;
                 float2 effectcoord: TEXCOORD2;
                 float2 selfShadowCoord: TEXCOORD3;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                
+                #ifndef _SKINBONE_ATTACHED
+                    float4 boneWeight: BLENDWEIGHTS;
+                    uint4 boneIndex: BLENDINDICES;
+                #endif
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct Varyings
@@ -358,8 +422,12 @@ Shader "ZDShader/URP/Character"
                 
                 float4 positionCS: SV_POSITION;
                 
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             
             
@@ -395,17 +463,37 @@ Shader "ZDShader/URP/Character"
             {
                 Varyings output = (Varyings)0;
                 
-                UNITY_SETUP_INSTANCE_ID(input);
-                UNITY_TRANSFER_INSTANCE_ID(input, output);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    uint mid = 0;
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_TRANSFER_INSTANCE_ID(input, output);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #endif
                 
-                //half3 objPivot = mul(GetObjectToWorldMatrix(), half4(0.0, 0.0, 0.0, 1.0)).xyz;
+                #if _AnimationInstancing
+                    float4x4 am = AnimationInstancingMatrix(input.boneIndex, input.boneWeight, mid);
+                    float4 positionOS = mul(am, input.positionOS);
+                    float3 normalOS = mul((float3x3)am, input.normalOS);
+                    float4 tangentOS = mul(am, input.tangentOS);
+                #else
+                    float4 positionOS = input.positionOS;
+                    float3 normalOS = input.normalOS;
+                    float4 tangentOS = input.tangentOS;
+                #endif
                 
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                
-                VertexNormalInputs vertexNormalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                VertexPositionInputs vertexInput;
+                VertexNormalInputs vertexNormalInput;
+                #ifdef _DrawMeshInstancedProcedural
+                    vertexInput = InitVertexPositionInputs(positionOS.xyz, mid);
+                    vertexNormalInput = InitVertexNormalInputs(normalOS.xyz, tangentOS, mid);
+                #else
+                    vertexInput = GetVertexPositionInputs(positionOS.xyz);
+                    vertexNormalInput = GetVertexNormalInputs(normalOS.xyz, tangentOS);
+                #endif
                 
                 // Computes fog factor per-vertex.
                 float fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -424,12 +512,17 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 //SelfMask
-                half index = _SelfMaskDirection;
+                half indexSelf = _SelfMaskDirection;
                 half3 dirPZPY = half3(0, 0, 1);half3 upPZPY = half3(0, 1, 0);
                 half3 dirPYNX = half3(0, 1, 0);half3 upPYNX = half3(-1, 0, 0);
-                half3 useDir = lerp(dirPZPY, dirPYNX, min(1, index));
-                half3 useUp = lerp(upPZPY, upPYNX, min(1, index));
-                output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
+                half3 useDir = lerp(dirPZPY, dirPYNX, min(1, indexSelf));
+                half3 useUp = lerp(upPZPY, upPYNX, min(1, indexSelf));
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    output.objectDirection.xyz = mul(_ObjectToWorldBuffer[mid], float4(useDir.xyz, 0.0)).xyz;
+                #else
+                    output.objectDirection.xyz = mul(GetObjectToWorldMatrix(), float4(useDir.xyz, 0.0)).xyz;
+                #endif
                 output.objectDirection.y = 0;
                 
                 Light mainLight = LerpLightDirection(output.objectDirection.xyz);
@@ -446,7 +539,11 @@ Shader "ZDShader/URP/Character"
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                 output.lightXZDirection.xyz = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
                 
-                output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #ifdef _DrawMeshInstancedProcedural
+                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
                 
                 output.positionCS = vertexInput.positionCS;
                 float4 positionSS = ComputeScreenPos(vertexInput.positionCS, _ProjectionParams.x);
@@ -630,15 +727,22 @@ Shader "ZDShader/URP/Character"
             
             half4 LitPassFragment(Varyings i): SV_Target
             {
-                UNITY_SETUP_INSTANCE_ID(i);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_INSTANCE_ID(i);
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                #endif
+                
+                //return float4((i.boneIndex.x == 32).xxx, 1.0);
                 
                 float3 positionWS = i.positionWSAndFogFactor.xyz;
                 float4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
                 float2 screenUV = positionSS.xy /= positionSS.w;
                 
-                DistanceDisslove(screenUV, i.vertexDist);
-                
+                #if _DrawMeshInstancedProcedural
+                #else
+                    DistanceDisslove(screenUV, i.vertexDist);
+                #endif
                 float4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
                 float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
@@ -964,6 +1068,8 @@ Shader "ZDShader/URP/Character"
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            #pragma shader_feature_local _AnimationInstancing
             
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             
@@ -978,7 +1084,7 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            #include "ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -990,7 +1096,16 @@ Shader "ZDShader/URP/Character"
                 float2 texcoord: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
                 
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                #ifndef _SKINBONE_ATTACHED
+                    float4 boneWeight: BLENDWEIGHTS;
+                    uint4 boneIndex: BLENDINDICES;
+                #endif
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct Varyings
@@ -998,15 +1113,31 @@ Shader "ZDShader/URP/Character"
                 float2 uv: TEXCOORD0;
                 float4 positionCS: SV_POSITION;
                 
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             
-            float4 GetShadowPositionHClip(Attributes input)
+            float4 GetShadowPositionHClip(Attributes input, uint mid)
             {
+                #if _AnimationInstancing
+                    float4x4 am = AnimationInstancingMatrix(input.boneIndex, input.boneWeight, mid);
+                    float4 positionOS = mul(am, input.positionOS);
+                    float3 normalOS = mul((float3x3)am, input.normalOS);
+                    
+                    input.positionOS = positionOS;
+                    input.normalOS = normalOS.xyz;
+                #endif
                 
-                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                #ifdef _DrawMeshInstancedProcedural
+                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(input.positionOS.xyz, 1.0));
+                    float3 normalWS = mul(_ObjectToWorldBuffer[mid], float4(input.normalOS.xyz, 0.0));
+                #else
+                    float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                    float3 normalWS = TransformObjectToWorldNormal(input.normalOS.xyz);
+                #endif
                 
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 #if UNITY_REVERSED_Z
@@ -1021,17 +1152,25 @@ Shader "ZDShader/URP/Character"
             
             Varyings ShadowPassVertex(Attributes input)
             {
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    uint mid = 0;
+                #endif
                 Varyings output = (Varyings)0;
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
-                output.positionCS = GetShadowPositionHClip(input);
+                output.positionCS = GetShadowPositionHClip(input, mid);
                 return output;
             }
             
             half4 ShadowPassFragment(Varyings input): SV_TARGET
             {
-                UNITY_SETUP_INSTANCE_ID(input);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                #endif
                 #if _AlphaClip
                     half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
                     half4 effectiveDisslive = _EffectiveColor;
@@ -1076,19 +1215,31 @@ Shader "ZDShader/URP/Character"
             //--------------------------------------
             // GPU Instancing
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            #pragma shader_feature_local _AnimationInstancing
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            #include "ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             struct Attributes
             {
                 float4 position: POSITION;
                 float2 texcoord: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                
+                #ifndef _SKINBONE_ATTACHED
+                    float4 boneWeight: BLENDWEIGHTS;
+                    uint4 boneIndex: BLENDINDICES;
+                #endif
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct Varyings
@@ -1097,35 +1248,71 @@ Shader "ZDShader/URP/Character"
                 float4 positionCS: SV_POSITION;
                 float vertexDist: TEXCOORD1;
                 float4 positionSS: TEXCOORD2;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             
             Varyings DepthOnlyVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
                 
-                UNITY_SETUP_INSTANCE_ID(input);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
+                #else
+                    uint mid = 0;
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                #endif
+                
+                #if _AnimationInstancing
+                    float4x4 am = AnimationInstancingMatrix(input.boneIndex, input.boneWeight, mid);
+                    float4 positionOS = mul(am, input.position);
+                #else
+                    float4 positionOS = input.position;
+                #endif
+                input.position = positionOS;
+                
                 
                 input.position.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
                 
-                float3 positionWS = mul(GetObjectToWorldMatrix(), float4(input.position.xyz, 0.0)).xyz;
+                #ifdef _DrawMeshInstancedProcedural
+                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(positionOS.xyz, 0.0)).xyz;
+                #else
+                    float3 positionWS = mul(GetObjectToWorldMatrix(), float4(positionOS.xyz, 0.0)).xyz;
+                #endif
                 positionWS.y = lerp(positionWS.y, -0.99, step(positionWS.y, -0.99));
-                input.position.xyz = mul(GetWorldToObjectMatrix(), float4(positionWS, 0.0)).xyz;
+                #ifdef _DrawMeshInstancedProcedural
+                    input.position.xyz = mul(_WorldToObjectBuffer[mid], float4(positionWS, 0.0)).xyz;
+                #else
+                    input.position.xyz = mul(GetWorldToObjectMatrix(), float4(positionWS, 0.0)).xyz;
+                #endif
                 output.positionCS = TransformObjectToHClip(input.position.xyz);
                 output.positionSS = ComputeScreenPos(output.positionCS, _ProjectionParams.x);
-                output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
+                
                 return output;
             }
             
             half4 DepthOnlyFragment(Varyings input): SV_TARGET
             {
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                #endif
                 float2 screenUV = input.positionSS.xy / input.positionSS.w;
-                DistanceDisslove(screenUV, input.vertexDist);
-                
+                #if _DrawMeshInstancedProcedural
+                #else
+                    DistanceDisslove(screenUV, input.vertexDist);
+                #endif
                 #if _AlphaClip
                     half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
                     half4 effectiveDisslive = _EffectiveColor;
@@ -1142,6 +1329,8 @@ Shader "ZDShader/URP/Character"
             
         }
         
+        
+        
         Pass
         {
             Name "SceneSelectionPass"
@@ -1152,6 +1341,7 @@ Shader "ZDShader/URP/Character"
             Cull Off
             Blend One Zero
             
+            
             HLSLPROGRAM
             
             #pragma vertex vert
@@ -1159,6 +1349,8 @@ Shader "ZDShader/URP/Character"
             // GPU Instancing
             #pragma multi_compile_instancing
             #pragma multi_compile _ _AlphaClip
+            #pragma multi_compile _ _DrawMeshInstancedProcedural
+            #pragma shader_feature_local _AnimationInstancing
             
             #pragma target 3.0
             
@@ -1168,31 +1360,60 @@ Shader "ZDShader/URP/Character"
             {
                 float4 vertex: POSITION;
                 float3 normal: NORMAL;
-                float3 color: COLOR0;
                 float2 uv: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
+                
+                #ifndef _SKINBONE_ATTACHED
+                    float4 boneWeight: BLENDWEIGHTS;
+                    uint4 boneIndex: BLENDINDICES;
+                #endif
+                
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid: SV_INSTANCEID;
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                #endif
             };
             
             struct v2f
             {
                 float4 vertex: SV_POSITION;
                 float2 uv: TEXCOORD0;
+                float4 positionSS: TEXCOORD1;
+                float vertexDist: TEXCOORD2;
                 
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_VERTEX_INPUT_INSTANCE_ID
+                    UNITY_VERTEX_OUTPUT_STEREO
+                #endif
             };
             sampler2D _diffuse;
             sampler2D _OutlineWidthControl;
             
-            #include "ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
                 v2f o;
-                UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                #ifdef _DrawMeshInstancedProcedural
+                    uint mid = _VisibleInstanceOnlyTransformIDBuffer[v.mid];
+                #else
+                    uint mid = 0;
+                    UNITY_SETUP_INSTANCE_ID(v);
+                    UNITY_TRANSFER_INSTANCE_ID(v, o);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                #endif
+                
+                #if _AnimationInstancing
+                    float4x4 am = AnimationInstancingMatrix(v.boneIndex, v.boneWeight, mid);
+                    float4 positionOS = mul(am, v.vertex);
+                    float3 normalOS = mul((float3x3)am, v.normal);
+                    
+                    v.vertex = positionOS;
+                    v.normal = normalOS.xyz;
+                #endif
+                
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
@@ -1209,31 +1430,58 @@ Shader "ZDShader/URP/Character"
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
-                half dist = distance(float3(0.0, v.vertex.y, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #ifdef _DrawMeshInstancedProcedural
+                    half dist = distance(v.vertex.xyz, mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    half dist = distance(v.vertex.xyz, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
                 half4 widthRange = _OutlineDistProp;
                 
-                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z))/* (lerp(widthRange.x, widthRange.y, saturate(dist - 0.05) * widthRange.z))*/;
+                RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z));
+                #ifdef _DrawMeshInstancedProcedural
+                    dist = distance(0.0.xxx, mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #else
+                    dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                #endif
                 
-                o.vertex = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz) / _OutlineEnable;
+                float4 positionCS;
+                #ifdef _DrawMeshInstancedProcedural
+                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(v.vertex.xyz + _OEM * RTD_OL, 1.0)).xyz;
+                    positionCS = TransformWorldToHClip(float4(positionWS, 1).xyz);
+                #else
+                    positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
+                #endif
+                
+                
+                o.vertex = positionCS / _OutlineEnable;
+                o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
+                
+                
                 o.uv = v.uv;
+                o.vertexDist = dist;
                 return o;
             }
             
             half4 frag(v2f i): SV_Target
             {
-                UNITY_SETUP_INSTANCE_ID(i);
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-                
-                #if _AlphaClip
-                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
-                    half4 effectiveDisslive = _EffectiveColor;
-                    
-                    half alphaMinus = 1.0 - _EffectiveColor.a;
-                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
-                    
-                    clip(effectiveDisslive.a - 0.5);
+                #ifdef _DrawMeshInstancedProcedural
+                #else
+                    UNITY_SETUP_INSTANCE_ID(i);
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 #endif
                 
+                float2 screenUV = i.positionSS.xy / i.positionSS.w;
+                
+                
+                half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
+                half4 effectiveDisslive = _EffectiveColor;
+                
+                half alphaMinus = 1.0 - _EffectiveColor.a;
+                effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                
+                float4 _diffuse_var = tex2D(_diffuse, i.uv);
+                half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _Color.a * effectiveDisslive.a);
+                //half4 col = float4(0.05.rrr, 1.0);
                 return 1.0;
             }
             ENDHLSL

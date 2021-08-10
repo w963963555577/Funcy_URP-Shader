@@ -14,6 +14,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
         #region Properties
         MaterialProperty diffuse { get; set; }
+        MaterialProperty boneMatrixMap{ get; set; }
         MaterialProperty color { get; set; }
 
         MaterialProperty subsurfaceScattering { get; set; }
@@ -328,7 +329,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
                 materialEditor.ShaderProperty(diffuseBlend, diffuseBlend.displayName);
                 materialEditor.ShaderProperty(outlineColor, outlineColor.displayName);
-
+                
 
             });
 
@@ -565,6 +566,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                     { mat.DisableKeyword(keywordName); }
                 }
                 materialEditor.RenderQueueField();
+                materialEditor.EnableInstancingField();
             });
 
             DrawArea("Float Model", () => {
@@ -606,6 +608,15 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                 selfMaskEnable.floatValue = 0.0f;
                 mat.DisableKeyword("_SelfMaskEnable");
             }
+            if(boneMatrixMap.textureValue != null)
+            {
+                mat.EnableKeyword("_AnimationInstancing");
+            }
+            else
+            {
+                mat.DisableKeyword("_AnimationInstancing");
+            }
+            materialEditor.TexturePropertySingleLine(boneMatrixMap.displayName.ToGUIContent(), boneMatrixMap);
         }
 
         public override void MaterialChanged(Material material)

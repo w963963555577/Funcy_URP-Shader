@@ -88,10 +88,19 @@ half4 _EffectiveColor;
 half _FaceLightMapCombineMode;
 
 half _DistanceDisslove;
+half4 _VertexDataMap_TexelSize;
+half4 _BoneMatrixMap_TexelSize;
+#ifdef _DrawMeshInstancedProcedural
+    StructuredBuffer<float4x4> _ObjectToWorldBuffer;
+    StructuredBuffer<float4x4> _WorldToObjectBuffer;
+    StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
+    StructuredBuffer<float> _TimeBuffer;
+#endif
+
 CBUFFER_END
 
-TEXTURE2D(_EffectiveMap);              SAMPLER(sampler_EffectiveMap);
-
+TEXTURE2D(_EffectiveMap);                    SAMPLER(sampler_EffectiveMap);
+TEXTURE2D_ARRAY(_BoneMatrixMap);             SAMPLER(sampler_BoneMatrixMap);
 
 float4 ComputeScreenPos(float4 pos, float projectionSign)
 {
@@ -122,7 +131,7 @@ half3 HSV2RGB(half3 c)
 void DistanceDisslove(float2 screenUV, half vertexDist)
 {
     half as = _ScreenParams.y / _ScreenParams.x;
-    half2 maskUV = half2(screenUV.x*as, screenUV.y) * 200.0;
+    half2 maskUV = half2(screenUV.x * as, screenUV.y) * 200.0;
     half rowID = fmod(floor(maskUV.y), 2.0);
     half2 distanceRect = abs(frac(lerp(maskUV, maskUV + 0.5, rowID))) * 0.70707;
     
@@ -136,3 +145,73 @@ float CaculateShadowArea(float4 src, float4 picker, float setpB)
     float3 compare = src.rgb - picker.rgb;
     return 1.0 - smoothstep(picker.a, setpB, length(compare));
 }
+
+#ifdef _DrawMeshInstancedProcedural
+    VertexPositionInputs InitVertexPositionInputs(float3 positionOS, uint id)
+    {
+        VertexPositionInputs input;
+        input.positionWS = mul(_ObjectToWorldBuffer[id], float4(positionOS, 1.0)).xyz;
+        input.positionVS = TransformWorldToView(input.positionWS);
+        input.positionCS = TransformWorldToHClip(input.positionWS);
+        
+        float4 ndc = input.positionCS * 0.5f;
+        input.positionNDC.xy = float2(ndc.x, ndc.y * _ProjectionParams.x) + ndc.w;
+        input.positionNDC.zw = input.positionCS.zw;
+        
+        return input;
+    }
+    
+    VertexNormalInputs InitVertexNormalInputs(float3 normalOS, float4 tangentOS, uint id)
+    {
+        VertexNormalInputs tbn;
+        
+        // mikkts space compliant. only normalize when extracting normal at frag.
+        real sign = tangentOS.w * GetOddNegativeScale();
+        #ifdef UNITY_ASSUME_UNIFORM_SCALING
+            tbn.normalWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], normalOS.xyz));
+        #else
+            tbn.normalWS.xyz = SafeNormalize(mul(normalOS, (real3x3)_WorldToObjectBuffer[id]));
+        #endif
+        tbn.tangentWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], tangentOS.xyz));
+        tbn.bitangentWS = cross(tbn.normalWS, tbn.tangentWS) * sign;
+        return tbn;
+    }
+#endif
+
+#ifndef _SKINBONE_ATTACHED
+    float4x4 BoneMatrix(float boneIndex, float time)
+    {
+        float loop = 0.333333333;
+        float t = fmod(time, loop) + 0.5 * _BoneMatrixMap_TexelSize.x;
+        float2 uv = float2(t, (boneIndex + 0.5) * _BoneMatrixMap_TexelSize.y);
+        float4 c1 = SAMPLE_TEXTURE2D_ARRAY_LOD(_BoneMatrixMap, sampler_BoneMatrixMap, uv, 0, 0);
+        uv.x += loop;
+        float4 c2 = SAMPLE_TEXTURE2D_ARRAY_LOD(_BoneMatrixMap, sampler_BoneMatrixMap, uv, 0, 0);
+        uv.x += loop;
+        float4 c3 = SAMPLE_TEXTURE2D_ARRAY_LOD(_BoneMatrixMap, sampler_BoneMatrixMap, uv, 0, 0);
+        float4 c4 = half4(0, 0, 0, 1);
+        float4x4 m;
+        
+        m._11_12_13_14 = c1;
+        m._21_22_23_24 = c2;
+        m._31_32_33_34 = c3;
+        m._41_42_43_44 = c4;
+        
+        return m;
+    }
+    float4x4 AnimationInstancingMatrix(float4 boneID, float4 boneWeight, uint mid)
+    {
+        #ifdef _DrawMeshInstancedProcedural
+            float time = _TimeBuffer[mid];
+        #else
+            float time = _Time.y;
+        #endif
+        
+        float4x4 o2w = BoneMatrix(boneID.x, time) * boneWeight.x;
+        o2w += BoneMatrix(boneID.y, time) * boneWeight.y;
+        o2w += BoneMatrix(boneID.z, time) * boneWeight.z;
+        o2w += BoneMatrix(boneID.w, time) * boneWeight.w;
+        
+        return o2w;
+    }
+#endif
