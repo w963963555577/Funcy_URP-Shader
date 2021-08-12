@@ -2,7 +2,8 @@ Shader "ZDShader/URP/Character"
 {
     Properties
     {
-        _BoneMatrixMap ("Bone Matrix Map", 2DArray) = "black" { }
+        _BoneMatrixMap ("Bone Matrix Map", 2DArray) = "black" { }        
+        
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (1.0, 1.0, 1.0, 1)
         
@@ -328,12 +329,15 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _AlphaClip
             
-            #pragma multi_compile _ _DiscolorationSystem
-            #pragma shader_feature_local _ExpressionEnable
-            
+            //#pragma multi_compile _ _DiscolorationSystem
+            #define _DiscolorationSystem 1
+            //#pragma shader_feature_local _ExpressionEnable
+            #define _ExpressionEnable 1
             #if _ExpressionEnable
-                #pragma shader_feature_local _ExpressionFormat_Wink
-                #pragma shader_feature_local _ExpressionFormat_FaceSheet
+                //#pragma shader_feature_local _ExpressionFormat_Wink
+                #define _ExpressionFormat_Wink 0
+                //#pragma shader_feature_local _ExpressionFormat_FaceSheet
+                #define _ExpressionFormat_FaceSheet 1
             #endif
             
             #ifdef SHADER_API_D3D11
@@ -1132,8 +1136,8 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 #ifdef _DrawMeshInstancedProcedural
-                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(input.positionOS.xyz, 1.0));
-                    float3 normalWS = mul(_ObjectToWorldBuffer[mid], float4(input.normalOS.xyz, 0.0));
+                    float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(input.positionOS.xyz, 1.0)).xyz;
+                    float3 normalWS = mul(_ObjectToWorldBuffer[mid], float4(input.normalOS.xyz, 0.0)).xyz;
                 #else
                     float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                     float3 normalWS = TransformObjectToWorldNormal(input.normalOS.xyz);
@@ -1156,6 +1160,8 @@ Shader "ZDShader/URP/Character"
                     uint mid = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
                 #else
                     uint mid = 0;
+                    UNITY_SETUP_INSTANCE_ID(input);
+                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 #endif
                 Varyings output = (Varyings)0;
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
@@ -1330,7 +1336,7 @@ Shader "ZDShader/URP/Character"
         }
         
         
-        
+
         Pass
         {
             Name "SceneSelectionPass"
