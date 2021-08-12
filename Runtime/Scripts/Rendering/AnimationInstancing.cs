@@ -15,7 +15,9 @@ public class AnimationInstancing : MonoBehaviour
     public ComputeShader cullingComputeShader;
     public List<RenderGroup> renderGroups = new List<RenderGroup>();
     public bool viewCulling = true;
-    
+
+    public UnityEngine.UI.Text objectCount, currentCount;    
+
     private void OnEnable()
     {
         foreach (var rg in renderGroups)
@@ -32,10 +34,17 @@ public class AnimationInstancing : MonoBehaviour
         rg.UpdateTransform(index);
     }
 
+    bool instanced_tmp = false;
+    bool _instanced = true;
+    public bool instanced { get { return _instanced; } set { _instanced = value; } }
+    float _distance = 8;
+    public float distance { get { return _distance; } set { _distance = value; } }
     [System.Serializable]
     public class RenderGroup
     {
         Renderer ren;
+
+        public int currentCount = 0;
 
         private Buffer _ObjectToWorldBuffer;
         private Buffer _WorldToObjectBuffer;
@@ -52,7 +61,7 @@ public class AnimationInstancing : MonoBehaviour
 
 
         //Animation Instancing
-        private Buffer _TimeBuffer;float[] time;
+        private Buffer _TimeBuffer;Vector4[] timeData;
 
         //Probes
         MaterialPropertyBlock properties = null;
@@ -80,8 +89,8 @@ public class AnimationInstancing : MonoBehaviour
 
 
             //Animation Instancing
-            _TimeBuffer = new Buffer(objs.Count, typeof(float));
-            time = new float[objs.Count];
+            _TimeBuffer = new Buffer(objs.Count, typeof(Vector4));
+            timeData = new Vector4[objs.Count];
         }
 
         public void DispBuffers()
@@ -103,12 +112,9 @@ public class AnimationInstancing : MonoBehaviour
             UpdateBuffer(false, false);
         }
 
-        public void UpdateTime(int index, float time)
+        public void UpdateTime(int index, Vector4 timedata)
         {
-            this.time[index] = time;
-            var mat = ren.sharedMaterial;
-            _TimeBuffer.SetData(this.time);
-            mat.SetBuffer("_TimeBuffer", _TimeBuffer.target);
+            this.timeData[index] = timedata;
         }
 
         public void UpdateBuffer(bool updateAllObjects = true, bool updateArgs = true)
@@ -122,6 +128,7 @@ public class AnimationInstancing : MonoBehaviour
                     w2o[index] = o.worldToLocalMatrix;
                     bounds[index] = new float3x2(o.bounds.center, o.bounds.extents);
                     var e = o.GetComponent<AnimationInstancingElement>();
+                    elements.Add(e);
                     if (!e)
                     {
                         e = o.gameObject.AddComponent<AnimationInstancingElement>();
@@ -131,7 +138,7 @@ public class AnimationInstancing : MonoBehaviour
                     index++;
                 }
             }
-                
+
             _ObjectToWorldBuffer.SetData(o2w);
             _WorldToObjectBuffer.SetData(w2o);
             
@@ -163,9 +170,9 @@ public class AnimationInstancing : MonoBehaviour
             if (activeGroup)
             { instancedMaterial.DisableKeyword("_DrawMeshInstancedProcedural"); }
             else
-            { instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural"); }            
-
+            { instancedMaterial.EnableKeyword("_DrawMeshInstancedProcedural"); }
             
+
             visibleInstanceOnlyTransformBuffer.SetCounterValue(0);
             cullingComputeShader.SetMatrix("_VMatrix", ViewMatrix);
             cullingComputeShader.SetMatrix("_PMatrix", ProjectionMatrix);
@@ -178,16 +185,40 @@ public class AnimationInstancing : MonoBehaviour
 
             if (!activeGroup)
             {
-                /*
-                AsyncGPUReadback.Request(visibleInstanceOnlyTransformBuffer.target, r =>
-                {
-                    if (r.hasError) return;
-                    ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
-                });
-                */
+                //Animation Instancing Data            
+                _TimeBuffer.SetData(this.timeData);
+                instancedMaterial.SetBuffer("_TimeBuffer", _TimeBuffer.target);
+                //Animation Instancing Data
+
                 ComputeBuffer.CopyCount(visibleInstanceOnlyTransformBuffer.target, argsBuffer.target, 4);
                 Graphics.DrawMeshInstancedIndirect(reference.sharedMesh, 0, instancedMaterial, new Bounds(new Vector3(0, 0, 0), new Vector3(10000, 10000, 10000)), argsBuffer.target, 0,
                     null, shadowCastingMode, true, reference.gameObject.layer, null, lightProbeUsage, volume);
+
+                if (viewCulling)
+                {
+                    AsyncGPUReadback.Request(visibleTransformIDBuffer.target, r =>
+                    {
+                        if (r.hasError) return;
+
+                        var d = r.GetData<uint>();
+                        d.CopyTo(visibleTransformID);
+                        currentCount = visibleTransformID.ToList().FindAll(x => x == 1).Count;
+                    });
+
+                    for (int i = 0; i < objs.Count; i++)
+                    {
+                        bool enabled = visibleTransformID[i] == 1;
+                        elements[i].enabled = enabled;
+                        elements[i].animator.enabled = enabled;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < objs.Count; i++)
+                    {
+                        objs[i].enabled = true;
+                    }
+                }
             }
             else
             {
@@ -198,12 +229,16 @@ public class AnimationInstancing : MonoBehaviour
                         if (r.hasError) return;
                         
                         var d = r.GetData<uint>();                        
-                        d.CopyTo(visibleTransformID);                        
+                        d.CopyTo(visibleTransformID);
+                        currentCount = visibleTransformID.ToList().FindAll(x => x == 1).Count;
                     });
                     
                     for (int i = 0; i < objs.Count; i++)
                     {
-                        objs[i].enabled = visibleTransformID[i] == 1;
+                        bool enabled = visibleTransformID[i] == 1;
+                        objs[i].enabled = enabled;
+                        elements[i].enabled = enabled;
+                        elements[i].animator.enabled = enabled;
                     }
                 }
                 else
@@ -224,6 +259,7 @@ public class AnimationInstancing : MonoBehaviour
         public ShadowCastingMode shadowCastingMode = ShadowCastingMode.On;
 
         [SerializeField] List<MeshRenderer> objs = new List<MeshRenderer>();
+        [SerializeField] List<AnimationInstancingElement> elements = new List<AnimationInstancingElement>();
 
         public int objectCount { get { return objs.Count; } }
         public void SetObjects(List<MeshRenderer> objects)
@@ -251,6 +287,16 @@ public class AnimationInstancing : MonoBehaviour
 #endif
     }    
 
+    public void UpdateBufferWherToggle(RenderGroup rg)
+    {
+        foreach (var o in rg.GetObjects())
+        {
+            o.enabled = rg.activeGroup;
+        }
+
+        rg.InitBuffers();
+        rg.UpdateBuffer();
+    }
     void LateUpdate()
     {
         if (Camera.main == null) return;
@@ -264,6 +310,15 @@ public class AnimationInstancing : MonoBehaviour
         {
             rg.Draw(cullingComputeShader, kernel, v, p, viewCulling, LightProbeUsage.BlendProbes);
         }
+        renderGroups[0].farClipDistance = distance;
+        renderGroups[0].activeGroup = !instanced;
+        if(instanced_tmp != instanced)
+        {
+            instanced_tmp = instanced;
+            UpdateBufferWherToggle(renderGroups[0]);
+        }
+        objectCount.text = string.Format("Object Count: {0}", renderGroups[0].objectCount);
+        currentCount.text = string.Format("Current Count: {0}", renderGroups[0].currentCount);
     }
 
     public void UpdateAllBuffer()
@@ -416,14 +471,8 @@ public class AnimationInstancing_Editor : Editor
                 if (GUI.changed || isRootChange)
                 {                    
                     var mat = rg.reference.GetComponent<MeshRenderer>().sharedMaterial;
-                                                                                    
-                    foreach (var o in rg.GetObjects())
-                    {
-                        o.enabled = rg.activeGroup;
-                    }                    
-                    
-                    rg.InitBuffers();                                            
-                    rg.UpdateBuffer();
+
+                    data.UpdateBufferWherToggle(rg);
 
                     EditorUtility.SetDirty(target);
                     UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);
