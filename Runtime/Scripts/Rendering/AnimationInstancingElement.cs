@@ -24,7 +24,7 @@ public class AnimationInstancingElement : MonoBehaviour
         animator = GetComponent<Animator>();
         allBehaviours = animator.GetBehaviours<AnimationMapData>().ToList();
         ren = GetComponent<Renderer>();
-
+        if (!ren) return;
         propertyBlock = new MaterialPropertyBlock();
         propertyBlock.Clear();
         ren.GetPropertyBlock(propertyBlock);
