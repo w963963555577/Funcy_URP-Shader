@@ -297,12 +297,18 @@ public class AnimationInstancing : MonoBehaviour
         rg.InitBuffers();
         rg.UpdateBuffer();
     }
+
+    Camera mainCamera;
     void LateUpdate()
     {
-        if (Camera.main == null) return;
-
-        Matrix4x4 v = Camera.main.worldToCameraMatrix;
-        Matrix4x4 p = Camera.main.projectionMatrix;
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            return;
+        }
+        
+        Matrix4x4 v = mainCamera.worldToCameraMatrix;
+        Matrix4x4 p = mainCamera.projectionMatrix;
         
         var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");
         

@@ -223,15 +223,20 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 #if UNITY_EDITOR
         public bool hasMesh = false;
 #endif
-    }    
+    }
 
+    Camera mainCamera;
     void LateUpdate()
     {
-        if (Camera.main == null) return;
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            return;
+        }
 
-        Matrix4x4 v = Camera.main.worldToCameraMatrix;
-        Matrix4x4 p = Camera.main.projectionMatrix;
-        
+        Matrix4x4 v = mainCamera.worldToCameraMatrix;
+        Matrix4x4 p = mainCamera.projectionMatrix;
+
         var kernel = viewCulling ? cullingComputeShader.FindKernel("ViewCulling") : cullingComputeShader.FindKernel("Default");
         var lightProbeUsage = volume == null ? LightProbeUsage.BlendProbes : LightProbeUsage.UseProxyVolume;
         foreach (var rg in renderGroups)
