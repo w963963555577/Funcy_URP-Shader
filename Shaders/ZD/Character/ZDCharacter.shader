@@ -2,7 +2,7 @@ Shader "ZDShader/URP/Character"
 {
     Properties
     {
-        _BoneMatrixMap ("Bone Matrix Map", 2DArray) = "black" { }        
+        _BoneMatrixMap ("Bone Matrix Map", 2DArray) = "black" { }
         
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (1.0, 1.0, 1.0, 1)
@@ -64,7 +64,6 @@ Shader "ZDShader/URP/Character"
         _OutlineWidthControl ("Outline Width Control", 2D) = "white" { }
         
         // _DiscolorationSystem
-        [Toggle(_DiscolorationSystem)] _DiscolorationSystem ("Enable Discoloration System", float) = 0
         _DiscolorationColorCount ("Use Color Count", Range(1, 10)) = 2
         [HDR]_DiscolorationColor_0 ("DiscolorationColor_0", Color) = (1, 1, 1, 1)
         [HDR]_DiscolorationColor_1 ("DiscolorationColor_1", Color) = (1, 1, 1, 1)
@@ -106,8 +105,6 @@ Shader "ZDShader/URP/Character"
         _OutlineDistProp ("Outline Ctrl Properties", Vector) = (0.5, 1.0, 0.3, 0.0)
         
         //Expression
-        [Toggle(_ExpressionEnable)] _ExpressionEnable ("Enable Expression", float) = 0
-        
         [IntRange]_SelectExpressionMap ("Select Map", Range(0, 1)) = 0
         [NoScaleOffset]_ExpressionMap ("Face Sheet", 2D) = "black" { }
         [NoScaleOffset]_ExpressionQMap ("Q Face Sheet", 2D) = "black" { }
@@ -334,10 +331,10 @@ Shader "ZDShader/URP/Character"
             //#pragma shader_feature_local _ExpressionEnable
             #define _ExpressionEnable 1
             #if _ExpressionEnable
-                //#pragma shader_feature_local _ExpressionFormat_Wink
-                #define _ExpressionFormat_Wink 0
-                //#pragma shader_feature_local _ExpressionFormat_FaceSheet
-                #define _ExpressionFormat_FaceSheet 1
+                #pragma shader_feature_local _ExpressionFormat_Wink
+                //#define _ExpressionFormat_Wink 0
+                #pragma shader_feature_local _ExpressionFormat_FaceSheet
+                //#define _ExpressionFormat_FaceSheet 1
             #endif
             
             #ifdef SHADER_API_D3D11
@@ -794,15 +791,15 @@ Shader "ZDShader/URP/Character"
                         Brow = lerp(Brow, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, browUV), _SelectExpressionMap);
                     #endif
                     
-                    #if _ExpressionFormat_FaceSheet || _ExpressionFormat_Wink
-                        half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
-                        half2 eyesUV = i.expressionUV01.xy;
-                        half2 eyesMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _EyesTRS.xy + half2(0.5, 0.5) + _EyesTRS.zw;
-                        half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
-                        half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
-                        half4 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV);
-                        Eyes = lerp(Eyes, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, eyesUV), _SelectExpressionMap);
-                    #endif
+                    
+                    half4 _EyesTRS = half4(1.0 / _FaceRect.zw, -_FaceRect.xy);
+                    half2 eyesUV = i.expressionUV01.xy;
+                    half2 eyesMaskUV = (i.uv01.zw - half2(0.5, 0.5)) * _EyesTRS.xy + half2(0.5, 0.5) + _EyesTRS.zw;
+                    half2 eyesMaskRect = abs(((eyesMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
+                    half eyesMask = 1.0 - (max(smoothstep(1.0 - maskBlur * _EyesTRS.x, 1.0, eyesMaskRect.x), smoothstep(1.0 - maskBlur * _EyesTRS.y, 1.0, eyesMaskRect.y)));
+                    half4 Eyes = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, eyesUV);
+                    Eyes = lerp(Eyes, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, eyesUV), _SelectExpressionMap);
+                    
                     
                     #if _ExpressionFormat_FaceSheet
                         half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
@@ -1336,7 +1333,7 @@ Shader "ZDShader/URP/Character"
         }
         
         
-
+        
         Pass
         {
             Name "SceneSelectionPass"

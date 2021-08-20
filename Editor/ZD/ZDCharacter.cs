@@ -92,8 +92,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty discolorationColor_7 { get; set; }
         MaterialProperty discolorationColor_8 { get; set; }
         MaterialProperty discolorationColor_9 { get; set; }
-        MaterialProperty[] discolorationColorList = new MaterialProperty[10];
-        MaterialProperty discolorationSystem { get; set; }
+        MaterialProperty[] discolorationColorList = new MaterialProperty[10];        
         MaterialProperty discolorationColorCount { get; set; }
 
         MaterialProperty outlineDistProp { get; set; }
@@ -102,8 +101,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty diffuseBlend { get; set; }
 
 
-        public enum ExpressionFormat { Wink, FaceSheet }
-        MaterialProperty expressionEnable { get; set; }
+        public enum ExpressionFormat { Wink, FaceSheet }        
         MaterialProperty selectExpressionMap { get; set; }
         MaterialProperty expressionMap { get; set; }
         MaterialProperty expressionQMap { get; set; }
@@ -336,9 +334,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
 
             DrawArea("Discoloration System", () =>
-            {
-                materialEditor.ShaderProperty(discolorationSystem, "Enable");
-                EditorGUI.BeginDisabledGroup(mat.GetFloat("_DiscolorationSystem") == 0.0);
+            {                
                 materialEditor.ShaderProperty(discolorationColorCount, discolorationColorCount.displayName.ToGUIContent());
                 mat.SetFloat("_DiscolorationColorCount", Mathf.Floor(mat.GetFloat("_DiscolorationColorCount")));
                 byte[] discolorationLabelByte = new byte[] { 0, 28, 57, 85, 113, 142, 170, 198, 227, 255 };
@@ -370,7 +366,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                         EditorGUI.LabelField(currentRect, string.Format("RGB= {0}", discolorationLabelByte[i]));
                     }
                 }
-                EditorGUI.EndDisabledGroup();
+                
             },
             () => 
             {
@@ -479,8 +475,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
             DrawArea("Expression System", () =>
             {
-                materialEditor.ShaderProperty(expressionEnable, "Enable");
-                EditorGUI.BeginDisabledGroup(mat.GetFloat("_ExpressionEnable") == 0.0);
+                                
                 materialEditor.ShaderProperty(selectExpressionMap, selectExpressionMap.displayName);
                 materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
                 materialEditor.TexturePropertySingleLine(expressionQMap.displayName.ToGUIContent(), expressionQMap);
@@ -537,7 +532,7 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
                     materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
                     materialEditor.ShaderProperty(mouthRect, mouthRect.displayName);
                 }
-                EditorGUI.EndDisabledGroup();
+                
             });
 
             DrawArea("Custom Lighting", () => {
