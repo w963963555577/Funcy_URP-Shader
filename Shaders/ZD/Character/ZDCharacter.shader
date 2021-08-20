@@ -320,9 +320,12 @@ Shader "ZDShader/URP/Character"
             #pragma exclude_renderers d3d11_9x
             #pragma target 3.0
             
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
-            #pragma multi_compile _ _SHADOWS_SOFT
+            //#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #define _MAIN_LIGHT_SHADOWS 1
+            //#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #define _MAIN_LIGHT_SHADOWS_CASCADE 1
+            //#pragma multi_compile _ _SHADOWS_SOFT
+            #define _SHADOWS_SOFT 1
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _AlphaClip
             
