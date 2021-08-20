@@ -1,22 +1,22 @@
 CBUFFER_START(UnityPerMaterial)
-float4 _PositionMask_ST;
-float4 _BaseMap_ST;
-float4 _BlendColor_SelfShadow;
-float4 _BlendColor_Dark;
-float4 _BlendColor_Mid;
-float4 _BlendColor_Light;
-float4 _SpecColor;
-float _Speed;
-float _Amount;
-float _Distance;
+half4 _PositionMask_ST;
+half4 _BaseMap_ST;
+half4 _BlendColor_SelfShadow;
+half4 _BlendColor_Dark;
+half4 _BlendColor_Mid;
+half4 _BlendColor_Light;
+half4 _SpecColor;
+half _Speed;
+half _Amount;
+half _Distance;
 
-float _LambertOffset;
-float _ClipThreshod;
-float _SpecularOffset;
-float _ViewRendererMode;
+half _LambertOffset;
+half _ClipThreshod;
+half _SpecularOffset;
+half _ViewRendererMode;
 #ifdef _DrawMeshInstancedProcedural
-    StructuredBuffer<float4x4> _ObjectToWorldBuffer;
-    StructuredBuffer<float4x4> _WorldToObjectBuffer;
+    StructuredBuffer<half4x4> _ObjectToWorldBuffer;
+    StructuredBuffer<half4x4> _WorldToObjectBuffer;
     StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
 #endif
 CBUFFER_END

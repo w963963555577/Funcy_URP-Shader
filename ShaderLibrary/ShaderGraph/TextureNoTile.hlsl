@@ -1,27 +1,27 @@
-float4 hash4(float2 p)
+half4 hash4(half2 p)
 {
-    return frac(sin(float4(1.0 + dot(p, float2(37.0, 17.0)),
-    2.0 + dot(p, float2(11.0, 47.0)),
-    3.0 + dot(p, float2(41.0, 29.0)),
-    4.0 + dot(p, float2(23.0, 31.0)))) * 103.0);
+    return frac(sin(half4(1.0 + dot(p, half2(37.0, 17.0)),
+    2.0 + dot(p, half2(11.0, 47.0)),
+    3.0 + dot(p, half2(41.0, 29.0)),
+    4.0 + dot(p, half2(23.0, 31.0)))) * 103.0);
 }
-void TextureNoTile_float(Texture2D < float4 > map, in float2 uv, in SamplerState state, out float4 Out)
+void TextureNoTile_half(Texture2D < half4 > map, in half2 uv, in SamplerState state, out half4 Out)
 {
-    float2 p = floor(uv);
-    float2 f = frac(uv);
+    half2 p = floor(uv);
+    half2 f = frac(uv);
     
     // voronoi contribution
-    float4 va = 0.0;
-    float wt = 0.0;
+    half4 va = 0.0;
+    half wt = 0.0;
     for (int j = -1; j <= 1; j ++)
     for (int i = -1; i <= 1; i ++)
     {
-        float2 g = float2(i, j);
-        float4 o = hash4(p + g);
-        float2 r = g - f + o.xy;
-        float d = dot(r, r);
-        float w = exp(-5.0 * d);
-        float4 c = SAMPLE_TEXTURE2D(map, state, uv + o.zw);
+        half2 g = half2(i, j);
+        half4 o = hash4(p + g);
+        half2 r = g - f + o.xy;
+        half d = dot(r, r);
+        half w = exp(-5.0 * d);
+        half4 c = SAMPLE_TEXTURE2D(map, state, uv + o.zw);
         va += w * c;
         wt += w;
     }
