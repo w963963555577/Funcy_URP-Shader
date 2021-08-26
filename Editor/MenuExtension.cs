@@ -300,14 +300,15 @@ public class MenuExtension
         [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格(ZD)", false, 1007)]
         public static void CopyAllDiscolorationInfo()
         {
-            var dirs = Directory.GetDirectories(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"));
+            string localFloder = AssetDatabase.GetAssetPath(Selection.activeObject).Replace("Assets/", "/");
+            var dirs = Directory.GetDirectories(Application.dataPath + localFloder);
             string result = "";
             
             foreach(var d in dirs) {
 
                 string path = d.toAssetsPath();
 
-                Material mat = AssetDatabase.LoadAssetAtPath<Material>(Directory.GetFiles(d + "/Materials/", "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".mat")[0].toAssetsPath());
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(Directory.GetFiles(d , "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".mat")[0].toAssetsPath());
 
                 if (mat.shader.name != "ZDShader/URP/Character") continue;
 
