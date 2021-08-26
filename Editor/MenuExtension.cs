@@ -277,7 +277,7 @@ public class MenuExtension
         [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", true)]
         public static bool CopyAllDiscolorationInfo_Validator()
         {
-            return Selection.activeObject is DefaultAsset && AssetDatabase.GetAssetPath(Selection.activeObject) == "Assets/02.Arts/Models/Combines";
+            return Selection.activeObject is DefaultAsset;
         }
         [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", false, 1005)]
         public static void CopyAllDiscolorationInfo()
@@ -312,6 +312,7 @@ public class MenuExtension
 
                 Material mat = AssetDatabase.LoadAssetAtPath<Material>(Directory.GetFiles(d + "/Materials/", "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".mat")[0].toAssetsPath());
 
+                if (mat.shader.name != "ZDShader/URP/Character") continue;
 
                 s = string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}",
                     tab, modelName, avatarID, "", "", modelID, 1, 0, 0, 0, 0, 0, 0, 0, CopyCharacterShaderInfo(mat));
