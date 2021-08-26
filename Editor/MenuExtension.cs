@@ -179,7 +179,7 @@ public class MenuExtension
     }
     public class CreateAssetMenu
     {
-        static string CopyCharacterShaderInfo(Material referenceMaterial)
+        static string CopyCharacterShaderInfo(Material referenceMaterial, bool includeMaterialName = false)
         {
             Color skinColor, eyesColor, hairColor, headressColor1, headressColor2, color1, color2, color3, color4;
             Color emissionColor, specularColor;            
@@ -197,7 +197,9 @@ public class MenuExtension
             specularColor = referenceMaterial.GetColor("_SpecularColor");
             char tab = '	';
 
-            return string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}", tab,
+            string result = "";
+            if (includeMaterialName) result += referenceMaterial.name + tab;
+            result += string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}", tab,
                  ColorToSheetString(skinColor),
                  ColorToSheetString(eyesColor),
                  ColorToSheetString(color1),
@@ -210,6 +212,8 @@ public class MenuExtension
                  ColorToSheetString(emissionColor),
                  ColorToSheetString(specularColor)
                 );
+
+            return result; 
         }
 
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste Effective", true)]
@@ -274,18 +278,54 @@ public class MenuExtension
             GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial);
         }
 
+        [MenuItem("Assets/ZD/Excel/複製角色RGB到表格(包含材質名)", true)]
+        public static bool CopyDiscolorationInfoName_Validator()
+        {
+            return Selection.activeObject is Material && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+        }
+        [MenuItem("Assets/ZD/Excel/複製角色RGB到表格(包含材質名)", false, 1006)]
+        public static void CopyDiscolorationInfoName()
+        {
+            Material referenceMaterial = Selection.activeObject as Material;
+            GUIUtility.systemCopyBuffer = CopyCharacterShaderInfo(referenceMaterial, true);
+        }
+
+
         [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", true)]
         public static bool CopyAllDiscolorationInfo_Validator()
         {
             return Selection.activeObject is DefaultAsset;
         }
-        [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格", false, 1005)]
+#if ZD_ART_EDITOR
+        [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格(ZD)", false, 1007)]
+        public static void CopyAllDiscolorationInfo()
+        {
+            var dirs = Directory.GetDirectories(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"));
+            string result = "";
+            
+            foreach(var d in dirs) {
+
+                string path = d.toAssetsPath();
+
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(Directory.GetFiles(d + "/Materials/", "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".mat")[0].toAssetsPath());
+
+                if (mat.shader.name != "ZDShader/URP/Character") continue;
+
+                result += CopyCharacterShaderInfo(mat, true) + "\n";
+            }
+
+            GUIUtility.systemCopyBuffer = result;
+        }
+
+#else
+        [MenuItem("Assets/ZD/Excel/複製所有角色RGB到表格(CM)", false, 1007)]
         public static void CopyAllDiscolorationInfo()
         {
             var dirs = Directory.GetDirectories(Path.Combine(Application.dataPath, "02.Arts/Models/Combines"));
             string result = "";
             char tab = '	';
-            foreach(var d in dirs) {
+            foreach (var d in dirs)
+            {
 
                 string path = d.toAssetsPath();
                 var fbxs = Directory.GetFiles(d, "*", SearchOption.AllDirectories).ToList().FindAll(f => Path.GetExtension(f).ToLower() == ".fbx");
@@ -295,8 +335,8 @@ public class MenuExtension
                 var fbx = fbxs.Count > 0 ? fbxs[0].toAssetsPath() : "";
 
                 var avatarID = "-1";
-                var modelID =  "-1";
-                var modelName =  "<尚未命名>";
+                var modelID = "-1";
+                var modelName = "<尚未命名>";
 
                 if (fbx != "")
                 {
@@ -304,7 +344,7 @@ public class MenuExtension
                     if (importer.sourceAvatar)
                     { avatarID = importer.sourceAvatar.name.Split('_')[1]; }
                 }
-                
+
                 string[] split = Path.GetFileName(Path.GetFileName(d)).Split('_');
 
                 modelID = split.Length > 1 ? split[1] : modelID;
@@ -322,6 +362,8 @@ public class MenuExtension
 
             GUIUtility.systemCopyBuffer = result;
         }
+
+#endif
 
         static string ColorToSheetString(Color c)
         {
