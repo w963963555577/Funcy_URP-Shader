@@ -182,8 +182,7 @@ public class MenuExtension
         static string CopyCharacterShaderInfo(Material referenceMaterial)
         {
             Color skinColor, eyesColor, hairColor, headressColor1, headressColor2, color1, color2, color3, color4;
-            Color emissionColor, specularColor;
-            Color shadowColor1, shadowColor2, shadowColor3;
+            Color emissionColor, specularColor;            
             skinColor = referenceMaterial.GetColor("_DiscolorationColor_1");
             eyesColor = referenceMaterial.GetColor("_DiscolorationColor_2");
             color1 = referenceMaterial.GetColor("_DiscolorationColor_3");
@@ -196,12 +195,9 @@ public class MenuExtension
 
             emissionColor = referenceMaterial.GetColor("_EmissionColor");
             specularColor = referenceMaterial.GetColor("_SpecularColor");
-            shadowColor1 = referenceMaterial.GetColor("_ShadowColor0");
-            shadowColor2 = referenceMaterial.GetColor("_ShadowColor1");
-            shadowColor3 = referenceMaterial.GetColor("_ShadowColorElse");
             char tab = '	';
 
-            return string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}{0}{12}{0}{13}{0}{14}", tab,
+            return string.Format("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}", tab,
                  ColorToSheetString(skinColor),
                  ColorToSheetString(eyesColor),
                  ColorToSheetString(color1),
@@ -212,10 +208,7 @@ public class MenuExtension
                  ColorToSheetString(headressColor1),
                  ColorToSheetString(headressColor2),
                  ColorToSheetString(emissionColor),
-                 ColorToSheetString(specularColor),
-                 ColorToSheetString(shadowColor1),
-                 ColorToSheetString(shadowColor2),
-                 ColorToSheetString(shadowColor3)
+                 ColorToSheetString(specularColor)
                 );
         }
 
