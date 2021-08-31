@@ -22,14 +22,14 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
         
         
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Transparent" "Queue" = "Transparent" }
-
+        
         Stencil
         {
             Ref [_StencilRef]
             Comp [_StencilComp]
         }
         
-        Cull Back
+        Cull Off
         HLSLINCLUDE
         #pragma target 3.0
         ENDHLSL
