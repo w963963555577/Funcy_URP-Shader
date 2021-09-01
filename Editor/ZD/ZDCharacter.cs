@@ -81,7 +81,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
         MaterialProperty selfMaskEnable { get; set; }
         MaterialProperty shadowRefraction { get; set; }
         MaterialProperty shadowOffset { get; set; }
-
+        MaterialProperty discoloration { get; set; }
+        
         MaterialProperty discolorationColor_0 { get; set; }
         MaterialProperty discolorationColor_1 { get; set; }
         MaterialProperty discolorationColor_2 { get; set; }
@@ -334,7 +335,8 @@ namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
 
 
             DrawArea("Discoloration System", () =>
-            {                
+            {
+                materialEditor.ShaderProperty(discoloration, discoloration.displayName.ToGUIContent());                
                 materialEditor.ShaderProperty(discolorationColorCount, discolorationColorCount.displayName.ToGUIContent());
                 mat.SetFloat("_DiscolorationColorCount", Mathf.Floor(mat.GetFloat("_DiscolorationColorCount")));
                 byte[] discolorationLabelByte = new byte[] { 0, 28, 57, 85, 113, 142, 170, 198, 227, 255 };

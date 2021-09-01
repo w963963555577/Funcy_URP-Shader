@@ -57,6 +57,7 @@ half4 _CustomLightColor;
 half4 _CustomLightDirection;
 half _CustomLightIntensity;
 
+half _Discoloration;
 half4 _DiscolorationColor_0;
 half4 _DiscolorationColor_1;
 half4 _DiscolorationColor_2;

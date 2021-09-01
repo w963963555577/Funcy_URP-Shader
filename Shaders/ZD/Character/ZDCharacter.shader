@@ -64,6 +64,7 @@ Shader "ZDShader/URP/Character"
         _OutlineWidthControl ("Outline Width Control", 2D) = "white" { }
         
         // _DiscolorationSystem
+        [Toggle]_Discoloration ("Enabled", Range(0, 1)) = 1
         _DiscolorationColorCount ("Use Color Count", Range(1, 10)) = 2
         [HDR]_DiscolorationColor_0 ("DiscolorationColor_0", Color) = (1, 1, 1, 1)
         [HDR]_DiscolorationColor_1 ("DiscolorationColor_1", Color) = (1, 1, 1, 1)
@@ -866,7 +867,7 @@ Shader "ZDShader/URP/Character"
                         #endif
                     #endif
                     
-                    Step8Color(_SelfMask_UV0_var.a, eyeAreaReplace, browReplace, mouthReplace, step_var, blackArea, skinArea, eyeArea);
+                    Step8Color(_SelfMask_UV0_var.a * _Discoloration, eyeAreaReplace, browReplace, mouthReplace, step_var, blackArea, skinArea, eyeArea);
                     
                     half3 colorRGB_A = step_var.rgb;
                     half3 colorRGB_B = _diffuse_var.rgb;
@@ -1045,8 +1046,7 @@ Shader "ZDShader/URP/Character"
                 
                 return finalRGBA;
             }
-            ENDHLSL
-            
+            ENDHLSL            
         }
         
         Pass
