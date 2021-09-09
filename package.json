@@ -1,6 +1,6 @@
 {
   "name": "com.zd.lwrp.funcy",
-  "description": "這是 Funcy 的 Shader Package\n裡面有各種 Tutorial.",
+  "description": "\u9019\u662f Funcy \u7684 Shader Package\n\u88e1\u9762\u6709\u5404\u7a2e Tutorial.",
   "version": "1.0.0",
   "keywords": [
     "key",
@@ -16,7 +16,7 @@
   "dependencies": {
     "com.unity.render-pipelines.universal": "7.3.1",
     "com.unity.mathematics": "1.1.0",
-    "com.unity.rendering.hybrid": "0.5.2-preview.4"
+    "com.unity.rendering.hybrid": "0.5.0-preview.6"
   },
   "category": "w963963555577",
   "author": {
