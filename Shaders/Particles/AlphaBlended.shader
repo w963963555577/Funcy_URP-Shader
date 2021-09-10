@@ -149,7 +149,13 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
                 float4 screenPos = IN.ase_texcoord2;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float screenDepth16 = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                
+                
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(ase_screenPosNorm.xy), _ZBufferParams);
+                
+                float screenDepth16 = min(depthQ, depthT);
+                
                 float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
                 
                 float3 BakedAlbedo = 0;
