@@ -113,11 +113,11 @@ Shader "ZDShader/URP/Character"
         [Toggle(_ExpressionFormat_Wink)] _ExpressionFormat_Wink ("Wink", float) = 0
         [Toggle(_ExpressionFormat_FaceSheet)] _ExpressionFormat_FaceSheet ("FaceSheet", float) = 1
         
-        [IntRange]_SelectBrow ("Select Brow", Range(0, 4)) = 1
+        [IntRange]_SelectBrow ("Select Brow", Range(0, 4)) = 0
         _BrowRect ("Brow UV Rect", Vector) = (0, 0.45, 0.855, 0.3)
-        [IntRange]_SelectFace ("Select Face", Range(0, 8)) = 1
+        [IntRange]_SelectFace ("Select Face", Range(0, 8)) = 0
         _FaceRect ("Eyes UV Rect", Vector) = (0, -0.02, 0.855, 0.37)
-        [IntRange]_SelectMouth ("Select Mouth ", Range(0, 8)) = 1
+        [IntRange]_SelectMouth ("Select Mouth ", Range(0, 8)) = 0
         _MouthRect ("Mouth UV Rect", Vector) = (0, -0.97, 0.427, 0.28)
         
         [MaterialToggle] _FloatModel ("Float Model", float) = 0
