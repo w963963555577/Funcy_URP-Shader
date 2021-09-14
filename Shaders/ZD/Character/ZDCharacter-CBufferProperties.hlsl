@@ -181,10 +181,9 @@ half3 HSV2RGB(half3 c)
         half fillArea_4 = grayArea_4 - grayArea_3;
         half fillArea_3 = grayArea_3 - grayArea_2;
         #if _ExpressionEnable
-            half fillArea_2 = eyeCenter;
-            grayArea_1 = max(grayArea_1, grayArea_2) * (1.0 - eyeCenter);
-        #else
-            half fillArea_2 = grayArea_2 - grayArea_1;
+            half hasFace = min(_SelectFace, 1.0);
+            half fillArea_2 = lerp(grayArea_2 - grayArea_1, eyeCenter, hasFace);
+            grayArea_1 = lerp(grayArea_1, max(grayArea_1, grayArea_2) * (1.0 - eyeCenter), hasFace);        
         #endif
         
         half fillArea_1 = grayArea_1 - grayArea_0;

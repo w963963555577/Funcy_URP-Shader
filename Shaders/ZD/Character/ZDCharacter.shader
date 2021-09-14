@@ -692,7 +692,7 @@ Shader "ZDShader/URP/Character"
                 }
             #endif
             
-            float4 WorldToShadowCoord(float3 positionWS)
+            half4 WorldToShadowCoord(float3 positionWS)
             {
                 #ifdef _MAIN_LIGHT_SHADOWS_CASCADE
                     half cascadeIndex = ComputeCascadeIndex(positionWS);
@@ -701,10 +701,10 @@ Shader "ZDShader/URP/Character"
                 #endif
                 float4x4 m = _MainLightWorldToShadow[cascadeIndex];
                 
-                return mul(m, float4(positionWS, 1.0));
+                return mul(m, half4(positionWS, 1.0));
             }
             
-            half BRDFSpecular(half metallic, half smoothness, float3 normalWS, half3 lightDirectionWS, half3 viewDirectionWS)
+            half BRDFSpecular(half metallic, half smoothness, half3 normalWS, half3 lightDirectionWS, half3 viewDirectionWS)
             {
                 float3 halfDir = SafeNormalize(float3(lightDirectionWS) + float3(viewDirectionWS));
                 
@@ -740,17 +740,17 @@ Shader "ZDShader/URP/Character"
                 
                 //return float4((i.boneIndex.x == 32).xxx, 1.0);
                 
-                float3 positionWS = i.positionWSAndFogFactor.xyz;
-                float4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
-                float2 screenUV = positionSS.xy /= positionSS.w;
+                half3 positionWS = i.positionWSAndFogFactor.xyz;
+                half4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
+                half2 screenUV = positionSS.xy /= positionSS.w;
                 
                 #if _DrawMeshInstancedProcedural
                 #else
                     DistanceDisslove(screenUV, i.vertexDist);
                 #endif
-                float4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
-                float4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
-                float4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
+                half4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
+                half4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
+                half4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
                 
                 Light mainLight = LerpLightDirection(i.objectDirection.xyz);
@@ -765,18 +765,39 @@ Shader "ZDShader/URP/Character"
                 mainLight.color = _MainLightColor.rgb;
                 mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
-                float4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
+                half4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
                 mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
                 
+                half3 additionalLightColor = 0.0h.rrr;
+                // Additional lights loop
+                #ifdef _ADDITIONAL_LIGHTS
+                    
+                    BRDFData brdfData;
+                    InitializeBRDFData(1.0.rrr, 0.0, 0.0, 0.0, 1.0, brdfData);
+                    
+                    int additionalLightsCount = GetAdditionalLightsCount();
+                    half3 viewDirectionWS = SafeNormalize(GetCameraPositionWS() - positionWS);
+                    
+                    for (int iter = 0; iter < additionalLightsCount; iter ++)
+                    {
+                        Light light = GetAdditionalLight(iter, positionWS);
+                        
+                        half3 currentLightColor = LightingPhysicallyBased(brdfData, light, i.normalWS.xyz, viewDirectionWS) ;
+                        additionalLightColor += currentLightColor;
+                    }
+                    additionalLightColor = min(1.0.xxx, additionalLightColor);
+                #endif
                 
-                float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
-                float3 normalDirection = i.normalWS.xyz;
                 
-                float glossMask = _ESSGMask_var.a;
+                
+                half3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
+                half3 normalDirection = i.normalWS.xyz;
+                
+                half glossMask = _ESSGMask_var.a;
                 
                 half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
-                float fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
+                half fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
                 
                 
@@ -830,11 +851,11 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 
-                float3 lightColor = mainLight.color.rgb;
-                float3 halfDirection = normalize(viewDirection + mainLight.direction);
+                half3 lightColor = mainLight.color.rgb;
+                half3 halfDirection = normalize(viewDirection + mainLight.direction);
                 
-                float specStep = 2.0;
-                float specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                half specStep = 2.0;
+                half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
                 
                 /*BDRF Specular but in this shader was nonconformity
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
@@ -844,9 +865,9 @@ Shader "ZDShader/URP/Character"
                 specularValue = smoothstep(0.003, 0.004, specularValue) ;
                 */
                 
-                float4 _SpecularColor_var = _SpecularColor;
-                float specularMask = _ESSGMask_var.b;
-                float4 _Color_var = _Color;
+                half4 _SpecularColor_var = _SpecularColor;
+                half specularMask = _ESSGMask_var.b;
+                half4 _Color_var = _Color;
                 
                 
                 
@@ -883,20 +904,20 @@ Shader "ZDShader/URP/Character"
                     
                 #endif
                 //ShadowReplacer
-                float shadowArea0 = CaculateShadowArea(_diffuse_var, _Picker_0, _ShadowColor0.a);
-                float shadowArea1 = CaculateShadowArea(_diffuse_var, _Picker_1, _ShadowColor1.a);
-                float shadowArea2 = CaculateShadowArea(_diffuse_var, _Picker_2, _ShadowColor2.a);
-                float shadowArea3 = CaculateShadowArea(_diffuse_var, _Picker_3, _ShadowColor3.a);
-                float shadowArea4 = CaculateShadowArea(_diffuse_var, _Picker_4, _ShadowColor4.a);
-                float shadowArea5 = CaculateShadowArea(_diffuse_var, _Picker_5, _ShadowColor5.a);
-                float shadowArea6 = CaculateShadowArea(_diffuse_var, _Picker_6, _ShadowColor6.a);
-                float shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
-                float shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
-                float shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
-                float shadowArea10 = CaculateShadowArea(_diffuse_var, _Picker_10, _ShadowColor10.a);
-                float shadowArea11 = CaculateShadowArea(_diffuse_var, _Picker_11, _ShadowColor11.a);
-                float shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9 + shadowArea10 + shadowArea11);
-                float shadowAreaElse = (1.0 - shadowTotalArea);
+                half shadowArea0 = CaculateShadowArea(_diffuse_var, _Picker_0, _ShadowColor0.a);
+                half shadowArea1 = CaculateShadowArea(_diffuse_var, _Picker_1, _ShadowColor1.a);
+                half shadowArea2 = CaculateShadowArea(_diffuse_var, _Picker_2, _ShadowColor2.a);
+                half shadowArea3 = CaculateShadowArea(_diffuse_var, _Picker_3, _ShadowColor3.a);
+                half shadowArea4 = CaculateShadowArea(_diffuse_var, _Picker_4, _ShadowColor4.a);
+                half shadowArea5 = CaculateShadowArea(_diffuse_var, _Picker_5, _ShadowColor5.a);
+                half shadowArea6 = CaculateShadowArea(_diffuse_var, _Picker_6, _ShadowColor6.a);
+                half shadowArea7 = CaculateShadowArea(_diffuse_var, _Picker_7, _ShadowColor7.a);
+                half shadowArea8 = CaculateShadowArea(_diffuse_var, _Picker_8, _ShadowColor8.a);
+                half shadowArea9 = CaculateShadowArea(_diffuse_var, _Picker_9, _ShadowColor9.a);
+                half shadowArea10 = CaculateShadowArea(_diffuse_var, _Picker_10, _ShadowColor10.a);
+                half shadowArea11 = CaculateShadowArea(_diffuse_var, _Picker_11, _ShadowColor11.a);
+                half shadowTotalArea = min(1.0, shadowArea0 + shadowArea1 + shadowArea2 + shadowArea3 + shadowArea4 + shadowArea5 + shadowArea6 + shadowArea7 + shadowArea8 + shadowArea9 + shadowArea10 + shadowArea11);
+                half shadowAreaElse = (1.0 - shadowTotalArea);
                 #ifdef SHADER_API_D3D11
                     #if _PickerDebug_0
                         return float4(shadowArea0.xxx, 1.0);
@@ -939,8 +960,8 @@ Shader "ZDShader/URP/Character"
                 
                 
                 //PBRShadowArea
-                float shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
-                float refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
+                half shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
+                half refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
                 half uvUseArea = lerp(0.0, LigntMapAreaInUV1(i, refractionShadowArea), _SelfMaskEnable);
                 
                 refractionShadowArea = lerp(refractionShadowArea, uvUseArea, _SelfMask_UV0_var.g);
@@ -1004,27 +1025,8 @@ Shader "ZDShader/URP/Character"
                 //Fog
                 float fogFactor = i.positionWSAndFogFactor.w * i.positionWSAndFogFactor.w;
                 fogFactor *= fogFactor;
-                // Additional lights loop
-                #ifdef _ADDITIONAL_LIGHTS
-                    
-                    BRDFData brdfData;
-                    InitializeBRDFData(1.0.rrr, 0.0, 0.0, 0.0, 1.0, brdfData);
-                    
-                    int additionalLightsCount = GetAdditionalLightsCount();
-                    half3 viewDirectionWS = SafeNormalize(GetCameraPositionWS() - positionWS);
-                    float3 additionalLightColor = 0.0h.rrr;
-                    for (int iter = 0; iter < additionalLightsCount; iter ++)
-                    {
-                        Light light = GetAdditionalLight(iter, positionWS);
-                        
-                        float3 currentLightColor = LightingPhysicallyBased(brdfData, light, i.normalWS.xyz, viewDirectionWS) ;
-                        additionalLightColor += currentLightColor;
-                    }
-                    
-                    emissive += additionalLightColor * diffuseColor;
-                #endif
                 
-                float3 finalColor = emissive.rgb;
+                float3 finalColor = emissive.rgb + additionalLightColor * diffuseColor;
                 
                 finalColor = MixFog(finalColor, fogFactor);
                 
@@ -1046,7 +1048,8 @@ Shader "ZDShader/URP/Character"
                 
                 return finalRGBA;
             }
-            ENDHLSL            
+            ENDHLSL
+            
         }
         
         Pass
