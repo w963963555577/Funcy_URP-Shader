@@ -34,7 +34,7 @@ float2 projectorUV(float4 viewRayOS, float3 cameraPosOS, float4 screenUV, float2
     decalSpaceScenePos.xy *= scale;
     float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
     
-    float mask = (abs(decalSpaceScenePos.x) < 0.5) * (abs(decalSpaceScenePos.y) < 0.5) * (abs(decalSpaceScenePos.z) < 0.5);
+    float mask = (abs(decalSpaceScenePos.y) < 0.5)* (abs(decalSpaceScenePos.x) < 0.5) /* (abs(decalSpaceScenePos.y) < 0.5) * (abs(decalSpaceScenePos.z) < 0.5)*/;
     
     
     float3 decalSpaceHardNormal = normalize(cross(ddx(decalSpaceScenePos), ddy(decalSpaceScenePos)));
