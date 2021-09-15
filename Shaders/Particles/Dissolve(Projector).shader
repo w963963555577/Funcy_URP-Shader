@@ -11,10 +11,10 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
         _DissolveTex ("DissolveTex", 2D) = "white" { }
         [HDR]_DissolveColor ("DissolveColor", Color) = (1, 0.2351134, 0, 0)
         _EdgeNear ("EdgeNear", Float) = 5
-
+        
         _Panner ("Panner", Vector) = (0.0, 0.0, 0.0, 0.0)
     }
-
+    
     SubShader
     {
         LOD 0
@@ -43,20 +43,20 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
             
             #define ASE_SRP_VERSION 70201
             #define REQUIRE_DEPTH_TEXTURE 1
-
+            
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-
+            
             #pragma vertex vert
             #pragma fragment frag
-
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-
-
+            
+            
             struct VertexInput
             {
                 float4 vertex: POSITION;
@@ -64,11 +64,12 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
                 float4 ase_color: COLOR;
                 float4 ase_texcoord: TEXCOORD0;
                 float4 particleSize_And_rotation: TEXCOORD1;
-                float4 ase_texcoord2: TEXCOORD2;
+                float3 particleRotation: TEXCOORD2;
+                float4 ase_texcoord2: TEXCOORD3;
                 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
+            
             struct VertexOutput
             {
                 float4 clipPos: SV_POSITION;
@@ -81,23 +82,23 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
-
+            
             CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _MainTex_ST;
             float4 _DissolveTex_ST;
             float4 _DissolveColor;
             float _EdgeNear;
-
+            
             half4 _Panner;
             float4x4 _w2o;
             CBUFFER_END
-
+            
             sampler2D _MainTex;
             sampler2D _DissolveTex;
-
+            
             #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/ProjectorUV.hlsl"
-
+            
             VertexOutput vert(VertexInput v)
             {
                 VertexOutput o = (VertexOutput)0;
@@ -114,30 +115,30 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
                 float4x4 w2o = GetWorldToObjectMatrix();
                 InitProjectorVertexData(v.vertex, o2w, _w2o, o.viewRayOS, o.cameraPosOS);
                 
-
+                
                 o.ase_color = v.ase_color;
                 o.ase_texcoord3.xy = v.ase_texcoord.xy;
                 o.ase_texcoord3.zw = v.ase_texcoord2.xy;
                 
-
-                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz, v.particleSize_And_rotation.w);
+                
+                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz, v.particleRotation.x + v.particleRotation.y + v.particleRotation.z);
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
                 o.clipPos = vertexInput.positionCS;
-
+                
                 return o;
             }
-
-
+            
+            
             half4 frag(VertexOutput IN): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-
-
+                
+                
                 float2 uv0_MainTex = projectorUV(IN.viewRayOS, IN.cameraPosOS, IN.ase_texcoord2, IN.particleSize_And_rotation.xz, IN.particleSize_And_rotation.w);
                 
-
+                
                 float2 appendResult109 = (float2(float4(IN.ase_texcoord3.zw, 0, 0).xy.x, 1.0));
                 float4 tex2DNode5 = tex2D(_MainTex, (uv0_MainTex / appendResult109));
                 float2 uv0_DissolveTex = uv0_MainTex * _DissolveTex_ST.xy + _DissolveTex_ST.zw;
@@ -146,7 +147,7 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
                 float temp_output_54_0 = step(1.0, (tex2DNode18.r + disslove78));
                 float temp_output_70_0 = pow(saturate((temp_output_54_0 * (1.0 - saturate(pow(((-1.0 + (disslove78 - 0.0) * (2.0)) + tex2DNode18.r), 5.0))))), _EdgeNear);
                 float3 appendResult82 = (float3(_DissolveColor.rgb));
-                float4 lerpResult126 = lerp((_Color * tex2DNode5), float4((temp_output_70_0 * appendResult82 * disslove78), 0.0), temp_output_70_0);
+                float4 lerpResult126 = lerp((_Color * IN.ase_color * tex2DNode5), float4((temp_output_70_0 * appendResult82 * disslove78), 0.0), temp_output_70_0);
                 
                 float smoothstepResult100 = smoothstep(-0.1, tex2DNode18.r, (1.0 - abs(((uv0_MainTex - float2(0.5, 0.5)) * float2(2, 2))).y));
                 float smoothstepResult123 = smoothstep(0.45, 0.55, smoothstepResult100);
@@ -158,9 +159,9 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
                 float3 Color = lerpResult126.rgb;
                 float Alpha = temp_output_56_0;
                 float AlphaClipThreshold = 0.5;
-
-
-
+                
+                
+                
                 return half4(Color, Alpha);
             }
             

@@ -12,7 +12,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
         [HDR]_DissolveColor ("DissolveColor", Color) = (1, 0.2351134, 0, 0)
         _EdgeNear ("EdgeNear", Float) = 5
     }
-
+    
     SubShader
     {
         LOD 0
@@ -39,34 +39,35 @@ Shader "ZDShader/URP/Particles/Dissolve"
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #define ASE_SRP_VERSION 70301
-
+            
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-
+            
             #pragma vertex vert
             #pragma fragment frag
-
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
-
+            
             #if ASE_SRP_VERSION <= 70108
                 #define REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR
             #endif
-
             
-
+            
+            
             struct VertexInput
             {
                 float4 vertex: POSITION;
+                float4 color: COLOR;
                 float3 ase_normal: NORMAL;
                 float4 ase_texcoord: TEXCOORD0;
                 float4 ase_texcoord1: TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
+            
             struct VertexOutput
             {
                 float4 clipPos: SV_POSITION;
@@ -80,30 +81,31 @@ Shader "ZDShader/URP/Particles/Dissolve"
                     float fogFactor: TEXCOORD2;
                 #endif
                 float4 ase_texcoord3: TEXCOORD3;
+                float4 color: TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
-
+            
             CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _MainTex_ST;
             float4 _DissolveTex_ST;
             float4 _DissolveColor;
             float _EdgeNear;
-
+            
             CBUFFER_END
             sampler2D _MainTex;
             sampler2D _DissolveTex;
-
-
-
+            
+            
+            
             VertexOutput vert(VertexInput v)
             {
                 VertexOutput o = (VertexOutput)0;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
+                
                 o.ase_texcoord3.xy = v.ase_texcoord.xy;
                 o.ase_texcoord3.zw = v.ase_texcoord1.xy;
                 #ifdef ASE_ABSOLUTE_VERTEX_POS
@@ -117,11 +119,11 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 #else
                     v.vertex.xyz += vertexValue;
                 #endif
+                o.color = v.color;
                 
-
                 float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
                 float4 positionCS = TransformWorldToHClip(positionWS);
-
+                
                 #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
                     o.worldPos = positionWS;
                 #endif
@@ -137,18 +139,18 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 o.clipPos = positionCS;
                 return o;
             }
-
-
+            
+            
             half4 frag(VertexOutput IN): SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-
+                
                 #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
                     float3 WorldPosition = IN.worldPos;
                 #endif
                 float4 ShadowCoords = float4(0, 0, 0, 0);
-
+                
                 #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
                     #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                         ShadowCoords = IN.shadowCoord;
@@ -165,7 +167,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 float temp_output_54_0 = step(1.0, (tex2DNode18.r + disslove78));
                 float temp_output_70_0 = pow(saturate((temp_output_54_0 * (1.0 - saturate(pow(((-1.0 + (disslove78 - 0.0) * (2.0)) + tex2DNode18.r), 5.0))))), _EdgeNear);
                 float3 appendResult82 = (float3(_DissolveColor.rgb));
-                float4 lerpResult126 = lerp((_Color * tex2DNode5), float4((temp_output_70_0 * appendResult82 * disslove78), 0.0), temp_output_70_0);
+                float4 lerpResult126 = lerp((_Color * IN.color * tex2DNode5), float4((temp_output_70_0 * appendResult82 * disslove78), 0.0), temp_output_70_0);
                 
                 float smoothstepResult100 = smoothstep(-0.1, tex2DNode18.r, (1.0 - abs(((float4(IN.ase_texcoord3.xy, 0, 0).xy - float2(0.5, 0.5)) * float2(2, 2))).y));
                 float smoothstepResult123 = smoothstep(0.45, 0.55, smoothstepResult100);
@@ -177,17 +179,13 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 float3 Color = lerpResult126.rgb;
                 float Alpha = temp_output_56_0;
                 float AlphaClipThreshold = 0.5;
-
-
-
-                #ifdef LOD_FADE_CROSSFADE
-                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
-                #endif
+                
+                
 
                 #ifdef ASE_FOG
                     Color = MixFog(Color, IN.fogFactor);
                 #endif
-
+                
                 return half4(Color, Alpha);
             }
             
@@ -200,7 +198,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
             
             Name "ShadowCaster"
             Tags { "LightMode" = "ShadowCaster" }
-
+            
             ZWrite On
             ZTest LEqual
             
@@ -209,20 +207,20 @@ Shader "ZDShader/URP/Particles/Dissolve"
             #pragma multi_compile_instancing
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #define ASE_SRP_VERSION 70301
-
+            
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-
+            
             #pragma vertex vert
             #pragma fragment frag
-
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
             
-
+            
+            
             struct VertexInput
             {
                 float4 vertex: POSITION;
@@ -231,7 +229,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 float4 ase_texcoord1: TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-
+            
             struct VertexOutput
             {
                 float4 clipPos: SV_POSITION;
@@ -245,29 +243,29 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
-
+            
             CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _MainTex_ST;
             float4 _DissolveTex_ST;
             float4 _DissolveColor;
             float _EdgeNear;
-
+            
             CBUFFER_END
             sampler2D _MainTex;
             sampler2D _DissolveTex;
-
-
+            
+            
             
             float3 _LightDirection;
-
+            
             VertexOutput vert(VertexInput v)
             {
                 VertexOutput o;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
+                
                 o.ase_texcoord2.xy = v.ase_texcoord.xy;
                 o.ase_texcoord2.zw = v.ase_texcoord1.xy;
                 #ifdef ASE_ABSOLUTE_VERTEX_POS
@@ -281,24 +279,24 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 #else
                     v.vertex.xyz += vertexValue;
                 #endif
-
-
+                
+                
                 float3 positionWS = TransformObjectToWorld(v.vertex.xyz);
-
+                
                 #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
                     o.worldPos = positionWS;
                 #endif
-
+                
                 float3 normalWS = TransformObjectToWorldDir(v.ase_normal);
-
+                
                 float4 clipPos = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
-
+                
                 #if UNITY_REVERSED_Z
                     clipPos.z = min(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
                 #else
                     clipPos.z = max(clipPos.z, clipPos.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
-
+                
                 #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR) && defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
                     VertexPositionInputs vertexInput = (VertexPositionInputs)0;
                     vertexInput.positionWS = positionWS;
@@ -306,21 +304,21 @@ Shader "ZDShader/URP/Particles/Dissolve"
                     o.shadowCoord = GetShadowCoord(vertexInput);
                 #endif
                 o.clipPos = clipPos;
-
+                
                 return o;
             }
             
-
+            
             half4 frag(VertexOutput IN): SV_TARGET
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
-
+                
                 #if defined(ASE_NEEDS_FRAG_WORLD_POSITION)
                     float3 WorldPosition = IN.worldPos;
                 #endif
                 float4 ShadowCoords = float4(0, 0, 0, 0);
-
+                
                 #if defined(ASE_NEEDS_FRAG_SHADOWCOORDS)
                     #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                         ShadowCoords = IN.shadowCoord;
@@ -328,7 +326,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
                         ShadowCoords = TransformWorldToShadowCoord(WorldPosition);
                     #endif
                 #endif
-
+                
                 float2 uv0_MainTex = IN.ase_texcoord2.xy * _MainTex_ST.xy + _MainTex_ST.zw;
                 float2 appendResult109 = (float2(float4(IN.ase_texcoord2.zw, 0, 0).xy.x, 1.0));
                 float4 tex2DNode5 = tex2D(_MainTex, (uv0_MainTex / appendResult109));
@@ -343,11 +341,11 @@ Shader "ZDShader/URP/Particles/Dissolve"
                 
                 float Alpha = temp_output_56_0;
                 float AlphaClipThreshold = 0.5;
-
+                
                 #ifdef _ALPHATEST_ON
                     clip(Alpha - AlphaClipThreshold);
                 #endif
-
+                
                 #ifdef LOD_FADE_CROSSFADE
                     LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
                 #endif

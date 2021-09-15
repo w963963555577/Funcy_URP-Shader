@@ -81,6 +81,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 float4 vertex: POSITION;
                 float4 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
                 float4 particleSize_And_rotation: TEXCOORD1;
+                float3 particleRotation: TEXCOORD2;
                 float4 ase_color: COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -109,7 +110,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 
                 
                 o.ase_texcoord0 = v.ase_texcoord0;
-                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz, v.particleSize_And_rotation.w);
+                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz,  v.particleRotation.x + v.particleRotation.y + v.particleRotation.z);
                 o.ase_color = v.ase_color;
                 
                 //setting value to unused interpolator channels and avoid initialization warnings
@@ -123,6 +124,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 
                 float4x4 o2w = GetObjectToWorldMatrix();
                 float4x4 w2o = GetWorldToObjectMatrix();
+                
                 InitProjectorVertexData(v.vertex, o2w, _w2o, o.viewRayOS, o.cameraPosOS);
                 
                 

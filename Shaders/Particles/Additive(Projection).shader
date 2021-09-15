@@ -12,7 +12,6 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
         [HideInInspector] _texcoord ("", 2D) = "white" { }
         
         _Panner ("Panner", Vector) = (0.0, 0.0, 0.0, 0.0)
-                
     }
     
     SubShader
@@ -52,7 +51,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
             
             #pragma vertex vert
             #pragma fragment frag
-                        
+            
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -81,6 +80,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
                 float4 vertex: POSITION;
                 float4 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
                 float4 particleSize_And_rotation: TEXCOORD1;
+                float3 particleRotation: TEXCOORD2;
                 float4 ase_color: COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -109,7 +109,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
                 
                 
                 o.ase_texcoord0 = v.ase_texcoord0;
-                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz, v.particleSize_And_rotation.w);
+                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz, v.particleRotation.x + v.particleRotation.y + v.particleRotation.z);
                 o.ase_color = v.ase_color;
                 
                 //setting value to unused interpolator channels and avoid initialization warnings
@@ -141,7 +141,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
                 float4 break13 = (tex2D(_MainTex, uv_MainTex + _Panner.xy * _Time.y * _Panner.z) * IN.ase_color * _TintColor);
                 float3 appendResult14 = (float3(break13.r, break13.g, break13.b));
                 
-
+                
                 float3 BakedAlbedo = 0;
                 float3 BakedEmission = 0;
                 float3 Color = appendResult14;
