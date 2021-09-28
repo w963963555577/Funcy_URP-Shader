@@ -112,7 +112,7 @@ Shader "ZDShader/URP/PBR-Base"
             //#pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
             
             #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
-                                    
+            
             
             // -------------------------------------
             // Unity defined keywords
@@ -360,9 +360,9 @@ Shader "ZDShader/URP/PBR-Base"
                     
                     float4 offset = input.positionOS;
                     #ifdef _DrawMeshInstancedProcedural
-                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]), _WindEnabled);
+                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, input.texcoord, _ObjectToWorldBuffer[id], _WorldToObjectBuffer[id]), _WindEnabled);
                     #else
-                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                        input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, input.texcoord, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
                     #endif
                     offset -= input.positionOS;
                     input.normalOS = input.normalOS + offset.xyz * 0.5 * _WindEnabled;
@@ -615,9 +615,9 @@ Shader "ZDShader/URP/PBR-Base"
                 
                 float4 offset = input.positionOS;
                 #ifdef _DrawMeshInstancedProcedural
-                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, input.texcoord, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
                 #else
-                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                    input.positionOS = lerp(input.positionOS, WindAnimation(input.positionOS, input.texcoord, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
                 #endif
                 
                 offset -= input.positionOS;
@@ -710,9 +710,9 @@ Shader "ZDShader/URP/PBR-Base"
                 #endif
                 
                 #ifdef _DrawMeshInstancedProcedural
-                    input.position = lerp(input.position, WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                    input.position = lerp(input.position, WindAnimation(input.position, input.texcoord, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
                 #else
-                    input.position = lerp(input.position, WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                    input.position = lerp(input.position, WindAnimation(input.position, input.texcoord, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
                 #endif
                 
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
@@ -811,9 +811,9 @@ Shader "ZDShader/URP/PBR-Base"
                 #endif
                 
                 #ifdef _DrawMeshInstancedProcedural
-                    input.position = lerp(input.position, WindAnimation(input.position, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
+                    input.position = lerp(input.position, WindAnimation(input.position, input.texcoord, _ObjectToWorldBuffer[input.mid], _WorldToObjectBuffer[input.mid]), _WindEnabled);
                 #else
-                    input.position = lerp(input.position, WindAnimation(input.position, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
+                    input.position = lerp(input.position, WindAnimation(input.position, input.texcoord, GetObjectToWorldMatrix(), GetWorldToObjectMatrix()), _WindEnabled);
                 #endif
                 
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
