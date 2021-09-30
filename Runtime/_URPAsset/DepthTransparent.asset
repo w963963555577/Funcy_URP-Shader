@@ -1,5 +1,24 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8722160649223003045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 804bf49869d3b4315a850958d8530433, type: 3}
+  m_Name: TransparentDepth
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    Event: 500
+    blitMaterial: {fileID: 2100000, guid: a4d76bb0c579cf34ebfce5ff51b2aed0, type: 2}
+    blitMaterialPassIndex: 0
+    destination: 0
+    textureId: _BlitPassTexture
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14,8 +33,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_RendererFeatures:
   - {fileID: 5967541579142117669}
-  - {fileID: 6858670060548019533}
-  m_RendererFeatureMap: 25b923e772f7d0524d5592ce14e42e5f
+  - {fileID: -8722160649223003045}
+  m_RendererFeatureMap: 25b923e772f7d0525b242cfd19a9f486
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   shaders:
     blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
@@ -78,28 +97,3 @@ MonoBehaviour:
       restoreCamera: 1
       offset: {x: 0, y: 0, z: 0, w: 0}
       cameraFieldOfView: 60
---- !u!114 &6858670060548019533
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5281b33931f17d841830ca8fb30462db, type: 3}
-  m_Name: TransparentDepth
-  m_EditorClassIdentifier: 
-  m_Active: 1
-  settings:
-    mipmapCount: 0
-    renderPassEvent: 500
-    downSample: 1
-    copyToFrameBuffer: 1
-    material: {fileID: 2100000, guid: a4d76bb0c579cf34ebfce5ff51b2aed0, type: 2}
-    usePass: 0
-    targetName: _CustomScreenTextureDepthTrans
-    grabMaterial: {fileID: 2100000, guid: a4d76bb0c579cf34ebfce5ff51b2aed0, type: 2}
-    frameBufferUsePass: 0
-    grabTextureName: _CustomScreenTextureColorRTDepthTrans
-    globalRenderTextures: []
