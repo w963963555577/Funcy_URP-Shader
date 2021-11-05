@@ -11,9 +11,11 @@ public class CustomShadingTexture : ScriptableRendererFeature
     {
         public LayerMask layerMask;
         public Material material;
-        public string drawLightModel = "UniversalForward";
+        public int usePassIndex = -1;
+        public string drawLightMode = "UniversalForward";
         public string sampleTextureName = "_CustomMap";
         public FilterMode filterMode = FilterMode.Point;
+        public RenderTextureFormat format = RenderTextureFormat.ARGB32;
         [Range(1, 10)] public int downSample = 1;
 
         public RenderObjectType renderObjectType = RenderObjectType.Opaque;
@@ -46,14 +48,14 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public void Setup(RenderTargetHandle destination)
         {
             this.destination = destination;
-            m_ShaderTagId = new ShaderTagId(settings.drawLightModel);
+            m_ShaderTagId = new ShaderTagId(settings.drawLightMode);
         }
 
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
             RenderTextureDescriptor descriptor = cameraTextureDescriptor;
             descriptor.depthBufferBits = 32;
-            descriptor.colorFormat = RenderTextureFormat.ARGB32;
+            descriptor.colorFormat = settings.format;
             descriptor.width /=  settings.downSample;
             descriptor.height /= settings.downSample;
             cmd.GetTemporaryRT(destination.id, descriptor, settings.filterMode);
@@ -82,17 +84,16 @@ public class CustomShadingTexture : ScriptableRendererFeature
 
             if(material)
             {
-                drawSettings.overrideMaterial = material;
+                drawSettings.overrideMaterial = material;                
                 drawSettings.enableInstancing = material.enableInstancing;
+                drawSettings.overrideMaterialPassIndex = settings.usePassIndex;
             }
-            
-            drawSettings.enableDynamicBatching = true; // default value is true. please change it before draw call if needed.            
+
             drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
 
             
             context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref m_FilteringSettings);
-            
-
+                        
             cmd.SetGlobalTexture(settings.sampleTextureName, destination.id);
 
             context.ExecuteCommandBuffer(cmd);

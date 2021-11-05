@@ -13,6 +13,7 @@ Shader "ZDShader/URP/Particles/Additive"
         _Border ("Border", Vector) = (5.0, 5.0, 5.0, 5.0)
         [MaterialToggle] _Slice ("Slice UV", Float) = 0
         _Panner ("Panner", Vector) = (0.0, 0.0, 0.0, 0.0)
+        [Enum(UnityEngine.Rendering.CompareFunction)]  _ZTest ("ZTest", Float) = 4
     }
     
     SubShader
@@ -34,7 +35,7 @@ Shader "ZDShader/URP/Particles/Additive"
             
             Blend SrcAlpha One
             ZWrite Off
-            ZTest LEqual
+            ZTest [_ZTest]
             Offset 0, 0
             ColorMask RGBA
             
