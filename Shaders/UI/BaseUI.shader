@@ -13,6 +13,8 @@
         
         _ColorMask ("Color Mask", Float) = 15
         
+        [Toggle(NEED_ALPHA)] _NeedAlpha ("Need Alpha", Float) = 1
+        
         [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
     SubShader
@@ -27,6 +29,7 @@
             ReadMask [_StencilReadMask]
             WriteMask [_StencilWriteMask]
         }
+        
         
         
         Cull Off
@@ -50,7 +53,7 @@
             
             #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
             #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
-            
+            #pragma multi_compile_local _ NEED_ALPHA
             struct appdata
             {
                 float4 vertex: POSITION;
@@ -73,7 +76,6 @@
             fixed4 _TextureSampleAdd;
             float4 _ClipRect;
             float4 _MainTex_ST;
-            
             
             v2f vert(appdata v)
             {
@@ -98,7 +100,13 @@
                 #ifdef UNITY_UI_ALPHACLIP
                     clip(col.a - 0.001);
                 #endif
-                col.a = saturate(col.a);
+                
+                #ifdef NEED_ALPHA
+                    col.a = saturate(col.a);
+                #else
+                    col.a = 1;
+                #endif
+                
                 return col;
             }
             ENDCG
