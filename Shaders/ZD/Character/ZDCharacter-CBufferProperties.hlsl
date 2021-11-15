@@ -98,6 +98,10 @@ half4 _BoneMatrixMap_TexelSize;
     StructuredBuffer<uint> _VisibleInstanceOnlyTransformIDBuffer;
     StructuredBuffer<float4> _TimeBuffer;
 #endif
+
+half _InsightSystemIsSelf;
+half _InsightSystemIsSelect;
+half4 _InsightSystemSelectColor;
 CBUFFER_END
 
 #ifdef _DrawMeshInstancedProcedural
@@ -106,6 +110,8 @@ CBUFFER_END
     float4 _TimeData;
 #endif
 
+TEXTURE2D(_diffuse);                         SAMPLER(sampler_diffuse);
+TEXTURE2D(_OutlineWidthControl);             SAMPLER(sampler_OutlineWidthControl);
 TEXTURE2D(_EffectiveMap);                    SAMPLER(sampler_EffectiveMap);
 TEXTURE2D_ARRAY(_BoneMatrixMap);             SAMPLER(sampler_BoneMatrixMap);
 
@@ -183,7 +189,7 @@ half3 HSV2RGB(half3 c)
         #if _ExpressionEnable
             half hasFace = min(_SelectFace, 1.0);
             half fillArea_2 = lerp(grayArea_2 - grayArea_1, eyeCenter, hasFace);
-            grayArea_1 = lerp(grayArea_1, max(grayArea_1, grayArea_2) * (1.0 - eyeCenter), hasFace);        
+            grayArea_1 = lerp(grayArea_1, max(grayArea_1, grayArea_2) * (1.0 - eyeCenter), hasFace);
         #endif
         
         half fillArea_1 = grayArea_1 - grayArea_0;
@@ -221,7 +227,7 @@ void DistanceDisslove(half2 screenUV, half vertexDist)
 
 half CaculateShadowArea(half4 src, half4 picker, half setpB)
 {
-    half3 compare = src.rgb - picker.rgb;
+    half3 compare = max(src.rgb - picker.rgb, 0.0001.xxx);
     return 1.0 - smoothstep(picker.a, setpB, length(compare));
 }
 

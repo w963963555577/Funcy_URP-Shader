@@ -162,6 +162,8 @@ Shader "ZDShader/URP/Character"
             
             #pragma target 3.0
             
+            uniform half4 _CharacterOutlineColorAndBlend;
+            uniform half4 _CharacterOutlineElseColorAndBlend;
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             
             struct appdata
@@ -189,21 +191,20 @@ Shader "ZDShader/URP/Character"
                 float2 uv: TEXCOORD0;
                 float4 positionSS: TEXCOORD1;
                 float vertexDist: TEXCOORD2;
-                
+                float4 outlineColor: COLOR;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                     UNITY_VERTEX_OUTPUT_STEREO
                 #endif
             };
-            sampler2D _diffuse;
-            sampler2D _OutlineWidthControl;
+            
             
             #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
-                v2f o;
+                v2f o = (v2f)0;
                 #ifdef _DrawMeshInstancedProcedural
                     uint mid = _VisibleInstanceOnlyTransformIDBuffer[v.mid];
                 #else
@@ -226,7 +227,7 @@ Shader "ZDShader/URP/Character"
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
                 half RTD_OL_OLWABVD_OO = 1.0;
-                half4 _OutlineWidthControl_var = tex2Dlod(_OutlineWidthControl, float4(v.uv, 0.0, 0));
+                half4 _OutlineWidthControl_var = SAMPLE_TEXTURE2D_LOD(_OutlineWidthControl, sampler_OutlineWidthControl, v.uv, 0);
                 
                 half2 RTD_OL_DNOL_OO = v.uv;
                 half2 node_8743 = RTD_OL_DNOL_OO;
@@ -260,13 +261,19 @@ Shader "ZDShader/URP/Character"
                     positionCS = TransformObjectToHClip(float4(v.vertex.xyz + _OEM * RTD_OL, 1).xyz);
                 #endif
                 
+                half4 _diffuse_var = SAMPLE_TEXTURE2D_LOD(_diffuse, sampler_diffuse, v.uv, 0);
+                o.outlineColor.rgb = lerp(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, lerp(_CharacterOutlineElseColorAndBlend.rgb, _CharacterOutlineColorAndBlend.rgb, max(_InsightSystemIsSelf, _InsightSystemIsSelect)), _CharacterOutlineColorAndBlend.a);
                 
-                o.vertex = positionCS / _OutlineEnable;
+                o.vertex = positionCS;
+                #ifdef SHADER_API_D3D11
+                    o.vertex /= _OutlineEnable;
+                #endif
+                
                 o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
-                
                 
                 o.uv = v.uv;
                 o.vertexDist = dist;
+                
                 return o;
             }
             
@@ -289,8 +296,8 @@ Shader "ZDShader/URP/Character"
                 half alphaMinus = 1.0 - _EffectiveColor.a;
                 effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
                 
-                float4 _diffuse_var = tex2D(_diffuse, i.uv);
-                half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _Color.a * effectiveDisslive.a);
+                
+                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a);
                 //half4 col = float4(0.05.rrr, 1.0);
                 return col;
             }
@@ -369,8 +376,7 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             
-            
-            sampler2D _diffuse;
+            uniform half4 _CharacterColorAndBlend;
             
             #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
@@ -414,7 +420,6 @@ Shader "ZDShader/URP/Character"
                 float4 objectDirection: TEXCOORD4;      //  w: screenPosition.y
                 float4 lightXZDirection: TEXCOORD5;     //  w: screenPosition.z
                 float4 objectUp: TEXCOORD6;             //  w: screenPosition.w
-                
                 
                 float vertexDist: TEXCOORD7;
                 
@@ -488,7 +493,7 @@ Shader "ZDShader/URP/Character"
                     float4 tangentOS = input.tangentOS;
                 #endif
                 
-                input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
+                positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
                 VertexPositionInputs vertexInput;
                 VertexNormalInputs vertexNormalInput;
@@ -557,6 +562,7 @@ Shader "ZDShader/URP/Character"
                 output.objectDirection.w = positionSS.y;
                 output.lightXZDirection.w = positionSS.z;
                 output.objectUp.w = positionSS.w;
+                
                 
                 #if _ExpressionEnable
                     _SelectExpressionMap = round(_SelectExpressionMap);
@@ -738,7 +744,6 @@ Shader "ZDShader/URP/Character"
                     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 #endif
                 
-                //return float4((i.boneIndex.x == 32).xxx, 1.0);
                 
                 half3 positionWS = i.positionWSAndFogFactor.xyz;
                 half4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
@@ -748,7 +753,7 @@ Shader "ZDShader/URP/Character"
                 #else
                     DistanceDisslove(screenUV, i.vertexDist);
                 #endif
-                half4 _diffuse_var = tex2D(_diffuse, i.uv01.xy);
+                half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv01.xy);
                 half4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
                 half4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
@@ -799,9 +804,7 @@ Shader "ZDShader/URP/Character"
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 half fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
-                
-                
-                
+                                                
                 
                 #if _ExpressionEnable
                     
@@ -981,7 +984,7 @@ Shader "ZDShader/URP/Character"
                 float _EmissionOn_var = _EmissionOn;
                 float _Flash_var = (1.0 - max(0, dot(normalDirection, viewDirection))) * _Flash;
                 float3 specularColor = _SpecularColor_var.rgb * specularValue * specularMask;
-                
+
                 
                 //MixShadowReplacer
                 float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
@@ -1027,7 +1030,7 @@ Shader "ZDShader/URP/Character"
                 fogFactor *= fogFactor;
                 
                 float3 finalColor = emissive.rgb + additionalLightColor * diffuseColor;
-                
+                finalColor = lerp(finalColor, lerp(_CharacterColorAndBlend.rgb, _InsightSystemSelectColor.rgb, _InsightSystemSelectColor.a), min(_CharacterColorAndBlend.a, 1.0 - _InsightSystemIsSelf));
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv01.xy * 0.5);
@@ -1397,8 +1400,7 @@ Shader "ZDShader/URP/Character"
                     UNITY_VERTEX_OUTPUT_STEREO
                 #endif
             };
-            sampler2D _diffuse;
-            sampler2D _OutlineWidthControl;
+            
             
             #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
@@ -1427,7 +1429,7 @@ Shader "ZDShader/URP/Character"
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 
                 half RTD_OL_OLWABVD_OO = 1.0;
-                half4 _OutlineWidthControl_var = tex2Dlod(_OutlineWidthControl, float4(v.uv, 0.0, 0));
+                half4 _OutlineWidthControl_var = SAMPLE_TEXTURE2D_LOD(_OutlineWidthControl, sampler_OutlineWidthControl, v.uv, 0);
                 
                 half2 RTD_OL_DNOL_OO = v.uv;
                 half2 node_8743 = RTD_OL_DNOL_OO;
@@ -1488,7 +1490,7 @@ Shader "ZDShader/URP/Character"
                 half alphaMinus = 1.0 - _EffectiveColor.a;
                 effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
                 
-                float4 _diffuse_var = tex2D(_diffuse, i.uv);
+                float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv);
                 half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _Color.a * effectiveDisslive.a);
                 //half4 col = float4(0.05.rrr, 1.0);
                 return 1.0;

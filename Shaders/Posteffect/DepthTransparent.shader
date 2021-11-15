@@ -38,7 +38,7 @@ Shader "DepthTransparent"
             v2f vert(a2v v)
             {
                 v2f o;
-                o.pos = TransformObjectToHClip(v.vertex);
+                o.pos = TransformObjectToHClip(v.vertex.xyz);
                 o.uv = v.texcoord;
                 return o;
             }            
