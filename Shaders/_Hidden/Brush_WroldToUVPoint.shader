@@ -1,4 +1,4 @@
-Shader "Hidden/LWRP/Brush_WroldToUVPoint"
+Shader "Hidden/URP/Brush_WroldToUVPoint"
 {
     Properties
     {
@@ -109,5 +109,5 @@ Shader "Hidden/LWRP/Brush_WroldToUVPoint"
             
         }
     }
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.Brush_WroldToUVPoint"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.Brush_WroldToUVPoint"
 }

@@ -1,4 +1,4 @@
-Shader "Hidden/LWRP/VertexNormalUVDrawer"
+Shader "Hidden/URP/VertexNormalUVDrawer"
 {
     Properties
     {

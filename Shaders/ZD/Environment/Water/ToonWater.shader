@@ -324,5 +324,5 @@ Shader "ZDShader/URP/Environment/ToonWater"
         }
     }
     
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ToonWater"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.ToonWater"
 }

@@ -314,7 +314,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
         if (Settings.heightFixerData == null || Settings.heightFixerData.Count < 1)
         {
             Settings.heightFixerData = new List<MobileSSPRHeightFixerData>();
-            Settings.heightFixerData.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<MobileSSPRHeightFixerData>("Packages/com.zd.lwrp.funcy/Runtime/_URPAsset/SSRHeightFixerDatas/Default.asset"));
+            Settings.heightFixerData.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<MobileSSPRHeightFixerData>("Packages/com.zd.urp.funcy/Runtime/_URPAsset/SSRHeightFixerDatas/Default.asset"));
             UnityEditor.EditorUtility.SetDirty(this);
         }
 

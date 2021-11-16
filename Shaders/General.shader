@@ -1,6 +1,6 @@
 ﻿// Made with Amplify Shader Editor
 // Available at the Unity Asset Store - http://u3d.as/y3X
-Shader "Hidden/LWRP/General"
+Shader "Hidden/URP/General"
 {
     Properties { }
     
@@ -873,7 +873,7 @@ Shader "Hidden/LWRP/General"
                 
                 OctaImpostorVertex(v.vertex, v.normal, o.uvsFrame1, o.uvsFrame2, o.uvsFrame3, o.octaFrame, o.viewPos);
                 
-                #if AI_LWRP_VERSION > 51300
+                #if AI_URP_VERSION > 51300
                     o.clipPos = MetaVertexPosition(v.vertex, v.uvLM, v.uvDLM, unity_LightmapST, unity_DynamicLightmapST);
                 #else
                     o.clipPos = MetaVertexPosition(v.vertex, v.uvLM, v.uvDLM, unity_LightmapST);

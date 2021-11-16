@@ -46,7 +46,7 @@ namespace UnityEditor
         {
             // Catergories
             public static readonly GUIContent SurfaceOptions =
-                new GUIContent("Surface Options", "Controls how LWRP renders the Material on a screen.");
+                new GUIContent("Surface Options", "Controls how URP renders the Material on a screen.");
 
             public static readonly GUIContent SurfaceInputs = new GUIContent("Surface Inputs",
                 "These settings describe the look and feel of the surface itself.");
@@ -407,7 +407,7 @@ namespace UnityEditor
         {
             // Clear all keywords for fresh start
             material.shaderKeywords = null;
-            // Setup blending - consistent across all LWRP shaders
+            // Setup blending - consistent across all URP shaders
             SetupMaterialBlendMode(material);
             // Receive Shadows
             if (material.HasProperty("_ReceiveShadows"))

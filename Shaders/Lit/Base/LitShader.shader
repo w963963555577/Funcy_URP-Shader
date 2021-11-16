@@ -846,5 +846,5 @@ Shader "ZDShader/URP/PBR-Base"
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.LitShader"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.LitShader"
 }

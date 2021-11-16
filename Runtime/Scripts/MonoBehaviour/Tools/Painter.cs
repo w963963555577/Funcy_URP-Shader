@@ -11,7 +11,7 @@ using UnityEditor;
 using UnityEditor.Rendering;
 using uWintab;
 #endif
-namespace UnityEngine.Funcy.LWRP.Runtime
+namespace UnityEngine.Funcy.URP.Runtime
 {
 #if UNITY_EDITOR
     [ExecuteInEditMode]

@@ -10,6 +10,6 @@
 
 // don't touch the next define, it's automatically set by script
 #define AI_HDRP_VERSION 999999
-#define AI_LWRP_VERSION 70108
+#define AI_URP_VERSION 70108
 
 #endif //AMPLIFYIMPOSTORSCONFIG_INCLUDED

@@ -20,7 +20,7 @@ public class MenuExtension
             {
                 Material m = o as Material;
                 var tex = m.GetTexture("_BaseMap") as Texture2D;
-                m.shader = Shader.Find("ZDShader/LWRP/Character");
+                m.shader = Shader.Find("ZDShader/URP/Character");
                 m.SetTexture("_diffuse", tex);
             }
         }
@@ -44,7 +44,7 @@ public class MenuExtension
                 bool isParticle = shader.Contains("Mobile/Particles/");
                 if (!isParticle) continue;
                 Debug.Log(System.IO.Path.GetFileName(shader));
-                m.shader = Shader.Find("ZDShader/LWRP/Particles/" + System.IO.Path.GetFileName(shader));
+                m.shader = Shader.Find("ZDShader/URP/Particles/" + System.IO.Path.GetFileName(shader));
 
             }
         }
@@ -124,7 +124,7 @@ public class MenuExtension
         [MenuItem("GameObject/Funcy/FPS Display UI", false, 46)]
         static void FPSDisplayUI()
         {
-            var p = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.zd.lwrp.funcy/Runtime/Prefab/FPSDisplayUI.prefab");
+            var p = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.zd.urp.funcy/Runtime/Prefab/FPSDisplayUI.prefab");
             var g = PrefabUtility.InstantiatePrefab(p) as GameObject;
             g.transform.SetAsLastSibling();
 
@@ -141,7 +141,7 @@ public class MenuExtension
             vl.transform.position = Vector3.zero;
             vl.transform.rotation = Quaternion.identity;
             vl.transform.localScale = Vector3.one * 1000;
-            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/LWRP/Volume/Directional Lighting"));
+            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/URP/Volume/Directional Lighting"));
             renderer.sharedMaterial.SetTextureScale("_ShadowRamp", Vector2.one * 16f);
             Selection.activeGameObject = vl;
         }
@@ -157,7 +157,7 @@ public class MenuExtension
             vl.transform.position = Vector3.zero;
             vl.transform.rotation = Quaternion.identity;
             vl.transform.localScale = Vector3.one * 50;
-            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/LWRP/Volume/Point Lighting"));
+            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/URP/Volume/Point Lighting"));
             renderer.sharedMaterial.SetTextureScale("_ShadowRamp", Vector2.one * 32f);
             Selection.activeGameObject = vl;
         }
@@ -173,7 +173,7 @@ public class MenuExtension
             vl.transform.position = Vector3.zero;
             vl.transform.rotation = Quaternion.identity;
             vl.transform.localScale = Vector3.one * 50;
-            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/LWRP/Volume/Lens Flare"));
+            renderer.sharedMaterial = new Material(Shader.Find("ZDShader/URP/Volume/Lens Flare"));
             Selection.activeGameObject = vl;
         }
     }

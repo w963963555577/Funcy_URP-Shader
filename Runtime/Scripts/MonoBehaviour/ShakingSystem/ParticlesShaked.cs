@@ -5,7 +5,7 @@ using Unity.Mathematics;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-namespace UnityEngine.Funcy.LWRP.Runtime
+namespace UnityEngine.Funcy.URP.Runtime
 {
     [ExecuteInEditMode]
     [RequireComponent(typeof(ParticleSystem))]

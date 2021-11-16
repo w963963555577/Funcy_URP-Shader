@@ -5,7 +5,7 @@ using UnityEngine.Events;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-namespace UnityEngine.Funcy.LWRP.Runtime
+namespace UnityEngine.Funcy.URP.Runtime
 {
     [ExecuteInEditMode]
     public class FPSCounter : MonoBehaviour

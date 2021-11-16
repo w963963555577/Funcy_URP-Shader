@@ -104,7 +104,7 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
             CBUFFER_END
             
             #include "Shapes.hlsl"
-            #include "Packages/com.zd.lwrp.funcy/ShaderLibrary/ProjectorUV.hlsl"
+            #include "Packages/com.zd.urp.funcy/ShaderLibrary/ProjectorUV.hlsl"
             
             
             v2f vert(appdata v)
@@ -149,5 +149,5 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
         }
     }
     
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ProjectorShape"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.ProjectorShape"
 }

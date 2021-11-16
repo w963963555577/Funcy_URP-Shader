@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-namespace UnityEngine.Funcy.LWRP.Runtime
+namespace UnityEngine.Funcy.URP.Runtime
 {
     [ExecuteInEditMode]
     public class Projector : MonoBehaviour

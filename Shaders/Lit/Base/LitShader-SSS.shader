@@ -1,7 +1,7 @@
 // When creating shaders for Lightweight Render Pipeline you can you the ShaderGraph which is super AWESOME!
 // However, if you want to author shaders in shading language you can use this teamplate as a base.
-// Please note, this shader does not match perfomance of the built-in LWRP Lit shader.
-// This shader works with LWRP 5.7.2 version and above
+// Please note, this shader does not match perfomance of the built-in URP Lit shader.
+// This shader works with URP 5.7.2 version and above
 Shader "ZDShader/URP/PBR-Base(SSS)"
 {
     Properties
@@ -687,5 +687,5 @@ Shader "ZDShader/URP/PBR-Base(SSS)"
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.LitShader_SSS"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.LitShader_SSS"
 }
