@@ -30,6 +30,7 @@ float3 _CameraDirection;
 //we found that on metal, UNITY_MATRIX_VP is not correct, so we will pass our own VP matrix to compute shader
 //but UNITY_MATRIX_I_VP is correct, not sure why.
 float4x4 _VPMatrix;
+float4x4 _InverseVPMatrix;
 float _ScreenLRStretchIntensity;
 float _ScreenLRStretchThreshold;
 float4 _FinalTintColor;
@@ -60,7 +61,7 @@ float3 ConvertScreenIDToPosWS(uint2 id)
     //https://github.com/Steven-Cannavan/URP_ScreenSpacePlanarReflections/blob/master/Assets/Shaders/ReflectionShader.compute#L75
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     float4 posCS = float4(screenUV * 2.0 - 1.0, inputPixelRawDepth, 1.0); //reconstruct posCS using screen [0,1] uv & rawDepth
-    float4 posHWS = mul(UNITY_MATRIX_I_VP, posCS); //posCS -> posHWS
+    float4 posHWS = mul(_InverseVPMatrix, posCS); //posCS -> posHWS
     float3 posWS = posHWS.xyz / posHWS.w; //posHWS -> posWS
     
     return posWS;

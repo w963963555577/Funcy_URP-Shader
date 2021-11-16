@@ -156,6 +156,12 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 Matrix4x4 VP = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true) * camera.worldToCameraMatrix;
                 cb.SetComputeMatrixParam(cs, "_VPMatrix", VP);
 
+                Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
+                Matrix4x4 viewMatrix = camera.worldToCameraMatrix;
+                Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
+                Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
+                cb.SetComputeMatrixParam(cs, "_InverseVPMatrix", invViewProjMatrix);
+
                 if (shouldUseSinglePassUnsafeAllowFlickeringDirectResolve)
                 {
                     ////////////////////////////////////////////////
