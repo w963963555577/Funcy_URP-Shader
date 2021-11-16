@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Name: MobileBloomRenderer
   m_EditorClassIdentifier: 
   m_RendererFeatures:
-  - {fileID: 3031588477919855300}
+  - {fileID: 0}
   - {fileID: 6983396807854424833}
   - {fileID: -6529504306141599248}
   - {fileID: -899535766028868467}
