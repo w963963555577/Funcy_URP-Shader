@@ -152,12 +152,15 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
                 cb.SetComputeVectorParam(cs, Shader.PropertyToID("_FinalTintColor"), settings.tintColor);
 
                 //we found that on metal, UNITY_MATRIX_VP is not correct, so we will pass our own VP matrix to compute shader
+
                 Camera camera = renderingData.cameraData.camera;
-                Matrix4x4 VP = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true) * camera.worldToCameraMatrix;
+                Matrix4x4 viewMatrix = camera.worldToCameraMatrix;
+
+                Matrix4x4 VP = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true) * viewMatrix;
                 cb.SetComputeMatrixParam(cs, "_VPMatrix", VP);
 
                 Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
-                Matrix4x4 viewMatrix = camera.worldToCameraMatrix;
+                
                 Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
                 Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
                 cb.SetComputeMatrixParam(cs, "_InverseVPMatrix", invViewProjMatrix);

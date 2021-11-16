@@ -200,7 +200,7 @@ Shader "ZDShader/URP/Character"
             };
             
             
-            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.urp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
@@ -378,7 +378,7 @@ Shader "ZDShader/URP/Character"
             
             uniform half4 _CharacterColorAndBlend;
             
-            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.urp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             
             TEXTURE2D(_mask);                       SAMPLER(sampler_mask);
@@ -1094,7 +1094,7 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
             
-            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.urp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             
             float3 _LightDirection;
@@ -1234,7 +1234,7 @@ Shader "ZDShader/URP/Character"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             
-            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.urp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             struct Attributes
             {
@@ -1402,7 +1402,7 @@ Shader "ZDShader/URP/Character"
             };
             
             
-            #include "Packages/com.zd.lwrp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
+            #include "Packages/com.zd.urp.funcy/Shaders/ZD/Character/ZDCharacter-CBufferProperties.hlsl"
             
             v2f vert(appdata v)
             {
@@ -1502,5 +1502,5 @@ Shader "ZDShader/URP/Character"
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ZDCharacter"
+    CustomEditor "UnityEditor.Rendering.Funcy.urp.ShaderGUI.ZDCharacter"
 }

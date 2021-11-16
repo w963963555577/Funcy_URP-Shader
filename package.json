@@ -1,7 +1,7 @@
 {
-  "name": "com.zd.lwrp.funcy",
+  "name": "com.zd.urp.funcy",
   "description": "\u9019\u662f Funcy \u7684 Shader Package\n\u88e1\u9762\u6709\u5404\u7a2e Tutorial.",
-  "version": "1.0.0",
+  "version": "7.4.3",
   "keywords": [
     "key",
     "words",
@@ -10,11 +10,10 @@
     "package",
     "search"
   ],
-  "unity": "2019.3",
-  "unityRelease": "0f6",
+  "unity": "2019.4",
   "displayName": "_Funcy URP",
   "dependencies": {
-    "com.unity.render-pipelines.universal": "7.3.1",
+    "com.unity.render-pipelines.universal": "7.4.3",
     "com.unity.mathematics": "1.1.0"
   },
   "category": "w963963555577",
@@ -26,7 +25,7 @@
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com:w963963555577/Funcy_URP-Shader.git",
-    "directory": "com.zd.lwrp.funcy"
+    "directory": "com.zd.urp.funcy"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@w963963555577"
