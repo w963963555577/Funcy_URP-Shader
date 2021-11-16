@@ -4,7 +4,7 @@ using UnityEngine;
 #if ZD_ART_EDITOR
 using LitJson;
 #endif
-namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
+namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 {
     [InitializeOnLoad]
     public class ReleaseEditorPrefs : Editor

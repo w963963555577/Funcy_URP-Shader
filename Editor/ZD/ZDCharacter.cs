@@ -6,7 +6,7 @@ using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 
-namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
+namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 {
     [InitializeOnLoad]
     internal class ZDCharacter : BaseFuncyShaderGUI

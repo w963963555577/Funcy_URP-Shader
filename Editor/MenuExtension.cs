@@ -219,7 +219,7 @@ public class MenuExtension
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste Effective", true)]
         public static bool PasteEffective_Validator()
         {
-            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.Effective.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.URP.ShaderGUI.Effective.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
         }
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste Effective", false, 1001)]
         public static void PasteEffectiveSystem()
@@ -227,7 +227,7 @@ public class MenuExtension
             foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
             {
                 var m = ((Material)mo);
-                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.Effective.Paste(m);
+                UnityEditor.Rendering.Funcy.URP.ShaderGUI.Effective.Paste(m);
             }
             AssetDatabase.SaveAssets();
         }
@@ -236,7 +236,7 @@ public class MenuExtension
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste DiscolorationSystem", true)]
         public static bool PasteDiscolorationSystem_Validator()
         {
-            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.DiscolorationSystem.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.URP.ShaderGUI.DiscolorationSystem.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
         }
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste DiscolorationSystem", false, 1002)]
         public static void PasteDiscolorationSystem()
@@ -244,7 +244,7 @@ public class MenuExtension
             foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
             {
                 var m = ((Material)mo);
-                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.DiscolorationSystem.Paste(m);
+                UnityEditor.Rendering.Funcy.URP.ShaderGUI.DiscolorationSystem.Paste(m);
             }
             AssetDatabase.SaveAssets();
         }
@@ -253,7 +253,7 @@ public class MenuExtension
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste ShadowReplacer", true)]
         public static bool PasteShadowReplacer_Validator()
         {
-            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ShadowReplacer.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
+            return Selection.activeObject is Material && UnityEditor.Rendering.Funcy.URP.ShaderGUI.ShadowReplacer.CanPaste() && ((Material)Selection.activeObject).shader.name == "ZDShader/URP/Character";
         }
         [MenuItem("Assets/ZD/Charater Shader Materials/Paste ShadowReplacer", false, 1003)]
         public static void PasteShadowReplacer()
@@ -261,7 +261,7 @@ public class MenuExtension
             foreach (var mo in Selection.objects.ToList().FindAll(x => x is Material))
             {
                 var m = ((Material)mo);
-                UnityEditor.Rendering.Funcy.LWRP.ShaderGUI.ShadowReplacer.Paste(m);
+                UnityEditor.Rendering.Funcy.URP.ShaderGUI.ShadowReplacer.Paste(m);
             }
             AssetDatabase.SaveAssets();
         }

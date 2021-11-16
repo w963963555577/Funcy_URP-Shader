@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
+namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 {
     internal class BrushMask : BaseFuncyShaderGUI
     {

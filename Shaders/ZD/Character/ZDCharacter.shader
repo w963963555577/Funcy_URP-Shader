@@ -1502,5 +1502,5 @@ Shader "ZDShader/URP/Character"
     
     // Uses a custom shader GUI to display settings. Re-use the same from Lit shader as they have the
     // same properties.
-    CustomEditor "UnityEditor.Rendering.Funcy.urp.ShaderGUI.ZDCharacter"
+    CustomEditor "UnityEditor.Rendering.Funcy.URP.ShaderGUI.ZDCharacter"
 }

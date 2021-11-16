@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine.Rendering;
 using UnityEditor.Rendering;
 
-namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
+namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 {
     internal class SpecTree : BaseShaderGUI
     {

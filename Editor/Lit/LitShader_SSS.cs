@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEditor;
 
-namespace UnityEditor.Rendering.Funcy.LWRP.ShaderGUI
+namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 {
     internal class LitShader_SSS : BaseShaderGUI
     {

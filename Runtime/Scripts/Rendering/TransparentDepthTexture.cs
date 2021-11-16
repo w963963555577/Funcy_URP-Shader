@@ -20,7 +20,7 @@ public class TransparentDepthTexture : MonoBehaviour
     {
 #if UNITY_EDITOR
         if (depthCamera == null)
-            depthCamera = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.zd.lwrp.funcy/Runtime/Prefab/DepthCamera.prefab").GetComponent<Camera>();
+            depthCamera = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.zd.urp.funcy/Runtime/Prefab/DepthCamera.prefab").GetComponent<Camera>();
 #endif
         if (currentCamera == null && depthCamera != null)
         {
