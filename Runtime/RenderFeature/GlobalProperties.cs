@@ -19,7 +19,7 @@ public class GlobalProperties : ScriptableRendererFeature
         [HideInInspector] public float floatValue;
         [HideInInspector] public Vector4 vectorValue;
         [HideInInspector][ColorUsage(true,true)] public Color colorValue;
-
+        [System.NonSerialized][HideInInspector] [ColorUsage(true, true)] public Color colorValueNonSerialized;
         public enum ShaderPropertyType
         {            
             Color = 0,            
@@ -57,7 +57,7 @@ public class GlobalProperties : ScriptableRendererFeature
                 switch(p.type)
                 {
                     case Property.ShaderPropertyType.Color:
-                        cmd.SetGlobalColor(p.name, p.colorValue);
+                        cmd.SetGlobalColor(p.name, p.colorValueNonSerialized);
                         break;
                     case Property.ShaderPropertyType.Float:
                         cmd.SetGlobalFloat(p.name, p.floatValue);
@@ -79,8 +79,26 @@ public class GlobalProperties : ScriptableRendererFeature
 
     public override void Create()
     {
+        foreach (var p in settings.properties)
+        {
+            switch (p.type)
+            {
+                case Property.ShaderPropertyType.Color:
+                    p.colorValueNonSerialized = p.colorValue;
+                    //cmd.SetGlobalColor(p.name, p.colorValue);
+                    break;
+                case Property.ShaderPropertyType.Float:
+                    //cmd.SetGlobalFloat(p.name, p.floatValue);
+                    break;
+                case Property.ShaderPropertyType.Vector:
+                    //cmd.SetGlobalVector(p.name, p.vectorValue);
+                    break;
+            }
+        }
+
         pass = new Pass(settings, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
+
        
     }
 
