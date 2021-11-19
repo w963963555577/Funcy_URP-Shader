@@ -141,7 +141,7 @@ half3 RGB2HSV(half3 c)
     half4 q = lerp(half4(p.xyw, c.r), half4(c.r, p.yzx), step(p.x, c.r));
     
     half d = q.x - min(q.w, q.y);
-    half e = 1.0e-10;
+    half e = 1.0e-4;
     return half3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 

@@ -307,10 +307,10 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
             
             struct Attributes
             {
-                half4 positionOS: POSITION;
-                half3 normalOS: NORMAL;
+                float4 positionOS: POSITION;
+                float3 normalOS: NORMAL;
                 half2 texcoord: TEXCOORD0;
-                half2 uv1: TEXCOORD1;
+                float2 uv1: TEXCOORD1;
                 #ifdef _DrawMeshInstancedProcedural
                     uint mid: SV_INSTANCEID;
                 #else
@@ -321,8 +321,8 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
             struct Varyings
             {
                 half2 uv: TEXCOORD0;
-                half3 p0: TEXCOORD2;
-                half3 p1: TEXCOORD3;
+                half3 p0: TEXCOORD1;
+                half3 p1: TEXCOORD2;
                 half4 positionCS: SV_POSITION;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
@@ -330,7 +330,7 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
                     UNITY_VERTEX_OUTPUT_STEREO
                 #endif
             };
-            
+
             half4 GetShadowPositionHClip(Attributes input)
             {
                 half3 viewOffset = half3(remap(input.texcoord.xy, 0.0.xx, 1.0.xx, -1.0.xx, 1.0.xx) * 2.0, 0.0);
@@ -366,7 +366,7 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
                 
                 return positionCS;
             }
-            
+
             Varyings ShadowPassVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
@@ -395,8 +395,7 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
-            }
-            
+            }            
             
             half alpha(half albedoAlpha, half4 color, half cutoff)
             {
@@ -467,8 +466,8 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
             
             struct Attributes
             {
-                half4 position: POSITION;
-                half2 texcoord: TEXCOORD0;
+                float4 position: POSITION;
+                float2 texcoord: TEXCOORD0;
                 half2 uv1: TEXCOORD1;
                 
                 #ifdef _DrawMeshInstancedProcedural

@@ -95,7 +95,7 @@
                 float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
                 
                 float d = q.x - min(q.w, q.y);
-                float e = 1.0e-10;
+                float e = 1.0e-4;
                 return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
             }
             
