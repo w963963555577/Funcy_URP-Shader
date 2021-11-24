@@ -309,7 +309,7 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
             {
                 float4 positionOS: POSITION;
                 float3 normalOS: NORMAL;
-                half2 texcoord: TEXCOORD0;
+                float2 texcoord: TEXCOORD0;
                 float2 uv1: TEXCOORD1;
                 #ifdef _DrawMeshInstancedProcedural
                     uint mid: SV_INSTANCEID;
@@ -320,10 +320,10 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
             
             struct Varyings
             {
-                half2 uv: TEXCOORD0;
-                half3 p0: TEXCOORD1;
-                half3 p1: TEXCOORD2;
-                half4 positionCS: SV_POSITION;
+                float2 uv: TEXCOORD0;
+                float3 p0: TEXCOORD1;
+                float3 p1: TEXCOORD2;
+                float4 positionCS: SV_POSITION;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
                     UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -340,8 +340,8 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
                     uint id = _VisibleInstanceOnlyTransformIDBuffer[input.mid];
                     viewOffset = mul(half4(viewOffset, 0.0), _ObjectToWorldBuffer[id]).xyz;
                     input.positionOS.xyz += normalize(viewOffset) * _ViewRendererMode;
-                    half3 positionWS = mul(_ObjectToWorldBuffer[id], half4(input.positionOS.xyz, 1.0)).xyz;
-                    half3 normalWS = half3(0, 0, 0);
+                    float3 positionWS = mul(_ObjectToWorldBuffer[id], half4(input.positionOS.xyz, 1.0)).xyz;
+                    float3 normalWS = half3(0, 0, 0);
                     
                     #ifdef UNITY_ASSUME_UNIFORM_SCALING
                         normalWS = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], input.normalOS));
@@ -351,12 +351,12 @@ Shader "ZDShader/URP/Environment/SpecialTree_Combined"
                 #else
                     viewOffset = mul(half4(viewOffset, 0.0), GetObjectToWorldMatrix()).xyz;
                     input.positionOS.xyz += normalize(viewOffset) * _ViewRendererMode;
-                    half3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                    half3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                    float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                    float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                     
                 #endif
                 
-                half4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
                 
                 #if UNITY_REVERSED_Z
                     positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
