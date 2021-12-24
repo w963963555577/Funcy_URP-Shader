@@ -215,6 +215,7 @@ half3 HSV2RGB(half3 c)
 
 void DistanceDisslove(half2 screenUV, half vertexDist)
 {
+    /*
     half as = _ScreenParams.y / _ScreenParams.x;
     half2 maskUV = half2(screenUV.x * as, screenUV.y) * 200.0;
     half rowID = fmod(floor(maskUV.y), 2.0);
@@ -223,6 +224,7 @@ void DistanceDisslove(half2 screenUV, half vertexDist)
     half distanceDissloveMask = 1.0 - max(distanceRect.x, distanceRect.y) * _DistanceDisslove;
     distanceDissloveMask *= distanceDissloveMask * distanceDissloveMask * distanceDissloveMask;
     //clip(distanceDissloveMask - (1.0 - min(1.0, vertexDist * 1.5384)));
+    */
 }
 
 half CaculateShadowArea(half4 src, half4 picker, half setpB)
@@ -316,3 +318,4 @@ half CaculateShadowArea(half4 src, half4 picker, half setpB)
         return o2w;
     }
 #endif
+//#include "../../../ShaderLibrary/GlobalFog.hlsl"

@@ -14,6 +14,7 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 
         #region Properties
         MaterialProperty diffuse { get; set; }
+        MaterialProperty clippingAlbedoAlpha { get; set; }
         MaterialProperty boneMatrixMap{ get; set; }
         MaterialProperty color { get; set; }
 
@@ -592,6 +593,8 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
                 "B= Self Shadow Mask\n(自投影遮罩)\n黑色=不顯示,白色=顯示",
                 "A= Discoloration Area\n(變色遮罩)")
                 ), selfMask);
+
+            materialEditor.ShaderProperty(clippingAlbedoAlpha, clippingAlbedoAlpha.displayName);
 
             if (selfMask.textureValue != null)
             {

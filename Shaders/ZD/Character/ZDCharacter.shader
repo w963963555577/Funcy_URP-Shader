@@ -6,6 +6,7 @@ Shader "ZDShader/URP/Character"
         
         _diffuse ("BaseColor", 2D) = "white" { }
         [HDR]_Color ("BaseColor", Color) = (1.0, 1.0, 1.0, 1)
+        [Toggle(_ClippingAlbedoAlpha)] _ClippingAlbedoAlpha ("Enable Clipping", float) = 0
         
         _SubsurfaceScattering ("Scatter", Range(0, 1)) = 0.2
         _SubsurfaceRadius ("Radius", Range(0, 5.0)) = 2.0
@@ -159,6 +160,7 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile _ _AlphaClip
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
+            #pragma shader_feature_local _ClippingAlbedoAlpha
             
             #pragma target 3.0
             
@@ -290,6 +292,7 @@ Shader "ZDShader/URP/Character"
                 #else
                     DistanceDisslove(screenUV, i.vertexDist);
                 #endif
+                
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
                 half4 effectiveDisslive = _EffectiveColor;
                 
@@ -298,7 +301,11 @@ Shader "ZDShader/URP/Character"
                 
                 
                 half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a);
-                //half4 col = float4(0.05.rrr, 1.0);
+                #if defined(_ClippingAlbedoAlpha)
+                    half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv.xy);
+                    clip(_diffuse_var.a - 0.5);
+                #endif
+                //col = MixGlobalFog(col, i.positionWS_And_FogFactor.xyz, i.positionWS_And_FogFactor.w);
                 return col;
             }
             ENDHLSL
@@ -368,6 +375,7 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
+            #pragma shader_feature_local _ClippingAlbedoAlpha
             
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
@@ -804,7 +812,7 @@ Shader "ZDShader/URP/Character"
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 half fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
                 half SSS = max(NdotL, fresnel) * _SubsurfaceRadius * (1.0 - glossMask);
-                                                
+                
                 
                 #if _ExpressionEnable
                     
@@ -984,7 +992,7 @@ Shader "ZDShader/URP/Character"
                 float _EmissionOn_var = _EmissionOn;
                 float _Flash_var = (1.0 - max(0, dot(normalDirection, viewDirection))) * _Flash;
                 float3 specularColor = _SpecularColor_var.rgb * specularValue * specularMask;
-
+                
                 
                 //MixShadowReplacer
                 float3 _diffuse_hsv = RGB2HSV(_diffuse_var.rgb);
@@ -1049,6 +1057,10 @@ Shader "ZDShader/URP/Character"
                 
                 float4 finalRGBA = float4(finalColor, _Color.a * effectiveDisslive.a);
                 
+                #if defined(_ClippingAlbedoAlpha)
+                    clip(_diffuse_var.a - 0.5);
+                #endif
+                //finalRGBA = MixGlobalFog(finalRGBA, positionWS.xyz, fogFactor);
                 return finalRGBA;
             }
             ENDHLSL
@@ -1080,6 +1092,7 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
+            #pragma shader_feature_local _ClippingAlbedoAlpha
             
             #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             
@@ -1183,15 +1196,21 @@ Shader "ZDShader/URP/Character"
                     UNITY_SETUP_INSTANCE_ID(input);
                     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 #endif
-                #if _AlphaClip
-                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
-                    half4 effectiveDisslive = _EffectiveColor;
-                    half alphaMinus = 1.0 - _EffectiveColor.a;
-                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
-                    
-                    clip(effectiveDisslive.a - 0.5);
+                #if defined(_AlphaClip) || defined(_ClippingAlbedoAlpha)
+                    half clippingResult = 1.0;
+                    #if defined(_AlphaClip)
+                        half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
+                        half4 effectiveDisslive = _EffectiveColor;
+                        half alphaMinus = 1.0 - _EffectiveColor.a;
+                        effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                        clippingResult *= effectiveDisslive.a;
+                    #endif
+                    #if defined(_ClippingAlbedoAlpha)
+                        float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, input.uv.xy);
+                        clippingResult *= _diffuse_var.a;
+                    #endif
+                    clip(clippingResult - 0.5);
                 #endif
-                
                 return 0;
             }
             
@@ -1229,6 +1248,7 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
+            #pragma shader_feature_local _ClippingAlbedoAlpha
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
@@ -1325,13 +1345,20 @@ Shader "ZDShader/URP/Character"
                 #else
                     DistanceDisslove(screenUV, input.vertexDist);
                 #endif
-                #if _AlphaClip
-                    half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
-                    half4 effectiveDisslive = _EffectiveColor;
-                    half alphaMinus = 1.0 - _EffectiveColor.a;
-                    effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
-                    
-                    clip(effectiveDisslive.a - 0.5);
+                #if defined(_AlphaClip) || defined(_ClippingAlbedoAlpha)
+                    half clippingResult = 1.0;
+                    #if defined(_AlphaClip)
+                        half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, input.uv.xy);
+                        half4 effectiveDisslive = _EffectiveColor;
+                        half alphaMinus = 1.0 - _EffectiveColor.a;
+                        effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                        clippingResult *= effectiveDisslive.a;
+                    #endif
+                    #if defined(_ClippingAlbedoAlpha)
+                        float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, input.uv.xy);
+                        clippingResult *= _diffuse_var.a;
+                    #endif
+                    clip(clippingResult - 0.5);
                 #endif
                 return 0;
             }
@@ -1493,6 +1520,9 @@ Shader "ZDShader/URP/Character"
                 float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv);
                 half4 col = float4(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, _Color.a * effectiveDisslive.a);
                 //half4 col = float4(0.05.rrr, 1.0);
+                #if defined(_ClippingAlbedoAlpha)
+                    clip(_diffuse_var.a - 0.5);
+                #endif
                 return 1.0;
             }
             ENDHLSL
