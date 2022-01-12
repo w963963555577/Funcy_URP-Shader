@@ -161,6 +161,7 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
             #pragma shader_feature_local _ClippingAlbedoAlpha
+            #pragma shader_feature_local _InsightDisable
             
             #pragma target 3.0
             
@@ -264,7 +265,11 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 half4 _diffuse_var = SAMPLE_TEXTURE2D_LOD(_diffuse, sampler_diffuse, v.uv, 0);
-                o.outlineColor.rgb = lerp(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, lerp(_CharacterOutlineElseColorAndBlend.rgb, _CharacterOutlineColorAndBlend.rgb, max(_InsightSystemIsSelf, _InsightSystemIsSelect)), _CharacterOutlineColorAndBlend.a);
+                #if _InsightDisable
+                    o.outlineColor.rgb = _OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend;
+                #else
+                    o.outlineColor.rgb = lerp(_OutlineColor.rgb + _diffuse_var.rgb * _DiffuseBlend, lerp(_CharacterOutlineElseColorAndBlend.rgb, _CharacterOutlineColorAndBlend.rgb, max(_InsightSystemIsSelf, _InsightSystemIsSelect)), _CharacterOutlineColorAndBlend.a);
+                #endif
                 
                 o.vertex = positionCS;
                 #ifdef SHADER_API_D3D11
@@ -376,7 +381,8 @@ Shader "ZDShader/URP/Character"
             #pragma multi_compile _ _DrawMeshInstancedProcedural
             #pragma shader_feature_local _AnimationInstancing
             #pragma shader_feature_local _ClippingAlbedoAlpha
-            
+            #pragma shader_feature_local _InsightDisable
+
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
             
@@ -1038,7 +1044,10 @@ Shader "ZDShader/URP/Character"
                 fogFactor *= fogFactor;
                 
                 float3 finalColor = emissive.rgb + additionalLightColor * diffuseColor;
-                finalColor = lerp(finalColor, lerp(_CharacterColorAndBlend.rgb, _InsightSystemSelectColor.rgb, _InsightSystemSelectColor.a), min(_CharacterColorAndBlend.a, 1.0 - _InsightSystemIsSelf));
+                #ifndef _InsightDisable
+                    finalColor = lerp(finalColor, lerp(_CharacterColorAndBlend.rgb, _InsightSystemSelectColor.rgb, _InsightSystemSelectColor.a), min(_CharacterColorAndBlend.a, 1.0 - _InsightSystemIsSelf));
+                #endif
+
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv01.xy * 0.5);
