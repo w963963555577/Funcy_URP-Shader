@@ -67,6 +67,15 @@ Shader "ZDShader/URP/PBR-Base"
         
         Pass
         {
+            Stencil
+            {
+                Ref 10
+                Comp Always
+                Pass Replace
+                Fail Keep
+                ZFail Keep
+            }
+            
             Name "StandardLit"
             Tags { "LightMode" = "UniversalForward" }
             

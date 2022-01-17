@@ -36,7 +36,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
         
         Pass
         {
-            /*
+            
             Stencil
             {
                 Ref[_StencilRef]
@@ -44,7 +44,7 @@ Shader "ZDShader/URP/Particles/Additive(Projection)"
                 WriteMask[_WriteMask]
                 Comp[_StencilCompare]
             }
-            */
+            
             Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             

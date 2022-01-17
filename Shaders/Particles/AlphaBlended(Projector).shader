@@ -36,7 +36,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
         
         Pass
         {
-            /*
+            
             Stencil
             {
                 Ref[_StencilRef]
@@ -44,7 +44,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 WriteMask[_WriteMask]
                 Comp[_StencilCompare]
             }
-            */
+            
             Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             

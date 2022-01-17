@@ -24,21 +24,22 @@ Shader "ZDShader/URP/Projector/Shape(Depth)"
         
         _Falloff ("Fall Off", Float) = 4
         
-        
-        
-        
-        
-        //Hide Property
-        [HideInInspector]_StencilRef ("_StencilRef", Float) = 0
-        [HideInInspector]_StencilComp ("_StencilComp", Float) = 0 //0 = disable
     }
     
     SubShader
     {
-        Tags { "RenderType" = "Overlay" "Queue" = "Transparent-499" "DisableBatching" = "True" }
+        Tags { "RenderType" = "Overlay" "Queue" = "Transparent" "DisableBatching" = "True" }
         
         Pass
         {
+            Stencil
+            {
+                Ref 10
+                ReadMask 255
+                WriteMask 255
+                Comp Equal
+            }
+
             Cull Front
             ZWrite Off
             ZTest GEqual
