@@ -118,6 +118,17 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
         MaterialProperty mouthRect { get; set; }
 
         MaterialProperty effectiveMap { get; set; }
+
+        /*OS Disslove*/
+        MaterialProperty dissloveMap { get; set; }
+
+        MaterialProperty effectiveColor_Light { get; set; }
+        MaterialProperty effectiveColor_Dark { get; set; }
+        MaterialProperty effectiveDisslove { get; set; }
+
+        MaterialProperty dissliveWithDiretion { get; set; }
+        MaterialProperty dissliveAngle { get; set; }
+
         MaterialProperty faceLightMapCombineMode { get; set; }
         MaterialProperty floatModel { get; set; }
         MaterialProperty effectiveColor { get; set; }
@@ -252,6 +263,20 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
                 GUILayout.EndVertical();
                 GUILayout.EndVertical();
 
+                GUILayout.BeginVertical("Box");
+                GUILayout.Label("OS Disslove", EditorStyles.boldLabel);
+                GUILayout.BeginVertical("Box");
+                {
+                    materialEditor.TexturePropertySingleLine(dissloveMap.displayName.ToGUIContent(), dissloveMap, effectiveColor_Light, effectiveColor_Dark);
+                    materialEditor.ShaderProperty(effectiveDisslove, effectiveDisslove.displayName);
+                    materialEditor.TextureScaleOffsetProperty(dissloveMap);
+                    GUILayout.Space(10);
+                    materialEditor.ShaderProperty(dissliveWithDiretion, dissliveWithDiretion.displayName);
+                    materialEditor.ShaderProperty(dissliveAngle, dissliveAngle.displayName);
+                }
+                GUILayout.EndVertical();
+                GUILayout.Space(10);
+                GUILayout.EndVertical();
 
                 GUILayout.BeginVertical("Box");
                 GUILayout.Label("Edge Light", EditorStyles.boldLabel);

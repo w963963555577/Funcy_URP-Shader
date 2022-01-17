@@ -123,6 +123,14 @@ Shader "ZDShader/URP/Character"
         
         [MaterialToggle] _FloatModel ("Float Model", float) = 0
         
+        //OS Disslove
+        _DissloveMap ("DissloveMap Map", 2D) = "white" { }
+        [HDR]_EffectiveColor_Light ("_EffectiveColor", Color) = (0.0, 6.0, 4.3, 1.0)
+        [HDR]_EffectiveColor_Dark ("_EffectiveColor Dark", Color) = (2.07, 0.6, 6.0, 1.0)
+        _EffectiveDisslove ("Disslove", Range(0.0, 1.0)) = 1.0
+        [Toggle] _DissliveWithDiretion ("From Direction", float) = 1
+        _DissliveAngle ("Angle", Range(-180, 180)) = 0
+        
         //Effective Disslove
         _EffectiveMap ("Effective Map", 2D) = "white" { }
         [MaterialToggle] _FaceLightMapCombineMode ("Face LightMap Combined", float) = 0.0
@@ -194,6 +202,12 @@ Shader "ZDShader/URP/Character"
                 float2 uv: TEXCOORD0;
                 float4 positionSS: TEXCOORD1;
                 float vertexDist: TEXCOORD2;
+                
+                /*OS Disslove*/
+                float3 OSuvMask: TEXCOORD3;
+                float4 OSuv1: TEXCOORD4;
+                float4 OSuv2: TEXCOORD5;
+                
                 float4 outlineColor: COLOR;
                 #ifdef _DrawMeshInstancedProcedural
                 #else
@@ -228,6 +242,10 @@ Shader "ZDShader/URP/Character"
                 
                 
                 v.vertex.y += (sin(_Time.y + v.effectcoord.x + v.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
+                
+                /*OS Disslove*/
+                GetDissloveInput(v.vertex, v.normal, _DissloveMap_ST, o.OSuv1, o.OSuv2, o.OSuvMask);
+                
                 
                 half RTD_OL_OLWABVD_OO = 1.0;
                 half4 _OutlineWidthControl_var = SAMPLE_TEXTURE2D_LOD(_OutlineWidthControl, sampler_OutlineWidthControl, v.uv, 0);
@@ -304,11 +322,21 @@ Shader "ZDShader/URP/Character"
                 half alphaMinus = 1.0 - _EffectiveColor.a;
                 effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
                 
+                /*OS Disslove*/
+                half osEffectiveDisslive = _EffectiveDisslove;
+                half osEdgeArea;
+                half osValue = osEffectiveDisslive;
+                half4 osEffectiveMask;
+                osEffectiveDisslive = GetDissloveAlpha(i.OSuv1, i.OSuv2, i.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
                 
-                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a);
+                half gradient = smoothstep(osValue + 0.2, osValue - 0.2, (lerp(osEffectiveMask.r, i.OSuv2.w + 0.2 + (0.5 - osValue) + 0.15 * (1.0 - osValue), _DissliveWithDiretion)));
+                i.outlineColor.rgb = lerp(i.outlineColor.rgb, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
+                /*OS Disslove*/
+                
+                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
                 #if defined(_ClippingAlbedoAlpha)
                     half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv.xy);
-                    clip(_diffuse_var.a - 0.5);
+                    clip(_diffuse_var.a * osEffectiveDisslive - 0.5);
                 #endif
                 //col = MixGlobalFog(col, i.positionWS_And_FogFactor.xyz, i.positionWS_And_FogFactor.w);
                 return col;
@@ -382,7 +410,7 @@ Shader "ZDShader/URP/Character"
             #pragma shader_feature_local _AnimationInstancing
             #pragma shader_feature_local _ClippingAlbedoAlpha
             #pragma shader_feature_local _InsightDisable
-
+            
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
             
@@ -443,6 +471,11 @@ Shader "ZDShader/URP/Character"
                         float4 expressionUV23: TEXCOORD9;
                     #endif
                 #endif
+                
+                /*OS Disslove*/
+                float3 OSuvMask: TEXCOORD10;
+                float4 OSuv1: TEXCOORD11;
+                float4 OSuv2: TEXCOORD12;
                 
                 float4 positionCS: SV_POSITION;
                 
@@ -518,6 +551,9 @@ Shader "ZDShader/URP/Character"
                     vertexInput = GetVertexPositionInputs(positionOS.xyz);
                     vertexNormalInput = GetVertexNormalInputs(normalOS.xyz, tangentOS);
                 #endif
+                
+                /*OS Disslove*/
+                GetDissloveInput(positionOS, normalOS, _DissloveMap_ST, output.OSuv1, output.OSuv2, output.OSuvMask);
                 
                 // Computes fog factor per-vertex.
                 float fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
@@ -1047,7 +1083,7 @@ Shader "ZDShader/URP/Character"
                 #ifndef _InsightDisable
                     finalColor = lerp(finalColor, lerp(_CharacterColorAndBlend.rgb, _InsightSystemSelectColor.rgb, _InsightSystemSelectColor.a), min(_CharacterColorAndBlend.a, 1.0 - _InsightSystemIsSelf));
                 #endif
-
+                
                 finalColor = MixFog(finalColor, fogFactor);
                 
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv01.xy * 0.5);
@@ -1064,10 +1100,21 @@ Shader "ZDShader/URP/Character"
                     #endif
                 #endif
                 
-                float4 finalRGBA = float4(finalColor, _Color.a * effectiveDisslive.a);
+                /*OS Disslove*/
+                half osEffectiveDisslive = _EffectiveDisslove;
+                half osEdgeArea;
+                half osValue = osEffectiveDisslive;
+                half4 osEffectiveMask;
+                osEffectiveDisslive = GetDissloveAlpha(i.OSuv1, i.OSuv2, i.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
+                
+                half gradient = smoothstep(osValue + 0.2, osValue - 0.2, (lerp(osEffectiveMask.r, i.OSuv2.w + 0.2 + (0.5 - osValue) + 0.15 * (1.0 - osValue), _DissliveWithDiretion)));
+                finalColor = lerp(finalColor, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
+                /*OS Disslove*/
+                
+                float4 finalRGBA = float4(finalColor, _Color.a * effectiveDisslive.a * osEffectiveDisslive);
                 
                 #if defined(_ClippingAlbedoAlpha)
-                    clip(_diffuse_var.a - 0.5);
+                    clip(_diffuse_var.a * osEffectiveDisslive - 0.5);
                 #endif
                 //finalRGBA = MixGlobalFog(finalRGBA, positionWS.xyz, fogFactor);
                 return finalRGBA;
@@ -1143,6 +1190,10 @@ Shader "ZDShader/URP/Character"
             struct Varyings
             {
                 float2 uv: TEXCOORD0;
+                /*OS Disslove*/
+                float3 OSuvMask: TEXCOORD1;
+                float4 OSuv1: TEXCOORD2;
+                float4 OSuv2: TEXCOORD3;
                 float4 positionCS: SV_POSITION;
                 
                 #ifdef _DrawMeshInstancedProcedural
@@ -1194,6 +1245,11 @@ Shader "ZDShader/URP/Character"
                 Varyings output = (Varyings)0;
                 input.positionOS.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
+                
+                /*OS Disslove*/
+                GetDissloveInput(input.positionOS, input.normalOS, _DissloveMap_ST, output.OSuv1, output.OSuv2, output.OSuvMask);
+                
+                
                 output.positionCS = GetShadowPositionHClip(input, mid);
                 return output;
             }
@@ -1217,6 +1273,14 @@ Shader "ZDShader/URP/Character"
                     #if defined(_ClippingAlbedoAlpha)
                         float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, input.uv.xy);
                         clippingResult *= _diffuse_var.a;
+                        
+                        /*OS Disslove*/
+                        half osEffectiveDisslive = _EffectiveDisslove;
+                        half osEdgeArea;
+                        half osValue = osEffectiveDisslive;
+                        half4 osEffectiveMask;
+                        osEffectiveDisslive = GetDissloveAlpha(input.OSuv1, input.OSuv2, input.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
+                        clippingResult *= osEffectiveDisslive;
                     #endif
                     clip(clippingResult - 0.5);
                 #endif
@@ -1268,6 +1332,7 @@ Shader "ZDShader/URP/Character"
             struct Attributes
             {
                 float4 position: POSITION;
+                float4 normal: NORMAL;
                 float2 texcoord: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
                 
@@ -1289,6 +1354,13 @@ Shader "ZDShader/URP/Character"
                 float4 positionCS: SV_POSITION;
                 float vertexDist: TEXCOORD1;
                 float4 positionSS: TEXCOORD2;
+                
+                /*OS Disslove*/
+                float3 OSuvMask: TEXCOORD3;
+                float4 OSuv1: TEXCOORD4;
+                float4 OSuv2: TEXCOORD5;
+                
+                
                 #ifdef _DrawMeshInstancedProcedural
                 #else
                     UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -1319,6 +1391,9 @@ Shader "ZDShader/URP/Character"
                 
                 input.position.y += (sin(_Time.y + input.effectcoord.x + input.effectcoord.y) + 0.5) * 0.3 * _FloatModel;
                 output.uv = input.texcoord;
+                
+                /*OS Disslove*/
+                GetDissloveInput(input.position, input.normal, _DissloveMap_ST, output.OSuv1, output.OSuv2, output.OSuvMask);
                 
                 #ifdef _DrawMeshInstancedProcedural
                     float3 positionWS = mul(_ObjectToWorldBuffer[mid], float4(positionOS.xyz, 0.0)).xyz;
@@ -1366,6 +1441,13 @@ Shader "ZDShader/URP/Character"
                     #if defined(_ClippingAlbedoAlpha)
                         float4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, input.uv.xy);
                         clippingResult *= _diffuse_var.a;
+                        /*OS Disslove*/
+                        half osEffectiveDisslive = _EffectiveDisslove;
+                        half osEdgeArea;
+                        half osValue = osEffectiveDisslive;
+                        half4 osEffectiveMask;
+                        osEffectiveDisslive = GetDissloveAlpha(input.OSuv1, input.OSuv2, input.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
+                        clippingResult *= osEffectiveDisslive;
                     #endif
                     clip(clippingResult - 0.5);
                 #endif

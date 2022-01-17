@@ -89,6 +89,15 @@ half4 _EffectiveColor;
 half _FaceLightMapCombineMode;
 
 half _DistanceDisslove;
+
+/*OS Disslove*/
+half4 _DissloveMap_ST;
+half4 _EffectiveColor_Light;
+half4 _EffectiveColor_Dark;
+half _EffectiveDisslove;
+half _DissliveWithDiretion;
+half _DissliveAngle;
+
 half4 _VertexDataMap_TexelSize;
 half4 _BoneMatrixMap_TexelSize;
 
@@ -113,6 +122,7 @@ CBUFFER_END
 TEXTURE2D(_diffuse);                         SAMPLER(sampler_diffuse);
 TEXTURE2D(_OutlineWidthControl);             SAMPLER(sampler_OutlineWidthControl);
 TEXTURE2D(_EffectiveMap);                    SAMPLER(sampler_EffectiveMap);
+TEXTURE2D(_DissloveMap);                    SAMPLER(sampler_DissloveMap);
 TEXTURE2D_ARRAY(_BoneMatrixMap);             SAMPLER(sampler_BoneMatrixMap);
 
 float4 ComputeScreenPos(float4 pos, float projectionSign)
@@ -129,9 +139,23 @@ half smoothstepBetterPerformace(half edge0, half edge1, half x, half d)
     return t * t * (3.0 - 2.0 * t);
 }
 
+half linearstep(half edge0, half edge1, half x)
+{
+    half t = (x - edge0) / (edge1 - edge0);
+    
+    return min(max(t, 0.0), 1.0);
+}
+
 half Remap(half value, half from1, half to1, half from2, half to2)
 {
     return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
+}
+
+float2 rotate2D(float2 uv, half2 pivot, half angle)
+{
+    float c = cos(angle);
+    float s = sin(angle);
+    return mul(uv - pivot, float2x2(c, -s, s, c)) + pivot;
 }
 
 half3 RGB2HSV(half3 c)
@@ -227,6 +251,45 @@ void DistanceDisslove(half2 screenUV, half vertexDist)
     */
 }
 
+void GetDissloveInput(float4 vertex, float3 normal, half4 _ST, out half4 OSuv1, out half4 OSuv2, out half3 OSuvMask)
+{
+    OSuv1.xy = vertex.xy * _ST.xy + _ST.zw;
+    OSuv1.zw = vertex.zy * _ST.xy + _ST.zw;
+    OSuv2.xy = vertex.zx * _ST.xy + _ST.zw;
+    OSuv2.zw = rotate2D(vertex.xy, half2(0.5, 0.8), -_DissliveAngle * 0.0174532925194444) * 0.5;
+    OSuvMask.xyz = half3(abs(dot(half3(1, 0, 0), normal)), abs(dot(half3(0, 1, 0), normal)), abs(dot(half3(0, 0, 1), normal)));
+}
+
+
+half GetDissloveAlpha(half4 OSuv1, half4 OSuv2, half3 OSuvMask, half value, out half edgeArea, out half4 effectiveMask)
+{
+    effectiveMask = 0.0;
+    half mask_x = SAMPLE_TEXTURE2D(_DissloveMap, sampler_DissloveMap, OSuv1.xy).r;
+    half mask_y = SAMPLE_TEXTURE2D(_DissloveMap, sampler_DissloveMap, OSuv1.zw).r;
+    half mask_z = SAMPLE_TEXTURE2D(_DissloveMap, sampler_DissloveMap, OSuv2.xy).r;
+    effectiveMask += mask_x * OSuvMask.x;
+    effectiveMask += mask_y * OSuvMask.y;
+    effectiveMask += mask_z * OSuvMask.z;
+    
+    half overArea = saturate(effectiveMask - 1.0);
+    effectiveMask = lerp(effectiveMask, mask_x, overArea);
+    
+    
+    half directionExpend = 0.8;
+    value *= lerp(1.0, directionExpend + 0.05, _DissliveWithDiretion);
+    half alphaMinus = 1.0 - value;
+    
+    half blend1 = linearstep(alphaMinus - 0.4, alphaMinus + 0.4, (1.0 - effectiveMask.r + 0.4 * (value - 0.5) * 2.0));
+    half blend2 = linearstep(alphaMinus - directionExpend, alphaMinus, (1.0 - (OSuv2.w + 0.5) + directionExpend * (value - 0.5) * 2.0));
+    //blend2 /= directionExpend;
+    blend2 *= _DissliveWithDiretion;
+    half x1 = smoothstepBetterPerformace(0.5, 0.6, max(blend1, blend2 + blend1) * max(1.0 - _DissliveWithDiretion, blend2), 10.0);
+    half x2 = smoothstepBetterPerformace(0.45, 0.5, max(blend1, blend2 + blend1) * max(1.0 - _DissliveWithDiretion, blend2), 10.0);
+    //x = saturate_good_performace(x);
+    edgeArea = x2 - x1;
+    return x2;
+}
+
 half CaculateShadowArea(half4 src, half4 picker, half setpB)
 {
     half3 compare = max(src.rgb - picker.rgb, 0.0001.xxx);
@@ -318,4 +381,4 @@ half CaculateShadowArea(half4 src, half4 picker, half setpB)
         return o2w;
     }
 #endif
-//#include "../../../ShaderLibrary/GlobalFog.hlsl"
+// #include ".. / .. / .. / ShaderLibrary / GlobalFog.hlsl"
