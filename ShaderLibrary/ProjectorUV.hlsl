@@ -4,11 +4,11 @@ void InitProjectorVertexData(float4 positionOS, float4x4 o2w, float4x4 w2o, out 
     
     viewRay.w = vr.z;
     
-    vr *= -1;
+    
     float4x4 ViewToObjectMatrix = mul(w2o, UNITY_MATRIX_I_V);
     
-    viewRay.xyz = mul((float3x3)ViewToObjectMatrix, vr);
-    cameraPos = mul(ViewToObjectMatrix, float4(0.0h, 0.0h, 0.0h, 1.0h)).xyz;
+    viewRay.xyz = mul((float3x3)ViewToObjectMatrix, -vr);
+    cameraPos = ViewToObjectMatrix._m03_m13_m23;
 }
 
 float2 rotate2D(float2 uv, half2 pivot, half angle)
@@ -20,7 +20,7 @@ float2 rotate2D(float2 uv, half2 pivot, half angle)
 
 float2 projectorUV(float4 viewRayOS, float3 cameraPosOS, float4 screenUV, float2 scale, float rotateAngle)
 {
-    viewRayOS /= viewRayOS.w;
+    viewRayOS *= rcp(viewRayOS.w);
     screenUV /= screenUV.w;
     #if defined(UNITY_SINGLE_PASS_STEREO)
         screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
@@ -28,21 +28,17 @@ float2 projectorUV(float4 viewRayOS, float3 cameraPosOS, float4 screenUV, float2
     float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(screenUV.xy), _ZBufferParams);
     float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(screenUV.xy), _ZBufferParams);
     
-    float sceneCameraSpaceDepth = min(depthQ, depthT);
-    float3 decalSpaceScenePos = cameraPosOS + viewRayOS.xyz * sceneCameraSpaceDepth;
-    decalSpaceScenePos.xy = rotate2D(decalSpaceScenePos.xy, 0.0.xx, rotateAngle);
-    decalSpaceScenePos.xy *= scale;
-    float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
-    
-    float mask = (abs(decalSpaceScenePos.y) < 0.5)* (abs(decalSpaceScenePos.x) < 0.5) /* (abs(decalSpaceScenePos.y) < 0.5) * (abs(decalSpaceScenePos.z) < 0.5)*/;
+    float depth = min(depthQ, depthT);
     
     
-    float3 decalSpaceHardNormal = normalize(cross(ddx(decalSpaceScenePos), ddy(decalSpaceScenePos)));
-    mask *= decalSpaceHardNormal.z > - 1.0 ? 1.0: 0.0;//compare scene hard normal with decal projector's dir, decalSpaceHardNormal.z equals dot(decalForwardDir,sceneHardNormalDir)
+    float3 decalSpaceScenePos = cameraPosOS + viewRayOS.xyz * depth;
+    decalSpaceScenePos.xz = rotate2D(decalSpaceScenePos.xz, 0.0.xx, rotateAngle);
+    decalSpaceScenePos.xz *= rcp(scale);
+    float2 decalSpaceUV = decalSpaceScenePos.xz + 0.5;
     
-    //call discard
-    clip(mask - 0.5);//if ZWrite is off, clip() is fast enough on mobile, because it won't access the DepthBuffer, so no pipeline stall.
-    //===================================================
+    
+    //  Clip decal to volume
+    clip(float3(0.5, 0.5, 0.5) - abs(decalSpaceScenePos.xyz));
     
     // sample the decal texture
     return decalSpaceUV.xy;

@@ -12,7 +12,14 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
         [HideInInspector] _texcoord ("", 2D) = "white" { }
         
         _Panner ("Panner", Vector) = (0.0, 0.0, 0.0, 0.0)
-                
+        
+
+        [Space(5)]
+        [IntRange] _StencilRef ("Stencil Reference", Range(0, 255)) = 10
+        [IntRange] _ReadMask ("     Read Mask", Range(0, 255)) = 255
+        [IntRange] _WriteMask ("     Write Mask", Range(0, 255)) = 255
+        [Enum(UnityEngine.Rendering.CompareFunction)]
+        _StencilCompare ("Stencil Comparison", Int) = 3
     }
     
     SubShader
@@ -29,6 +36,15 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
         
         Pass
         {
+            /*
+            Stencil
+            {
+                Ref[_StencilRef]
+                ReadMask[_ReadMask]
+                WriteMask[_WriteMask]
+                Comp[_StencilCompare]
+            }
+            */
             Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             
@@ -52,7 +68,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
             
             #pragma vertex vert
             #pragma fragment frag
-                        
+            
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -79,22 +95,23 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
             struct VertexInput
             {
                 float4 vertex: POSITION;
-                float4 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
-                float4 particleSize_And_rotation: TEXCOORD1;
-                float3 particleRotation: TEXCOORD2;
-                float4 ase_color: COLOR;
+                //Particle Parameter
+                float4 color: COLOR;
+                float3 center: TEXCOORD0;
+                float3 rotation: TEXCOORD1;
+                float3 size: TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
             
             struct VertexOutput
             {
                 float4 clipPos: SV_POSITION;
-                float4 ase_texcoord0: TEXCOORD0;
-                float4 particleSize_And_rotation: TEXCOORD1;
-                float4 ase_texcoord2: TEXCOORD2;
-                float4 viewRayOS: TEXCOORD3;
-                float3 cameraPosOS: TEXCOORD4;
-                float4 ase_color: COLOR;
+                float4 screenUV: TEXCOORD0;
+                float4 viewRayOS: TEXCOORD1;
+                float3 cameraPosOS: TEXCOORD2;
+                //Particle Parameter
+                float3 ps_Parm: TEXCOORD3 /*xy = size.xz, z= rotation Y*/;
+                float4 color: COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -109,9 +126,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 
                 
-                o.ase_texcoord0 = v.ase_texcoord0;
-                o.particleSize_And_rotation = float4(1.0 / v.particleSize_And_rotation.xyz,  v.particleRotation.x + v.particleRotation.y + v.particleRotation.z);
-                o.ase_color = v.ase_color;
+                o.color = v.color;
                 
                 //setting value to unused interpolator channels and avoid initialization warnings
                 
@@ -119,14 +134,18 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 o.clipPos = vertexInput.positionCS;
                 
                 float4 screenPos = ComputeScreenPos(o.clipPos);
-                o.ase_texcoord2 = screenPos;
+                o.screenUV = screenPos;
                 
                 
                 float4x4 o2w = GetObjectToWorldMatrix();
-                float4x4 w2o = GetWorldToObjectMatrix();
+                float4x4 w2o = _w2o;
+                InitProjectorVertexData(v.vertex, o2w, w2o, o.viewRayOS, o.cameraPosOS);
                 
-                InitProjectorVertexData(v.vertex, o2w, _w2o, o.viewRayOS, o.cameraPosOS);
-                
+                //ParticleSystem
+                float3 centerDetla = mul(_w2o, float4(v.center.xyz, 1.0));
+                o.cameraPosOS -= centerDetla;
+                o.ps_Parm.xy = v.size.xz;
+                o.ps_Parm.z = -v.rotation.y;
                 
                 return o;
             }
@@ -136,14 +155,14 @@ Shader "ZDShader/URP/Particles/Alpha Blended(Projector)"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
                 
-                float2 uv_MainTex = projectorUV(IN.viewRayOS, IN.cameraPosOS, IN.ase_texcoord2, IN.particleSize_And_rotation.xz, IN.particleSize_And_rotation.w);
+                float2 uv_MainTex = projectorUV(IN.viewRayOS, IN.cameraPosOS, IN.screenUV, IN.ps_Parm.xy, IN.ps_Parm.z);
                 
                 //return float4(IN.viewRayOS.xyz / IN.viewRayOS.w, 1.0);
                 
-                float4 break13 = (tex2D(_MainTex, uv_MainTex + _Panner.xy * _Time.y * _Panner.z) * IN.ase_color * _TintColor);
+                float4 break13 = (tex2D(_MainTex, uv_MainTex + _Panner.xy * _Time.y * _Panner.z) * IN.color * _TintColor);
                 float3 appendResult14 = (float3(break13.r, break13.g, break13.b));
                 
-
+                
                 float3 BakedAlbedo = 0;
                 float3 BakedEmission = 0;
                 float3 Color = appendResult14;
