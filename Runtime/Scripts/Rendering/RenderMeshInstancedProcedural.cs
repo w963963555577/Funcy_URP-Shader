@@ -131,8 +131,21 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
 
         public void Draw(ComputeShader cullingComputeShader, int kernel, Matrix4x4 ViewMatrix, Matrix4x4 ProjectionMatrix, bool viewCulling, LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes, LightProbeProxyVolume volume = null)
         {
+            if(reference==null)
+            {
+                return;
+            }
+
             if (instancedMaterial == null)
+            {
                 instancedMaterial =  reference.GetComponent<MeshRenderer>().sharedMaterial;
+            }
+
+            if (instancedMaterial == null)
+            {
+                return;
+            }
+
 
             if (activeGroup)
             { instancedMaterial.DisableKeyword("_DrawMeshInstancedProcedural"); }
@@ -217,8 +230,17 @@ public class RenderMeshInstancedProcedural : MonoBehaviour
             if (visibleInstanceOnlyTransformBuffer != null) visibleInstanceOnlyTransformBuffer.Dispose(); visibleInstanceOnlyTransformBuffer = null;
             if (visibleTransformIDBuffer != null) visibleTransformIDBuffer.Dispose(); visibleTransformIDBuffer = null;
             if (argsBuffer != null) argsBuffer.Dispose(); argsBuffer = null;
-            var mat = reference.GetComponent<MeshRenderer>().sharedMaterial;            
-            mat.DisableKeyword("_DrawMeshInstancedProcedural");
+
+            if (reference == null)
+            {
+                return;
+            }
+
+            var mat = reference.GetComponent<MeshRenderer>().sharedMaterial;
+            if (mat != null)
+            {
+                mat.DisableKeyword( "_DrawMeshInstancedProcedural" );
+            }
         }
 #if UNITY_EDITOR
         public bool hasMesh = false;
@@ -347,17 +369,43 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                     Debug.Log("You must be add reference in property");
                     return;
                 }
-                List<GameObject> rootGameObjects = new List<GameObject>();
-                data.gameObject.scene.GetRootGameObjects(rootGameObjects);
-
                 List<MeshRenderer> result = new List<MeshRenderer>();
-                foreach (var g in rootGameObjects)
+
+                //List<GameObject> rootGameObjects = new List<GameObject>();
+                //data.gameObject.scene.GetRootGameObjects(rootGameObjects);
+
+                //foreach (var g in rootGameObjects)
+                //{
+                //    result.AddRange(g.GetComponentsInChildren<MeshRenderer>(true).ToList().FindAll(r => r.GetComponent<MeshFilter>() && r.GetComponent<MeshFilter>().sharedMesh == rg.reference.sharedMesh));
+                //}
+
+                Transform parent = rg.reference.transform.parent;
+                MeshRenderer[] mrs = parent.GetComponentsInChildren<MeshRenderer>( true );
+                foreach (var mr in mrs)
                 {
-                    result.AddRange(g.GetComponentsInChildren<MeshRenderer>(true).ToList().FindAll(r => r.GetComponent<MeshFilter>() && r.GetComponent<MeshFilter>().sharedMesh == rg.reference.sharedMesh));
+                    MeshFilter mf = mr.GetComponent<MeshFilter>();
+                    if (mf == null)
+                    {
+                        continue;
+                    }
+
+                    Mesh smesh = mf.sharedMesh;
+
+                    if(smesh != rg.reference.sharedMesh)
+                    {
+                        Debug.LogError($"{mr.gameObject.name} has different mesh");
+                        continue;
+                    }
+
+                    result.Add( mr );
                 }
+
                 rg.SetObjects(result);
                 if (result.Count > 0)
+                {
+                    rg.InitBuffers();
                     rg.UpdateBuffer();
+                }
             }
             EditorUtility.SetDirty(target);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);
@@ -391,12 +439,12 @@ public class RenderMeshInstancedProcedural_Editor : Editor
                 if (rg.hasMesh != (rg.reference != null))
                 {                    
                     rg.hasMesh = rg.reference != null;
-                    if(rg.hasMesh && data.renderGroups.Find(g => g.reference.sharedMesh == rg.reference.sharedMesh) != rg)
-                    {
-                        rg.reference = null;
-                        rg.hasMesh = false;
-                        Debug.Log("mesh cannot repeat in list!!");
-                    }
+                    //if(rg.hasMesh && data.renderGroups.Find(g => g.reference.sharedMesh == rg.reference.sharedMesh) != rg)
+                    //{
+                    //    rg.reference = null;
+                    //    rg.hasMesh = false;
+                    //    Debug.Log("mesh cannot repeat in list!!");
+                    //}
                 }
 
                 GUILayout.EndHorizontal();
@@ -439,7 +487,7 @@ public class RenderMeshInstancedProcedural_Editor : Editor
             data.renderGroups.RemoveAt(removeIndex);
         }
 
-        if(GUI.changed)
+        if(GUI.changed && !Application.isPlaying)
         {
             EditorUtility.SetDirty(target);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(data.gameObject.scene);

@@ -128,7 +128,7 @@ Shader "ZDShader/URP/Character"
         [HDR]_EffectiveColor_Light ("_EffectiveColor", Color) = (0.0, 6.0, 4.3, 1.0)
         [HDR]_EffectiveColor_Dark ("_EffectiveColor Dark", Color) = (2.07, 0.6, 6.0, 1.0)
         _EffectiveDisslove ("Disslove", Range(0.0, 1.0)) = 1.0
-        [Toggle] _DissliveWithDiretion ("From Direction", float) = 1
+        [Toggle] _DissliveWithDiretion ("From Direction", float) = 0
         _DissliveAngle ("Angle", Range(-180, 180)) = 0
         
         //Effective Disslove
