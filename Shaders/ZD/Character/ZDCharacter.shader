@@ -333,7 +333,7 @@ Shader "ZDShader/URP/Character"
                 i.outlineColor.rgb = lerp(i.outlineColor.rgb, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
                 /*OS Disslove*/
                 
-                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
+                half4 col = float4(i.outlineColor.rgb * _MainLightColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
                 #if defined(_ClippingAlbedoAlpha)
                     half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv.xy);
                     clip(_diffuse_var.a * osEffectiveDisslive - 0.5);
@@ -818,7 +818,7 @@ Shader "ZDShader/URP/Character"
                 #endif
                 mainLight.shadowAttenuation = 1.0;
                 mainLight.color = _MainLightColor.rgb;
-                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
+                mainLight.color *= _CustomLightColor.rgb * _CustomLightIntensity;
                 
                 half4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
                 mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
