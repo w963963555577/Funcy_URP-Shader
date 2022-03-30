@@ -27,7 +27,7 @@ Shader "ZDShader/URP/Particles/Dissolve(Projector)"
         {
             
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTTransparent" }
             
             Cull Front
             Blend SrcAlpha OneMinusSrcAlpha

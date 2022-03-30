@@ -26,9 +26,9 @@ float2 projectorUV(float4 viewRayOS, float3 cameraPosOS, float4 screenUV, float2
         screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
     #endif
     float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(screenUV.xy), _ZBufferParams);
-    float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(screenUV.xy), _ZBufferParams);
+    //float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(screenUV.xy), _ZBufferParams);
     
-    float depth = min(depthQ, depthT);
+    float depth = depthQ;
     
     
     float3 decalSpaceScenePos = cameraPosOS + viewRayOS.xyz * depth;

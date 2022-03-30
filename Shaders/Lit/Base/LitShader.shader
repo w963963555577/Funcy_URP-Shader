@@ -77,7 +77,7 @@ Shader "ZDShader/URP/PBR-Base"
             }
             
             Name "StandardLit"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTOpaque" }
             
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]
@@ -469,10 +469,15 @@ Shader "ZDShader/URP/PBR-Base"
                     return half4(color, alpha);
                 }
                 
-                
-                // Used in Standard (Physically Based) shader
-                half4 LitPassFragment(Varyings input): SV_Target
+                struct ColorOutput
                 {
+                    half4 outColor0: SV_Target0;
+                    half4 outColor1: SV_Target1;
+                };
+                // Used in Standard (Physically Based) shader
+                ColorOutput LitPassFragment(Varyings input)
+                {
+                    ColorOutput o = (ColorOutput)0;
                     #ifdef _DrawMeshInstancedProcedural
                     #else
                         UNITY_SETUP_INSTANCE_ID(input);
@@ -486,7 +491,7 @@ Shader "ZDShader/URP/PBR-Base"
                     InitializeInputData(input, surfaceData.normalTS, inputData);
                     float2 screenUV = 0.0;
                     
-                    input.positionSS /= input.positionSS.w;
+                    input.positionSS.xyz /= input.positionSS.w;
                     input.positionSS.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? input.positionSS.z: input.positionSS.z * 0.5 + 0.5;
                     screenUV = input.positionSS.xy;
                     #if defined(UNITY_SINGLE_PASS_STEREO)
@@ -507,7 +512,9 @@ Shader "ZDShader/URP/PBR-Base"
                     
                     color.rgb = MixFog(color.rgb, inputData.fogCoord);
                     color = MixGlobalFog(color, input.positionWS);
-                    return color;
+                    o.outColor0 = color;
+                    o.outColor1 = half4(color.rgb, input.positionSS.w);
+                    return o;
                 }
                 
             #endif

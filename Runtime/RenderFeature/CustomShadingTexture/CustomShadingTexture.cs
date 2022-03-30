@@ -16,13 +16,12 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public string sampleTextureName = "_CustomMap";
         public FilterMode filterMode = FilterMode.Point;
         public RenderTextureFormat format = RenderTextureFormat.ARGB32;
-        [Range(1, 10)] public int downSample = 1;
+        [Range(1, 16)] public int downSample = 1;
 
         public RenderObjectType renderObjectType = RenderObjectType.Opaque;
         public enum RenderObjectType { Opaque, Transparent, All }
         public RenderQueueRange renderQueueRange;
         public Vector2Int limitQueueRange = new Vector2Int(3000, 3000);
-
     }
 
     public Settings settings = new Settings();
@@ -36,13 +35,13 @@ public class CustomShadingTexture : ScriptableRendererFeature
         private FilteringSettings m_FilteringSettings;
         ShaderTagId m_ShaderTagId;
         string tag;
-
+        ProfilingSampler m_ProfilingSampler;
         public Pass(RenderQueueRange renderQueueRange, Settings set, Material material, string tag)
         {
             settings = set;
             m_FilteringSettings = new FilteringSettings(renderQueueRange, set.layerMask);
             this.material = material;
-
+            m_ProfilingSampler = new ProfilingSampler(tag);
         }
 
         public void Setup(RenderTargetHandle destination)
@@ -53,7 +52,7 @@ public class CustomShadingTexture : ScriptableRendererFeature
 
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
-            RenderTextureDescriptor descriptor = cameraTextureDescriptor;
+            RenderTextureDescriptor descriptor = cameraTextureDescriptor;            
             descriptor.depthBufferBits = 32;
             descriptor.colorFormat = settings.format;
             descriptor.width /=  settings.downSample;
@@ -66,35 +65,31 @@ public class CustomShadingTexture : ScriptableRendererFeature
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             CommandBuffer cmd = CommandBufferPool.Get(tag);
-
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-
             var sortFlags = renderingData.cameraData.defaultOpaqueSortFlags;
             var drawSettings = CreateDrawingSettings(m_ShaderTagId, ref renderingData, sortFlags);
             drawSettings.perObjectData = PerObjectData.None;
-            
             var cameraData = renderingData.cameraData;
             Camera camera = cameraData.camera;
 
+            if (material)
+            {
+                drawSettings.overrideMaterial = material;
+                drawSettings.enableInstancing = material.enableInstancing;
+                drawSettings.overrideMaterialPassIndex = settings.usePassIndex;
+            }
+            drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
             if (cameraData.isStereoEnabled)
             {
                 context.StartMultiEye(camera);
             }
 
-            if(material)
-            {
-                drawSettings.overrideMaterial = material;                
-                drawSettings.enableInstancing = material.enableInstancing;
-                drawSettings.overrideMaterialPassIndex = settings.usePassIndex;
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
+            {                
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref m_FilteringSettings);                
             }
-
-            drawSettings.enableDynamicBatching = renderingData.supportsDynamicBatching;
-
-            
-            context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref m_FilteringSettings);
-                        
-            cmd.SetGlobalTexture(settings.sampleTextureName, destination.id);
 
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
@@ -131,13 +126,17 @@ public class CustomShadingTexture : ScriptableRendererFeature
         }
         queueRange.lowerBound = settings.limitQueueRange.x;
         queueRange.upperBound = settings.limitQueueRange.y;
-        
+                
 
         pass = new Pass(queueRange, settings, settings.material, this.name);
         pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses;
         texture.Init(settings.sampleTextureName);
     }
 
+    private void OnDisable()
+    {
+        
+    }
     // Here you can inject one or multiple render passes in the renderer.
     // This method is called when setting up the renderer once per-camera.
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)

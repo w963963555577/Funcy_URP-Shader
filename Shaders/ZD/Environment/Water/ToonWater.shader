@@ -30,9 +30,9 @@ Shader "ZDShader/URP/Environment/ToonWater"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTTransparent" }
             
-            Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
+            Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
             ZTest LEqual
             Offset 0, 0
@@ -124,7 +124,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 
                 float fogCoord: TEXCOORD0;
                 
-                float4 positionWS: TEXCOORD1;
+                float4 positionWS_And_surfaceDepth: TEXCOORD1;
                 float4 ase_texcoord2: TEXCOORD2;
                 float4 normalWS: TEXCOORD3;
                 float4 color: TEXCOORD4;
@@ -192,7 +192,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 float3 ase_worldPos = mul(GetObjectToWorldMatrix(), v.vertex).xyz;
-                o.positionWS.xyz = ase_worldPos;
+                o.positionWS_And_surfaceDepth.xyz = ase_worldPos;
                 float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
                 float4 screenPos = ComputeScreenPos(ase_clipPos);
                 o.ase_texcoord2 = screenPos;
@@ -201,7 +201,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 
                 
                 //setting value to unused interpolator channels and avoid initialization warnings
-                o.positionWS.w = 0;
+                o.positionWS_And_surfaceDepth.w = -TransformWorldToView(ase_worldPos).z;
                 o.normalWS.w = 0;
                 #ifdef ASE_ABSOLUTE_VERTEX_POS
                     float3 defaultVertexValue = v.vertex.xyz;
@@ -230,7 +230,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
                 
                 
-                float3 ase_worldPos = IN.positionWS.xyz;
+                float3 ase_worldPos = IN.positionWS_And_surfaceDepth.xyz;
                 float3 ase_worldViewDir = (_WorldSpaceCameraPos.xyz - ase_worldPos);
                 ase_worldViewDir = normalize(ase_worldViewDir);
                 float3 normalizeResult293 = normalize((_MainLightPosition.xyz + (ase_worldViewDir * float3(-1, -1, -1))));
@@ -251,18 +251,23 @@ Shader "ZDShader/URP/Environment/ToonWater"
                 //---
                 
                 float mulTime16 = _TimeParameters.x * _WaveSpeed;
-                float2 panner15 = (mulTime16 * float2(0.70707, 0.13314) + float4(IN.positionWS.xy / _RefractionScale, 0, 0).xy);
+                float2 panner15 = (mulTime16 * float2(0.70707, 0.13314) + float4(IN.positionWS_And_surfaceDepth.xy / _RefractionScale, 0, 0).xy);
                 float simplePerlin2D10 = snoise(panner15) * 0.5 + 0.5;
                 
                 float4 screenPos = IN.ase_texcoord2;
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
-                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(ase_screenPosNorm.xy), _ZBufferParams);
+                float4 depth = SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy);
+                float screenDepth = LinearEyeDepth(depth, _ZBufferParams);
+                float surfaceDepth = IN.positionWS_And_surfaceDepth.w;
+                float cameraHeight = (_WorldSpaceCameraPos.y - IN.positionWS_And_surfaceDepth.y) + 20.0;
+                float heightDepth = (screenDepth * rcp(surfaceDepth) - 1.0) * cameraHeight;
+                float depthQ = heightDepth;
                 
-                float screenDepth16 = min(depthQ, depthT);
                 
-                screenDepth16 = (simplePerlin2D10 - 1.0) * IN.color.a + screenDepth16 - screenPos.w;
+                float screenDepth16 = depthQ;
+                
+                screenDepth16 = (simplePerlin2D10 - 1.0) * IN.color.a + screenDepth16;
                 //return float4(screenDepth16.xxx, 1.0);
                 float smDisDepth = screenDepth16 / _Depth;
                 smDisDepth = min(1.0, smDisDepth);

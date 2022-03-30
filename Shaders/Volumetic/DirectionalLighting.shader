@@ -26,7 +26,7 @@ Shader "ZDShader/URP/Volume/Directional Lighting"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTTransparent" }
             
             Blend SrcAlpha OneMinusSrcAlpha
             Cull Front

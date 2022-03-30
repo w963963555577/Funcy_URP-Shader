@@ -30,7 +30,7 @@ Shader "ZDShader/URP/Environment/SpecialTree"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTOpaque" }
             
             Blend One Zero, One Zero
             ZWrite On

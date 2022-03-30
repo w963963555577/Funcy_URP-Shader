@@ -108,11 +108,11 @@ half4 _BoneMatrixMap_TexelSize;
     StructuredBuffer<float4> _TimeBuffer;
 #endif
 
+
+CBUFFER_END
 half _InsightSystemIsSelf;
 half _InsightSystemIsSelect;
 half4 _InsightSystemSelectColor;
-CBUFFER_END
-
 #ifdef _DrawMeshInstancedProcedural
     
 #else

@@ -2,9 +2,8 @@
 {
     Properties
     {
-        [HideInInspector]_MainTex ("Base (RGB)", 2D) = "white" { }
-        _Intensity ("Intensity", Range(0, 1)) = 0.0
-        _BumpMask ("BumpMask", 2D) = "black" { }
+        [HideInInspector]_MainTex ("Base (RGB)", 2D) = "white" { }        
+        //_RefractionMask ("RefractionMask", 2D) = "black" { }
     }
     HLSLINCLUDE
     
@@ -12,14 +11,14 @@
     
     TEXTURE2D(_MainTex);
     SAMPLER(sampler_MainTex);
-    TEXTURE2D(_BlurTex);
-    SAMPLER(sampler_BlurTex);
+    TEXTURE2D(_BloomBuffer);
+    SAMPLER(sampler_BloomBuffer);
     
-    TEXTURE2D(_BumpMask);
-    SAMPLER(sampler_BumpMask);
-    
+    TEXTURE2D(_RefractionBuffer);
+    SAMPLER(sampler_RefractionBuffer);
+
     uniform float4 _BumpMap_ST;
-    uniform half _Intensity;
+    uniform half _Intensity_RefractionBuffer;
     
     uniform half _BloomAdd;
     uniform half _BloomThreshold;
@@ -92,12 +91,12 @@
         float2 panner40 = (_Time.y * float2(0, -0.01) + uv0_BumpMap + float2(0.01, 0.01));
         float2 panner42 = (_Time.y * float2(0, -0.01) + uv0_BumpMap - float2(0.01, 0.01));
         
-        half4 maskColor = SAMPLE_TEXTURE2D(_BumpMask, sampler_BumpMask, uv);
+        half4 maskColor = SAMPLE_TEXTURE2D(_RefractionBuffer, sampler_RefractionBuffer, uv) * _Intensity_RefractionBuffer;
         
         uv += (uv - 0.5.xx) * 2.0 * max(max(maskColor.r, maskColor.g), maskColor.b) * (1.0 - length((uv - 0.5.xx) ));
         
         half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
-        half4 b = SAMPLE_TEXTURE2D(_BlurTex, sampler_BlurTex, uv) * _BloomAmount;
+        half4 b = SAMPLE_TEXTURE2D(_BloomBuffer, sampler_BloomBuffer, uv) * _BloomAmount;
         return(c * _OrigBlend + b) * 0.5h * (1.0 + _BloomAdd);
     }
     

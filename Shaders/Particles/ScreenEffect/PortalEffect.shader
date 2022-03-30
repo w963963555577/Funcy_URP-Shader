@@ -38,7 +38,7 @@
         Pass
         {
             Name "StandardLit"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTTransparent" }
             HLSLPROGRAM
             
             #pragma vertex vert

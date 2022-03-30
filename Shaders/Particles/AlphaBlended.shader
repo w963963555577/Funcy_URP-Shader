@@ -37,7 +37,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "MRTTransparent" }
             
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
@@ -151,10 +151,9 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
                 
                 
-                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
-                float depthT = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH_TRANSPARENT(ase_screenPosNorm.xy), _ZBufferParams);
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);                
                 
-                float screenDepth16 = min(depthQ, depthT);
+                float screenDepth16 = depthQ;
                 
                 float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
                 
