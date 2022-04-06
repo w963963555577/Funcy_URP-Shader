@@ -602,6 +602,7 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
         public virtual void BaseArea(Material mat)
         {
             materialEditor.TexturePropertySingleLine(diffuse.displayName.ToGUIContent(), diffuse, color);
+            mat.SetFloat("_Mask_Texture_Enabled", mask.textureValue == null ? 0.0f : 1.0f);
             materialEditor.TexturePropertySingleLine(mask.displayName.ToGUIContent(
                 string.Format("{0} \n\n{1} \n\n{2} \n\n{3}",
                 "R= Emission Mask\n(發光遮罩)",

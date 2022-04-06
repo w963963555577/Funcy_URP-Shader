@@ -15,7 +15,8 @@ Shader "ZDShader/URP/Character"
         _EdgeLightIntensity ("Edge Light Intensity", Range(0, 1)) = 1
         
         _Flash ("Flash", Float) = 0
-        _mask ("ESSGMask", 2D) = "(0,0.5,0,0)" { }
+        _mask ("ESSGMask", 2D) = "(0, 0.5, 0, 0)" { }
+        [HideInInspector] [Toggle(_Mask_Texture_Enabled)] _Mask_Texture_Enabled ("_Mask_Texture_Enabled", float) = 1
         _SelfMask ("Self Mask", 2D) = "black" { }
         
         
@@ -128,7 +129,7 @@ Shader "ZDShader/URP/Character"
         [HDR]_EffectiveColor_Light ("_EffectiveColor", Color) = (0.0, 6.0, 4.3, 1.0)
         [HDR]_EffectiveColor_Dark ("_EffectiveColor Dark", Color) = (2.07, 0.6, 6.0, 1.0)
         _EffectiveDisslove ("Disslove", Range(0.0, 1.0)) = 1.0
-        [Toggle] _DissliveWithDiretion ("From Direction", float) = 1
+        [Toggle] _DissliveWithDiretion ("From Direction", float) = 0
         _DissliveAngle ("Angle", Range(-180, 180)) = 0
         
         //Effective Disslove
@@ -333,7 +334,7 @@ Shader "ZDShader/URP/Character"
                 i.outlineColor.rgb = lerp(i.outlineColor.rgb, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
                 /*OS Disslove*/
                 
-                half4 col = float4(i.outlineColor.rgb * _MainLightColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
+                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
                 #if defined(_ClippingAlbedoAlpha)
                     half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv.xy);
                     clip(_diffuse_var.a * osEffectiveDisslive - 0.5);
@@ -350,7 +351,7 @@ Shader "ZDShader/URP/Character"
         {
             // "Lightmode" tag must be "LightweightForward" or not be defined in order for
             // to render objects.
-            Name "StandardLit"
+            Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             
             Cull Back
@@ -387,7 +388,7 @@ Shader "ZDShader/URP/Character"
                 #pragma shader_feature_local _ExpressionFormat_FaceSheet
                 //#define _ExpressionFormat_FaceSheet 1
             #endif
-            
+            #pragma shader_feature_local _ExpressionFormat_Wink
             #ifdef SHADER_API_D3D11
                 #pragma shader_feature_local _PickerDebug_0
                 #pragma shader_feature_local _PickerDebug_1
@@ -476,6 +477,7 @@ Shader "ZDShader/URP/Character"
                 float3 OSuvMask: TEXCOORD10;
                 float4 OSuv1: TEXCOORD11;
                 float4 OSuv2: TEXCOORD12;
+                half4 mainLight: COLOR0;
                 
                 float4 positionCS: SV_POSITION;
                 
@@ -594,7 +596,10 @@ Shader "ZDShader/URP/Character"
                     mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
                 #endif
                 mainLight.shadowAttenuation = 1.0;
-                mainLight.color = _MainLightColor.rgb;
+                
+                output.mainLight.a = lerp(1.0, max(1e-04, max(_MainLightColor.r, max(_MainLightColor.b, _MainLightColor.g))), unity_LightData.z);
+                output.mainLight.rgb = lerp(1.0, _MainLightColor.rgb * rcp(output.mainLight.a), unity_LightData.z);
+                
                 
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
                 output.lightXZDirection.xyz = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
@@ -669,7 +674,6 @@ Shader "ZDShader/URP/Character"
             {
                 return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
             }
-            
             
             float LigntMapAreaInUV1(Varyings i, float origShadow)
             {
@@ -804,7 +808,7 @@ Shader "ZDShader/URP/Character"
                     DistanceDisslove(screenUV, i.vertexDist);
                 #endif
                 half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv01.xy);
-                half4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
+                half4 _ESSGMask_var = lerp(half4(0, 0.5, 0, 0), SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy), _Mask_Texture_Enabled); // R-Em  G-Shadow B-Specular A-Gloss
                 half4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
                 
@@ -817,8 +821,6 @@ Shader "ZDShader/URP/Character"
                     mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
                 #endif
                 mainLight.shadowAttenuation = 1.0;
-                mainLight.color = _MainLightColor.rgb;
-                mainLight.color *= _CustomLightColor.rgb * _CustomLightIntensity;
                 
                 half4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
                 mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
@@ -845,11 +847,12 @@ Shader "ZDShader/URP/Character"
                 
                 
                 
-                half3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
+                half3 viewDirection = normalize(GetCameraPositionWS().xyz - positionWS.xyz);
                 half3 normalDirection = i.normalWS.xyz;
                 
                 half glossMask = _ESSGMask_var.a;
-                
+                half specularMask = _ESSGMask_var.b;
+
                 half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
                 half fresnel = max(1.0 - dot(viewDirection, normalDirection), max(0.0, dot(viewDirection, mainLight.direction - normalDirection * 0.82))) ;
@@ -904,11 +907,10 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 
-                half3 lightColor = mainLight.color.rgb;
                 half3 halfDirection = normalize(viewDirection + mainLight.direction);
                 
-                half specStep = 2.0;
-                half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                
+                half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * 2.0);
                 
                 /*BDRF Specular but in this shader was nonconformity
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
@@ -918,8 +920,7 @@ Shader "ZDShader/URP/Character"
                 specularValue = smoothstep(0.003, 0.004, specularValue) ;
                 */
                 
-                half4 _SpecularColor_var = _SpecularColor;
-                half specularMask = _ESSGMask_var.b;
+                half4 _SpecularColor_var = _SpecularColor;                
                 half4 _Color_var = _Color;
                 
                 
@@ -1010,8 +1011,6 @@ Shader "ZDShader/URP/Character"
                     #endif
                 #endif
                 
-                
-                
                 //PBRShadowArea
                 half shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
                 half refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
@@ -1021,11 +1020,13 @@ Shader "ZDShader/URP/Character"
                 refractionShadowArea = 1.0 - smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp) * 0.25, 1.0 - refractionShadowArea);
                 selfShadow = 1.0 - smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
                 
-                
-                float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
-                PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
-                
-                
+                half mainLightIntensity_1_0 = max(0, 1.0 - i.mainLight.a);
+                half mainLightIntensity_0_1 = 1.0 - mainLightIntensity_1_0;
+                float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow);
+                PBRShadowArea = lerp(PBRShadowArea, 0.0, min(1.0, mainLightIntensity_1_0 * 3.125));
+                PBRShadowArea *= PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * specularMask *(1.0 - glossMask));
+                half light2Dark = max(0.0, mainLightIntensity_1_0 - 0.32);
+                mainLight.color = lerp(i.mainLight.rgb * (1.0 - light2Dark), 0.0, light2Dark) * lerp(1.0, i.mainLight.a, max(PBRShadowArea, 1.0 - _CustomLightIntensity)) * _CustomLightColor.rgb;
                 
                 float4 _EmissionColor_var = _EmissionColor;
                 float emissionMask = _ESSGMask_var.r;
@@ -1065,7 +1066,7 @@ Shader "ZDShader/URP/Character"
                 float3 emissionColor = (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var);
                 
                 
-                float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
+                float3 emissive = (((mainLight.color.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
                 + diffuseColor) * mainLight.color * _Color.rgb + specularColor +
                 emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + _Time.y * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)

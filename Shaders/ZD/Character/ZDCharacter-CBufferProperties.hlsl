@@ -6,7 +6,7 @@ half _SubsurfaceScattering;
 half _SubsurfaceRadius;
 half _SelfMaskDirection;
 
-half4 _mask_ST;
+half4 _mask_ST;half _Mask_Texture_Enabled;
 half4 _Color;
 half4 _EmissionColor;
 half4 _SpecularColor;
