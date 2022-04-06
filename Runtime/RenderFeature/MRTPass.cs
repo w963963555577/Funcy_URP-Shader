@@ -19,7 +19,7 @@ public class MRTPass : ScriptableRendererFeature
         public List<string> MRTNames = new List<string>();
         public RenderQueueRange renderQueueRange;
         public RenderTextureFormat mrtFormat = RenderTextureFormat.ARGBHalf;
-        [Range(1, 16)] public int downSample = 1;
+        [HideInInspector][Range(1, 16)] public int downSample = 1;/*Hide Because MRT with downsample seems not working.*/
         public RenderObjectType renderObjectType = RenderObjectType.Opaque;
         public enum RenderObjectType { Opaque, Transparent, All }
         public Vector2Int limitQueueRange = new Vector2Int(2000, 3000);
@@ -115,7 +115,7 @@ public class MRTPass : ScriptableRendererFeature
 
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                if (settings.clear)
+                if (RenderSettings.skybox && settings.clear) 
                 {
                     cmd.ClearRenderTarget(true, true, settings.clearColor);
                 }
