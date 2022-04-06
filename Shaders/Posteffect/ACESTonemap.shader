@@ -2,16 +2,20 @@
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" { }
+        [HideInInspector]_MainTex ("Base (RGB)", 2D) = "white" { }
     }
     
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" }
         
-        LOD 100
         Pass
         {
+            ZTest Always Cull Off ZWrite Off
+            Fog
+            {
+                Mode off
+            }
             HLSLPROGRAM
             
             #pragma vertex vert
@@ -36,8 +40,6 @@
             TEXTURE2D(_MainTex);        SAMPLER(sampler_MainTex);
             
             CBUFFER_START(UnityPerMaterial)
-            float4 _MainTex_TexelSize;
-            float4 _MainTex_ST;
             
             CBUFFER_END
             
@@ -80,7 +82,7 @@
                     const half d = 0.5 * 0.01;
                     const half e = 0.6 * 0.01;
                     half3 x = acescg;
-                    half3 rgbPost = ((a * x + b)) / ((c * x + d) + e / (x + FLT_MIN));
+                    half3 rgbPost = ((a * x + b)) * rcp((c * x + d) + e * rcp(x + FLT_MIN));
                 #else
                     const half a = 2.7;
                     const half b = 0.2;
@@ -88,7 +90,7 @@
                     const half d = 0.5;
                     const half e = 0.6;
                     half3 x = acescg;
-                    half3 rgbPost = (x * (a * x + b)) / (x * (c * x + d) + e);
+                    half3 rgbPost = (x * (a * x + b)) * rcp(x * (c * x + d) + e);
                 #endif
                 
                 // Scale luminance to linear code value
@@ -139,28 +141,25 @@
             {
                 v2f o = (v2f)0;
                 o.vertex = TransformObjectToHClip(v.vertex.xyz);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = v.uv;
                 return o;
             }
             
             half4 frag(v2f input): SV_Target
             {
-                float2 res = _MainTex_TexelSize.xy;
-                
                 half4 col;
                 col.rgb = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).rgb;
                 
                 #if defined(UNITY_COLORSPACE_GAMMA)
                     col.rgb = GammaToLinearSpace(col.rgb);
                 #endif
-
+                
                 col.rgb = unity_to_ACES(col.rgb);
                 col.rgb = AcesTonemap(col.rgb);
-
+                
                 #if defined(UNITY_COLORSPACE_GAMMA)
                     col.rgb = LinearToGammaSpace(col.rgb);
                 #endif
-                //col.rgb = v > 1 ? 1.0 : 0.0;
                 return col;
             }
             ENDHLSL
