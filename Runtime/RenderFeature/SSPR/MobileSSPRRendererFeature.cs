@@ -365,7 +365,7 @@ public class MobileSSPRRendererFeature : ScriptableRendererFeature
 #if UNITY_EDITOR
     void Dirty()
     {
-        EditorUtility.SetDirty(this);
+        //EditorUtility.SetDirty(this);
     }
 #endif
 }

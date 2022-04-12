@@ -59,7 +59,7 @@
                 half hueWeight;
                 {
                     //hueWeight = cubic_basis_shaper(centeredHue, RRT_RED_WIDTH);
-                    hueWeight = smoothstep(0.0, 1.0, 1.0 - abs(2.0 * centeredHue / RRT_RED_WIDTH));
+                    hueWeight = smoothstep(0.0, 1.0, 1.0 - abs(2.0 * centeredHue * rcp(RRT_RED_WIDTH)));
                     hueWeight *= hueWeight;
                 }
                 
@@ -147,7 +147,7 @@
             
             half4 frag(v2f input): SV_Target
             {
-                half4 col;
+                half4 col = 0.0;
                 col.rgb = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).rgb;
                 
                 #if defined(UNITY_COLORSPACE_GAMMA)
