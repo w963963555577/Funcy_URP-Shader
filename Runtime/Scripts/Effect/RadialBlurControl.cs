@@ -13,8 +13,8 @@ using System.Reflection;
 public class RadialBlurControl : MonoBehaviour
 {
     public bool playOnAwake = true;
-    public AnimationCurve strengthCurve;
-    public AnimationCurve widthCurve;
+    public AnimationCurve strengthCurve=new AnimationCurve();
+    public AnimationCurve widthCurve = new AnimationCurve();
 
     public RadiusBlurSettings settings;
     [System.Serializable]
@@ -42,6 +42,7 @@ public class RadialBlurControl : MonoBehaviour
     }
     private void Awake()
     {
+        if (!Application.isPlaying) return;
         if(playOnAwake)
         {
             Play();
