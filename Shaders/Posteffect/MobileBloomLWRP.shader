@@ -3,23 +3,26 @@
     Properties
     {
         [HideInInspector]_MainTex ("Base (RGB)", 2D) = "white" { }
-        _Intensity ("Intensity", Range(0, 1)) = 0.0
-        _BumpMask ("BumpMask", 2D) = "black" { }
+        //_RefractionMask ("RefractionMask", 2D) = "black" { }
+        //_BlurStrength ("Strength", Range(0, 2)) = 1
+        //_BlurWidth ("Width", Float) = 0.2776577
+        //_Center ("Center", Vector) = (0.5, 0.5, 0, 0)
     }
     HLSLINCLUDE
     
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-    
+    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
     TEXTURE2D(_MainTex);
     SAMPLER(sampler_MainTex);
-    TEXTURE2D(_BlurTex);
-    SAMPLER(sampler_BlurTex);
+    TEXTURE2D(_BloomBuffer);
+    SAMPLER(sampler_BloomBuffer);
     
-    TEXTURE2D(_BumpMask);
-    SAMPLER(sampler_BumpMask);
+    TEXTURE2D(_RefractionBuffer);
+    SAMPLER(sampler_RefractionBuffer);
     
     uniform float4 _BumpMap_ST;
-    uniform half _Intensity;
+    uniform half _Intensity_RefractionBuffer;
     
     uniform half _BloomAdd;
     uniform half _BloomThreshold;
@@ -27,8 +30,12 @@
     uniform half _BlurAmount;
     uniform half _OrigBlend;
     uniform half4 _MainTex_TexelSize;
-    
-    
+    #if _RadiusBlur
+        uniform half4x4 _VPMatrix;
+        uniform half _BlurStrength;
+        uniform half _BlurWidth;
+        uniform half3 _BlurWorldPosition;
+    #endif
     struct AttributesDefault
     {
         float4 vertex: POSITION;
@@ -45,13 +52,35 @@
     {
         half4 pos: SV_POSITION;
         half2 uv: TEXCOORD0;
+        #if _RadiusBlur
+            half4 dirAndDistAndT: TEXCOORD1;
+            half2 pushUV[10]: TEXCOORD2;
+        #endif
     };
     
     v2f vert(AttributesDefault v)
     {
         v2f o = (v2f)0;
-        o.pos = TransformWorldToHClip(TransformObjectToWorld(v.vertex.xyz));
+        o.pos = TransformObjectToHClip(v.vertex.xyz);
         o.uv = v.uv;
+        
+        #if _RadiusBlur
+            half4 projPos = mul(_VPMatrix, half4(_BlurWorldPosition.xyz, 1.0));
+            half3 ndcPos = projPos.xyz * rcp(projPos.w);
+            half3 viewportPos = half3(ndcPos.x * 0.5 + 0.5, 1.0 - (ndcPos.y * 0.5 + 0.5), 0.0);
+            half2 center = viewportPos.xy;
+            half2 dir = center - o.uv;
+            half dist = sqrt(dir.x * dir.x + dir.y * dir.y);
+            o.dirAndDistAndT = half4(dir * rcp(dist), dist, saturate(dist * _BlurStrength));
+            // some sample positions
+            half samples[10] = {
+                - 0.08, -0.05, -0.03, -0.02, -0.01, 0.01, 0.02, 0.03, 0.05, 0.08
+            };
+            for (int n = 0; n < 10; n ++)
+            {
+                o.pushUV[n] = dir * samples[n] * _BlurWidth;
+            }
+        #endif
         return o;
     }
     
@@ -86,18 +115,25 @@
     half4 fragBlurBloom(v2f i): COLOR
     {
         half2 uv = i.uv;
-        
-        float2 uv0_BumpMap = uv.xy * _BumpMap_ST.xy + _BumpMap_ST.zw;
-        uv0_BumpMap.x *= _MainTex_TexelSize.y / _MainTex_TexelSize.x;
-        float2 panner40 = (_Time.y * float2(0, -0.01) + uv0_BumpMap + float2(0.01, 0.01));
-        float2 panner42 = (_Time.y * float2(0, -0.01) + uv0_BumpMap - float2(0.01, 0.01));
-        
-        half4 maskColor = SAMPLE_TEXTURE2D(_BumpMask, sampler_BumpMask, uv);
-        
-        uv += (uv - 0.5.xx) * 2.0 * max(max(maskColor.r, maskColor.g), maskColor.b) * (1.0 - length((uv - 0.5.xx) ));
-        
+        half4 maskColor = SAMPLE_TEXTURE2D(_RefractionBuffer, sampler_RefractionBuffer, uv) * _Intensity_RefractionBuffer;
+        half2 ditortion = (uv - 0.5.xx) * 2.0 * max(max(maskColor.r, maskColor.g), maskColor.b) * (1.0 - length((uv - 0.5.xx)));
+        uv += ditortion;
         half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
-        half4 b = SAMPLE_TEXTURE2D(_BlurTex, sampler_BlurTex, uv) * _BloomAmount;
+        
+        #if _RadiusBlur
+            half4 sum = c;
+            for (int n = 0; n < 10; n ++)
+            {
+                sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + i.pushUV[n]);
+            }
+            
+            //eleven samples...
+            sum *= 0.0909;
+            
+            c.rgb = lerp(c, sum, i.dirAndDistAndT.w).rgb;
+        #endif
+        half4 b = SAMPLE_TEXTURE2D(_BloomBuffer, sampler_BloomBuffer, uv) * _BloomAmount;
+        
         return(c * _OrigBlend + b) * 0.5h * (1.0 + _BloomAdd);
     }
     
@@ -146,6 +182,7 @@
             }
             HLSLPROGRAM
             
+            #pragma multi_compile _ _RadiusBlur
             #pragma vertex vert
             #pragma fragment fragBlurBloom
             #pragma fragmentoption ARB_precision_hint_fastest
