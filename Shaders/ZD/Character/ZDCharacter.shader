@@ -15,7 +15,8 @@ Shader "ZDShader/URP/Character"
         _EdgeLightIntensity ("Edge Light Intensity", Range(0, 1)) = 1
         
         _Flash ("Flash", Float) = 0
-        _mask ("ESSGMask", 2D) = "(0,0.5,0,0)" { }
+        _mask ("ESSGMask", 2D) = "(0, 0.5, 0, 0)" { }
+        [HideInInspector] [Toggle(_Mask_Texture_Enabled)] _Mask_Texture_Enabled ("_Mask_Texture_Enabled", float) = 1
         _SelfMask ("Self Mask", 2D) = "black" { }
         
         
@@ -269,9 +270,9 @@ Shader "ZDShader/URP/Character"
                 
                 RTD_OL *= max(widthRange.x, min(widthRange.y * 2.0, dist * widthRange.z));
                 #ifdef _DrawMeshInstancedProcedural
-                    dist = distance(0.0.xxx, mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                    dist = distance(0.0.xxx, mul(_WorldToObjectBuffer[mid], float4(GetCameraPositionWS().xyz, 1.0)).xyz);
                 #else
-                    dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                    dist = distance(0.0.xxx, mul(GetWorldToObjectMatrix(), float4(GetCameraPositionWS().xyz, 1.0)).xyz);
                 #endif
                 
                 float4 positionCS;
@@ -350,7 +351,7 @@ Shader "ZDShader/URP/Character"
         {
             // "Lightmode" tag must be "LightweightForward" or not be defined in order for
             // to render objects.
-            Name "StandardLit"
+            Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             
             Cull Back
@@ -366,7 +367,7 @@ Shader "ZDShader/URP/Character"
             
             #pragma prefer_hlslcc gles
             #pragma exclude_renderers d3d11_9x
-            #pragma target 3.0
+            #pragma target 4.0
             
             //#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #define _MAIN_LIGHT_SHADOWS 1
@@ -463,7 +464,7 @@ Shader "ZDShader/URP/Character"
                 float4 lightXZDirection: TEXCOORD5;     //  w: screenPosition.z
                 float4 objectUp: TEXCOORD6;             //  w: screenPosition.w
                 
-                float vertexDist: TEXCOORD7;
+                float4 vertexDist_And_viewDir: TEXCOORD7;
                 
                 #if _ExpressionEnable
                     float4 expressionUV01: TEXCOORD8;
@@ -476,6 +477,8 @@ Shader "ZDShader/URP/Character"
                 float3 OSuvMask: TEXCOORD10;
                 float4 OSuv1: TEXCOORD11;
                 float4 OSuv2: TEXCOORD12;
+                half4 mainLightColor: COLOR0;
+                float3 mainLightDirection: TEXCOORD13;
                 
                 float4 positionCS: SV_POSITION;
                 
@@ -586,7 +589,6 @@ Shader "ZDShader/URP/Character"
                 output.objectDirection.y = 0;
                 
                 Light mainLight = LerpLightDirection(output.objectDirection.xyz);
-                
                 // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
                 mainLight.distanceAttenuation = 1;
                 #if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE)
@@ -594,16 +596,29 @@ Shader "ZDShader/URP/Character"
                     mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
                 #endif
                 mainLight.shadowAttenuation = 1.0;
-                mainLight.color = _MainLightColor.rgb;
+                
+                output.mainLightColor.a = lerp(1.0, max(1e-04, max(_MainLightColor.r, max(_MainLightColor.b, _MainLightColor.g))), unity_LightData.z);
+                output.mainLightColor.rgb = lerp(1.0, _MainLightColor.rgb / (output.mainLightColor.a), unity_LightData.z);
                 
                 output.objectUp.xyz = mul(GetObjectToWorldMatrix(), float4(useUp.xyz, 0.0)).xyz;
-                output.lightXZDirection.xyz = normalize(float3(-mainLight.direction.x, 0.0, -mainLight.direction.z));
+                output.lightXZDirection.xyz = -normalize(float3(mainLight.direction.x, 0.0, mainLight.direction.z));
+                
+                /*
+                x,y,z = eulerAngles:X-Y-Z
+                transform.forward = mainLight.direction = f[cos(x) * sin(y), -sin(x), cos(x) * cos(y)]
+                */
+                float radiusX = 170 * 0.0174532925;/*170 * deg2rad = 170 * 0.0174532925*/
+                float fy = sin(radiusX);/*when sincos(x) when x as const, then command call 1 times*/
+                float ratio = sqrt((1.0 - fy * fy) / (mainLight.direction.x * mainLight.direction.x + mainLight.direction.z * mainLight.direction.z));
+                output.mainLightDirection = float3(mainLight.direction.x * ratio, fy, mainLight.direction.z * ratio);
                 
                 #ifdef _DrawMeshInstancedProcedural
-                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                    output.vertexDist_And_viewDir.x = distance(float3(0.0, 0.0, 0.0), mul(_WorldToObjectBuffer[mid], float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 #else
-                    output.vertexDist = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
+                    output.vertexDist_And_viewDir.x = distance(float3(0.0, 0.0, 0.0), mul(GetWorldToObjectMatrix(), float4(_WorldSpaceCameraPos.xyz, 1.0)).xyz);
                 #endif
+                
+                output.vertexDist_And_viewDir.yzw = normalize(GetCameraPositionWS().xyz - vertexInput.positionWS);
                 
                 output.positionCS = vertexInput.positionCS;
                 float4 positionSS = ComputeScreenPos(vertexInput.positionCS, _ProjectionParams.x);
@@ -612,7 +627,6 @@ Shader "ZDShader/URP/Character"
                 output.objectDirection.w = positionSS.y;
                 output.lightXZDirection.w = positionSS.z;
                 output.objectUp.w = positionSS.w;
-                
                 
                 #if _ExpressionEnable
                     _SelectExpressionMap = round(_SelectExpressionMap);
@@ -669,7 +683,6 @@ Shader "ZDShader/URP/Character"
             {
                 return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
             }
-            
             
             float LigntMapAreaInUV1(Varyings i, float origShadow)
             {
@@ -759,7 +772,8 @@ Shader "ZDShader/URP/Character"
                 
                 return mul(m, half4(positionWS, 1.0));
             }
-            
+            /*Not using*/
+            /*
             half BRDFSpecular(half metallic, half smoothness, half3 normalWS, half3 lightDirectionWS, half3 viewDirectionWS)
             {
                 float3 halfDir = SafeNormalize(float3(lightDirectionWS) + float3(viewDirectionWS));
@@ -785,7 +799,7 @@ Shader "ZDShader/URP/Character"
                 
                 return specularTerm * lerp(0.04, 1.0, metallic);
             }
-            
+            */
             half4 LitPassFragment(Varyings i): SV_Target
             {
                 #ifdef _DrawMeshInstancedProcedural
@@ -798,29 +812,28 @@ Shader "ZDShader/URP/Character"
                 half3 positionWS = i.positionWSAndFogFactor.xyz;
                 half4 positionSS = float4(i.normalWS.w, i.objectDirection.w, i.lightXZDirection.w, i.objectUp.w);
                 half2 screenUV = positionSS.xy /= positionSS.w;
-                
+                half vertexDist = i.vertexDist_And_viewDir.x;
                 #if _DrawMeshInstancedProcedural
                 #else
-                    DistanceDisslove(screenUV, i.vertexDist);
+                    DistanceDisslove(screenUV, vertexDist);
                 #endif
+                /*get textures color*/
                 half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv01.xy);
-                half4 _ESSGMask_var = SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy); // R-Em  G-Shadow B-Specular A-Gloss
+                half4 _ESSGMask_var = lerp(half4(0, 0.5, 0, 0), SAMPLE_TEXTURE2D(_mask, sampler_mask, i.uv01.xy), _Mask_Texture_Enabled); // R-emission, G-Shadow refract ratio, B-specular, A-gloss,
                 half4 _SelfMask_UV0_var = SAMPLE_TEXTURE2D(_SelfMask, sampler_SelfMask, i.uv01.xy);
                 
-                
-                Light mainLight = LerpLightDirection(i.objectDirection.xyz);
-                
+                Light mainLight;
+                mainLight.direction = i.mainLightDirection;
                 // unity_LightData.z is 1 when not culled by the culling mask, otherwise 0.
                 mainLight.distanceAttenuation = 1;
                 #if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE)
                     // unity_ProbesOcclusion.x is the mixed light probe occlusion data
                     mainLight.distanceAttenuation *= unity_ProbesOcclusion.x;
                 #endif
-                mainLight.shadowAttenuation = 1.0;
-                mainLight.color = _MainLightColor.rgb;
-                mainLight.color = _CustomLightColor.rgb * _CustomLightIntensity;
                 
-                half4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(i.vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
+                mainLight.shadowAttenuation = 1.0;
+                /*push face CastShadow to remove weird shadow*/
+                half4 shadowCoords = WorldToShadowCoord(lerp(positionWS + mainLight.direction * min(vertexDist, 1.0), positionWS, _SelfMask_UV0_var.b));
                 mainLight.shadowAttenuation = MainLightRealtimeShadow(shadowCoords);
                 
                 half3 additionalLightColor = 0.0h.rrr;
@@ -845,10 +858,11 @@ Shader "ZDShader/URP/Character"
                 
                 
                 
-                half3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - positionWS.xyz);
+                half3 viewDirection = i.vertexDist_And_viewDir.yzw;
                 half3 normalDirection = i.normalWS.xyz;
                 
                 half glossMask = _ESSGMask_var.a;
+                half specularMask = _ESSGMask_var.b;
                 
                 half NdotL = dot(i.normalWS.xyz, mainLight.direction.xyz);
                 half selfShadow = mainLight.distanceAttenuation * mainLight.shadowAttenuation ;
@@ -904,11 +918,10 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 
-                half3 lightColor = mainLight.color.rgb;
                 half3 halfDirection = normalize(viewDirection + mainLight.direction);
                 
-                half specStep = 2.0;
-                half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * specStep) / (specStep - 1);
+                
+                half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * 2.0);
                 
                 /*BDRF Specular but in this shader was nonconformity
                 glossMask = min(max(0, glossMask + _Gloss), 1.0);
@@ -919,7 +932,6 @@ Shader "ZDShader/URP/Character"
                 */
                 
                 half4 _SpecularColor_var = _SpecularColor;
-                half specularMask = _ESSGMask_var.b;
                 half4 _Color_var = _Color;
                 
                 
@@ -1010,8 +1022,6 @@ Shader "ZDShader/URP/Character"
                     #endif
                 #endif
                 
-                
-                
                 //PBRShadowArea
                 half shadowRefr = _ESSGMask_var.g + (_ShadowOffset -0.5h) * 2.0h;
                 half refractionShadowArea = NdotL + (shadowRefr - 0.5h) * 2.0h * _ShadowRefraction;
@@ -1021,11 +1031,13 @@ Shader "ZDShader/URP/Character"
                 refractionShadowArea = 1.0 - smoothstep(0.5 - (1.0 - _ShadowRamp), 0.5 + (1.0 - _ShadowRamp) * 0.25, 1.0 - refractionShadowArea);
                 selfShadow = 1.0 - smoothstep(0.5 - (1.0 - _SelfShadowRamp), 0.5 + (1.0 - _SelfShadowRamp), 1.0 - selfShadow);
                 
-                
-                float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow) ;
-                PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * (1.0 - glossMask));
-                
-                
+                half mainLightIntensity_1_0 = max(0, 1.0 - i.mainLightColor.a);
+                half mainLightIntensity_0_1 = 1.0 - mainLightIntensity_1_0;
+                float PBRShadowArea = refractionShadowArea * lerp(1.0, selfShadow, _ReceiveShadow);
+                PBRShadowArea = lerp(PBRShadowArea, 0.0, min(1.0, mainLightIntensity_1_0 * 3.125));
+                PBRShadowArea *= PBRShadowArea = lerp(PBRShadowArea, SSS, _SubsurfaceScattering * specularMask * (1.0 - glossMask));
+                half light2Dark = max(0.0, mainLightIntensity_1_0 - 0.32);
+                mainLight.color = lerp(i.mainLightColor.rgb * (1.0 - light2Dark), 0.0, light2Dark) * lerp(1.0, i.mainLightColor.a, max(PBRShadowArea, 1.0 - _CustomLightIntensity)) * _CustomLightColor.rgb;
                 
                 float4 _EmissionColor_var = _EmissionColor;
                 float emissionMask = _ESSGMask_var.r;
@@ -1065,7 +1077,7 @@ Shader "ZDShader/URP/Character"
                 float3 emissionColor = (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var);
                 
                 
-                float3 emissive = (((lightColor.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
+                float3 emissive = (((mainLight.color.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
                 + diffuseColor) * mainLight.color * _Color.rgb + specularColor +
                 emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + _Time.y * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
                 (float3(1, 0.3171664, 0.2549019) * _Flash_var * _Flash_var)
@@ -1229,7 +1241,6 @@ Shader "ZDShader/URP/Character"
                     positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
                 
-                
                 return positionCS;
             }
             
@@ -1332,7 +1343,7 @@ Shader "ZDShader/URP/Character"
             struct Attributes
             {
                 float4 position: POSITION;
-                float4 normal: NORMAL;
+                float3 normal: NORMAL;
                 float2 texcoord: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
                 
@@ -1400,6 +1411,7 @@ Shader "ZDShader/URP/Character"
                 #else
                     float3 positionWS = mul(GetObjectToWorldMatrix(), float4(positionOS.xyz, 0.0)).xyz;
                 #endif
+
                 positionWS.y = lerp(positionWS.y, -0.99, step(positionWS.y, -0.99));
                 #ifdef _DrawMeshInstancedProcedural
                     input.position.xyz = mul(_WorldToObjectBuffer[mid], float4(positionWS, 0.0)).xyz;
