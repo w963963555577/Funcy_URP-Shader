@@ -184,17 +184,17 @@ half3 HSV2RGB(half3 c)
         #if _ExpressionEnable
             half eyeCenter = smoothstep(0.5, 1.0, eyeAreaReplace.x) * eyeAreaReplace.y;
         #endif
-        half grayArea_9 = min(1.0, (smoothstepBetterPerformace(0.90, 1.00, gray, 10.0) * 2.0));
-        half grayArea_8 = min(1.0, (smoothstepBetterPerformace(0.70, 0.80, gray, 10.0) * 2.0));
-        half grayArea_7 = min(1.0, (smoothstepBetterPerformace(0.60, 0.70, gray, 10.0) * 2.0));
-        half grayArea_6 = min(1.0, (smoothstepBetterPerformace(0.45, 0.60, gray, 6.66) * 2.0));
-        half grayArea_5 = min(1.0, (smoothstepBetterPerformace(0.35, 0.45, gray, 10.0) * 2.0));
+        half grayArea_9 = saturate((smoothstepBetterPerformace(0.90, 1.00, gray, 10.0) * 2.0));
+        half grayArea_8 = saturate((smoothstepBetterPerformace(0.70, 0.80, gray, 10.0) * 2.0));
+        half grayArea_7 = saturate((smoothstepBetterPerformace(0.60, 0.70, gray, 10.0) * 2.0));
+        half grayArea_6 = saturate((smoothstepBetterPerformace(0.45, 0.60, gray, 6.66) * 2.0));
+        half grayArea_5 = saturate((smoothstepBetterPerformace(0.35, 0.45, gray, 10.0) * 2.0));
         half grayArea_4 = 1.00 - grayArea_5;
-        half grayArea_3 = min(1.0, (smoothstepBetterPerformace(0.70, 0.80, gray_oneminus, 10.0) * 2.0));
-        half grayArea_2 = min(1.0, (smoothstepBetterPerformace(0.80, 0.90, gray_oneminus, 10.0) * 2.0));
-        half grayArea_1 = min(1.0, (smoothstepBetterPerformace(0.90, 0.95, gray_oneminus, 20.0) * 2.0));
+        half grayArea_3 = saturate((smoothstepBetterPerformace(0.70, 0.80, gray_oneminus, 10.0) * 2.0));
+        half grayArea_2 = saturate((smoothstepBetterPerformace(0.80, 0.90, gray_oneminus, 10.0) * 2.0));
+        half grayArea_1 = saturate((smoothstepBetterPerformace(0.90, 0.95, gray_oneminus, 20.0) * 2.0));
         
-        half grayArea_0 = min(1.0, (smoothstepBetterPerformace(0.95, 1.00, gray_oneminus, 20.0) * 2.0));
+        half grayArea_0 = saturate((smoothstepBetterPerformace(0.95, 1.00, gray_oneminus, 20.0) * 2.0));
         #if _ExpressionEnable
             grayArea_0 = max(grayArea_0, min(1.0, smoothstepBetterPerformace(0.4, 0.5, eyeAreaReplace.x, 10.0) * eyeAreaReplace.y - eyeCenter));
             #if _ExpressionFormat_FaceSheet
@@ -222,8 +222,8 @@ half3 HSV2RGB(half3 c)
         
         blackArea = fillArea_0;
         skinArea = fillArea_1;
-        
         eyeArea = fillArea_2;
+
         color = _DiscolorationColor_8 * fillArea_8 + _DiscolorationColor_9 * fillArea_9 +
         _DiscolorationColor_7 * fillArea_7 + _DiscolorationColor_6 * fillArea_6 +
         _DiscolorationColor_5 * fillArea_5 + _DiscolorationColor_4 * fillArea_4 +
@@ -271,7 +271,7 @@ half GetDissloveAlpha(half4 OSuv1, half4 OSuv2, half3 OSuvMask, half value, out 
     effectiveMask += mask_y * OSuvMask.y;
     effectiveMask += mask_z * OSuvMask.z;
     
-    half overArea = saturate(effectiveMask - 1.0);
+    half overArea = saturate(effectiveMask.x - 1.0);
     effectiveMask = lerp(effectiveMask, mask_x, overArea);
     
     
