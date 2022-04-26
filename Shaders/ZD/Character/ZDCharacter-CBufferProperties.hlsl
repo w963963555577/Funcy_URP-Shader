@@ -6,7 +6,7 @@ half _SubsurfaceScattering;
 half _SubsurfaceRadius;
 half _SelfMaskDirection;
 
-half4 _mask_ST;
+half4 _mask_ST;half _Mask_Texture_Enabled;
 half4 _Color;
 half4 _EmissionColor;
 half4 _SpecularColor;
@@ -108,11 +108,11 @@ half4 _BoneMatrixMap_TexelSize;
     StructuredBuffer<float4> _TimeBuffer;
 #endif
 
+
+CBUFFER_END
 half _InsightSystemIsSelf;
 half _InsightSystemIsSelect;
 half4 _InsightSystemSelectColor;
-CBUFFER_END
-
 #ifdef _DrawMeshInstancedProcedural
     
 #else
