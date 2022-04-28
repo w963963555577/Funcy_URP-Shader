@@ -15,6 +15,7 @@ public class MRTPass : ScriptableRendererFeature
     public class Settings
     {        
         public RenderPassEvent Event = RenderPassEvent.AfterRenderingOpaques;
+        [System.NonSerialized]public int eventIndexOffset = 0;
         public FilterSettings filterSettings = new FilterSettings();
         public List<string> MRTNames = new List<string>();
         public RenderQueueRange renderQueueRange;
@@ -65,7 +66,7 @@ public class MRTPass : ScriptableRendererFeature
             this.settings = settings;
             m_ProfilerTag = profilerTag;
             m_ProfilingSampler = new ProfilingSampler(profilerTag);
-            this.renderPassEvent = settings.Event;            
+            this.renderPassEvent = settings.Event + settings.eventIndexOffset;
 
             var shaderTags = settings.filterSettings.lightModes;
             
