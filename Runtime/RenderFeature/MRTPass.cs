@@ -117,16 +117,9 @@ public class MRTPass : ScriptableRendererFeature
             {
                 if (RenderSettings.skybox && settings.clear) 
                 {
-                    //cmd.ClearRenderTarget(true, true, settings.clearColor);
-                    var currentActive = RenderTexture.active;
-                    foreach(var mrt in m_MRTs)
-                    {
-                        RenderTexture.active = (RenderTexture)Shader.GetGlobalTexture(mrt.id);
-                        GL.Clear(true, true, settings.clearColor, 0.0f);
-                    }
-                    RenderTexture.active = currentActive;
+                    cmd.ClearRenderTarget(true, true, settings.clearColor, 1.0f);
                 }
-
+                
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
