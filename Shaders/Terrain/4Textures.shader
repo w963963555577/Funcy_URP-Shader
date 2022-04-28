@@ -799,9 +799,9 @@ Shader "ZDShader/URP/Terrain/4 Textures"
 				half surfaceDepth = IN.positionWS_And_surfaceDepth.w;
 				half cameraHeight = (GetCameraPositionWS().y - positionWS.y);
 				half heightDepth = (screenDepth / surfaceDepth - 1.0) * cameraHeight;
-				half smDisDepth = smoothstep(0.0, 0.5, heightDepth);
+				half smDisDepth = smoothstep(0.0, 0.5, screenDepth);
 				half clearArea = 1.0 - min(1.0, (mrtForwardBuffer.r + mrtForwardBuffer.g + mrtForwardBuffer.b) * 10000.0);
-				color.rgb = lerp(mrtForwardBuffer.rgb, color.rgb, saturate(smDisDepth));
+				color.rgb = mrtForwardBuffer.rgb;
 				#endif
 
 				#ifdef ASE_DEPTH_WRITE_ON

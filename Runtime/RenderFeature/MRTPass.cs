@@ -115,9 +115,10 @@ public class MRTPass : ScriptableRendererFeature
 
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                if (settings.clear) 
+                if (RenderSettings.skybox && settings.clear) 
                 {
-                    cmd.ClearRenderTarget(false, true, settings.clearColor);
+                    cmd.ClearRenderTarget(true, true, settings.clearColor);
+                    cmd.ClearRandomWriteTargets();
                 }
 
                 context.ExecuteCommandBuffer(cmd);
