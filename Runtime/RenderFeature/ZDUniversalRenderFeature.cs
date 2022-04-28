@@ -14,14 +14,34 @@ using UnityEngine.UIElements;
 
 public class ZDUniversalRenderFeature : ScriptableRendererFeature
 {
+    public static ForwardRendererData rootRenderer;
     public static List<RadialBlurControl> radialBlurControls = new List<RadialBlurControl>();
     public MobileBloomPass.Settings settings = new MobileBloomPass.Settings();
+    public PassCatchDatas passCatchDatas = new PassCatchDatas();
     public RadiusBlurSettings radiusBlurSettings = new RadiusBlurSettings();
     MobileBloomPass bloomPass;
     
     public override void Create()
     {
         bloomPass = new MobileBloomPass(settings, radiusBlurSettings);
+        UniversalRenderPipelineAsset pipelineAsset = QualitySettings.GetRenderPipelineAssetAt(QualitySettings.GetQualityLevel()) as UniversalRenderPipelineAsset;
+        FieldInfo fieldInfo = pipelineAsset.GetType().GetField("m_RendererDataList", BindingFlags.Instance | BindingFlags.NonPublic);
+        ScriptableRendererData[] rendererDatas = fieldInfo.GetValue(pipelineAsset) as UnityEngine.Rendering.Universal.ScriptableRendererData[];
+        rootRenderer = rendererDatas.ToList().Find(x => x.name == "BloomRenderer") as ForwardRendererData;
+
+#if (UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)) || (UNITY_ANDROID || UNITY_STANDALONE_WIN)
+        rootRenderer.opaqueLayerMask = -1;
+        rootRenderer.transparentLayerMask = -1;
+        passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 0;
+        passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 0;
+        passCatchDatas.m_UniversalForwardOpaque.settings.active = false;
+#elif (UNITY_EDITOR && (UNITY_IPHONE || UNITY_STANDALONE_OSX)) || (UNITY_IPHONE || UNITY_STANDALONE_OSX)
+        rootRenderer.opaqueLayerMask = 0;
+        rootRenderer.transparentLayerMask = 0;
+        passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 50;
+        passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 50;
+        passCatchDatas.m_UniversalForwardOpaque.settings.active = true;
+#endif
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -45,14 +65,17 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
         {
             return m_RadiusBlurSettings;
         }
-        UniversalRenderPipelineAsset pipelineAsset = QualitySettings.GetRenderPipelineAssetAt(QualitySettings.GetQualityLevel()) as UniversalRenderPipelineAsset;
-
-        FieldInfo fieldInfo = pipelineAsset.GetType().GetField("m_RendererDataList", BindingFlags.Instance | BindingFlags.NonPublic);
-        ScriptableRendererData[] rendererDatas = fieldInfo.GetValue(pipelineAsset) as UnityEngine.Rendering.Universal.ScriptableRendererData[];
-        ScriptableRendererData data = rendererDatas.ToList().Find(x => x.name == "BloomRenderer");
-        ZDUniversalRenderFeature urf = data.rendererFeatures.Find(x => x.GetType() == typeof(ZDUniversalRenderFeature)) as ZDUniversalRenderFeature;
+        
+        ZDUniversalRenderFeature urf = rootRenderer.rendererFeatures.Find(x => x.GetType() == typeof(ZDUniversalRenderFeature)) as ZDUniversalRenderFeature;
         m_RadiusBlurSettings= urf.radiusBlurSettings;
         return m_RadiusBlurSettings;
+    }
+    [System.Serializable]
+    public class PassCatchDatas
+    {
+        public MRTPass m_MRTOpaque;
+        public MRTPass m_MRTTerrain;
+        public MRTPass m_UniversalForwardOpaque;
     }
 }
 #if UNITY_EDITOR

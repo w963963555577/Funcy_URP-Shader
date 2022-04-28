@@ -13,7 +13,8 @@ public class MRTPass : ScriptableRendererFeature
 {
     [System.Serializable]
     public class Settings
-    {        
+    {
+        [System.NonSerialized] public bool active = true;
         public RenderPassEvent Event = RenderPassEvent.AfterRenderingOpaques;
         [System.NonSerialized]public int eventIndexOffset = 0;
         public FilterSettings filterSettings = new FilterSettings();
@@ -144,6 +145,7 @@ public class MRTPass : ScriptableRendererFeature
 
     public override void Create()
     {
+        if (!settings.active) return;
         FilterSettings filter = settings.filterSettings;
         switch (settings.renderObjectType)
         {
@@ -164,6 +166,7 @@ public class MRTPass : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
+        if (!settings.active) return;
         pass.InitTargets(renderer.cameraColorTarget, renderer.cameraDepth);        
         renderer.EnqueuePass(pass);
     }
