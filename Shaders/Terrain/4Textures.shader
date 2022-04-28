@@ -797,11 +797,11 @@ Shader "ZDShader/URP/Terrain/4 Textures"
 				half4 mrtForwardBuffer = SAMPLE_TEXTURE2D(_ForwardObjectsColorAndHeight, sampler_ForwardObjectsColorAndHeight, screenUV);
 				half screenDepth = mrtForwardBuffer.a;
 				half surfaceDepth = IN.positionWS_And_surfaceDepth.w;
-				half cameraHeight = (GetCameraPositionWS().y - positionWS.y);
+				half cameraHeight = (GetCameraPositionWS().y - positionWS.y) + 10.0;
 				half heightDepth = (screenDepth / surfaceDepth - 1.0) * cameraHeight;
-				half smDisDepth = smoothstep(0.0, 0.5, screenDepth);
+				half smDisDepth = smoothstep(0.0, 0.5, heightDepth);
 				half clearArea = 1.0 - min(1.0, (mrtForwardBuffer.r + mrtForwardBuffer.g + mrtForwardBuffer.b) * 10000.0);
-				color.rgb = mrtForwardBuffer.rgb;
+				color.rgb = lerp(mrtForwardBuffer.rgb, color.rgb, saturate(smDisDepth + clearArea));
 				#endif
 
 				#ifdef ASE_DEPTH_WRITE_ON
