@@ -103,19 +103,18 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
         MaterialProperty diffuseBlend { get; set; }
 
 
-        public enum ExpressionFormat { Wink, FaceSheet }        
-        MaterialProperty selectExpressionMap { get; set; }
         MaterialProperty expressionMap { get; set; }
         MaterialProperty expressionQMap { get; set; }
-        MaterialProperty expressionFormat_Wink { get; set; }
-        MaterialProperty expressionFormat_FaceSheet { get; set; }
+        
         MaterialProperty selectBrow { get; set; }
         MaterialProperty selectFace { get; set; }
         MaterialProperty selectMouth { get; set; }
+        MaterialProperty selectBlush { get; set; }
 
         MaterialProperty browRect { get; set; }
         MaterialProperty faceRect { get; set; }
         MaterialProperty mouthRect { get; set; }
+        MaterialProperty blushRect { get; set; }
 
         MaterialProperty effectiveMap { get; set; }
 
@@ -172,43 +171,6 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
             EditorApplication.update -= materialEditor.Repaint;
             //Debug.Log("Closed");
 
-        }
-
-
-        public ExpressionFormat format = ExpressionFormat.FaceSheet;
-
-        ExpressionFormat SetExpressionFormat(Material mat)
-        {
-            bool wink = Array.IndexOf(mat.shaderKeywords, "_ExpressionFormat_Wink") != -1;
-            bool facesheet = Array.IndexOf(mat.shaderKeywords, "_ExpressionFormat_FaceSheet") != -1;
-
-            if (facesheet && !wink)
-            {
-                return ExpressionFormat.FaceSheet;
-            }
-            else if (!facesheet && wink)
-            {
-                return ExpressionFormat.Wink;
-            }
-            else
-            {
-                mat.EnableKeyword("_ExpressionFormat_FaceSheet");
-                mat.DisableKeyword("_ExpressionFormat_Wink");
-                return ExpressionFormat.FaceSheet;
-            }
-        }
-        void GetExpressionFormat(Material mat)
-        {            
-            if (format == ExpressionFormat.FaceSheet)
-            {
-                mat.EnableKeyword("_ExpressionFormat_FaceSheet");
-                mat.DisableKeyword("_ExpressionFormat_Wink");
-            }
-            if (format == ExpressionFormat.Wink)
-            {
-                mat.DisableKeyword("_ExpressionFormat_FaceSheet");
-                mat.EnableKeyword("_ExpressionFormat_Wink");
-            }
         }
 
 
@@ -503,64 +465,37 @@ namespace UnityEditor.Rendering.Funcy.URP.ShaderGUI
 
             DrawArea("Expression System", () =>
             {
-                                
-                materialEditor.ShaderProperty(selectExpressionMap, selectExpressionMap.displayName);
                 materialEditor.TexturePropertySingleLine(expressionMap.displayName.ToGUIContent(), expressionMap);
                 materialEditor.TexturePropertySingleLine(expressionQMap.displayName.ToGUIContent(), expressionQMap);
-                var currentFormat = SetExpressionFormat(mat);
-                format = SetExpressionFormat(mat);
-                format = (ExpressionFormat)EditorGUILayout.EnumPopup("Format", format);
-                GetExpressionFormat(mat);
-
+                
                 GUILayout.Space(6);
                 GUILayout.Label("Reset Rect", EditorStyles.boldLabel);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("PC"))
                 {
-                    switch (format)
-                    {
-                        case ExpressionFormat.Wink:
-                            faceRect.vectorValue = new float4(0.0f, .06f, .5f, .5f);
-                            break;
-                        case ExpressionFormat.FaceSheet:
-                            browRect.vectorValue = new float4(0.0f, .5f, .73f, .3f);
-                            faceRect.vectorValue = new float4(0.0f, .06f, .73f, .37f);
-                            mouthRect.vectorValue = new float4(0.0f, -1.11f, .4f, .28f);
-                            break;
-                    }
-
+                    browRect.vectorValue = new float4(0.0f, .5f, .73f, .3f);
+                    faceRect.vectorValue = new float4(0.0f, .06f, .73f, .37f);
+                    mouthRect.vectorValue = new float4(0.0f, -1.11f, .4f, .28f);
                 }
                 if (GUILayout.Button("Combine"))
                 {
-                    switch (format)
-                    {
-                        case ExpressionFormat.Wink:
-                            faceRect.vectorValue = new float4(0.0f, .26f, .67f, .36f);
-                            break;
-                        case ExpressionFormat.FaceSheet:
-                            browRect.vectorValue = new float4(0.0f, .68f, .855f, .3f);
-                            faceRect.vectorValue = new float4(0.0f, .26f, .855f, .3f);
-                            mouthRect.vectorValue = new float4(0.0f, -.63f, .5f, .3f);
-                            break;
-                    }
+                    browRect.vectorValue = new float4(0.0f, .68f, .855f, .3f);
+                    faceRect.vectorValue = new float4(0.0f, .26f, .855f, .3f);
+                    mouthRect.vectorValue = new float4(0.0f, -.63f, .5f, .3f);
                 }
                 GUILayout.EndHorizontal();
 
-                if (format == ExpressionFormat.FaceSheet)
-                {
-                    materialEditor.ShaderProperty(selectBrow, selectBrow.displayName);
-                    materialEditor.ShaderProperty(browRect, browRect.displayName);
-                }
-               
+                materialEditor.ShaderProperty(selectBrow, selectBrow.displayName);
+                materialEditor.ShaderProperty(browRect, browRect.displayName);
+                
                 materialEditor.ShaderProperty(selectFace, selectFace.displayName);
                 materialEditor.ShaderProperty(faceRect, faceRect.displayName);
 
-                if (format == ExpressionFormat.FaceSheet)
-                {
-                    materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
-                    materialEditor.ShaderProperty(mouthRect, mouthRect.displayName);
-                }
-                
+                materialEditor.ShaderProperty(selectMouth, selectMouth.displayName);
+                materialEditor.ShaderProperty(mouthRect, mouthRect.displayName);
+
+                materialEditor.ShaderProperty(selectBlush, selectBlush.displayName);
+                materialEditor.ShaderProperty(blushRect, blushRect.displayName);
             });
 
             DrawArea("Custom Lighting", () => {
