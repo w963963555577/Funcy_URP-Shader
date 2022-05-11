@@ -79,10 +79,12 @@ half _SelectExpressionMap;
 half _SelectMouth;
 half _SelectFace;
 half _SelectBrow;
+half _SelectBlush;
 
 half4 _BrowRect;
 half4 _FaceRect;
 half4 _MouthRect;
+half4 _BlushRect;
 
 half _FloatModel;
 half4 _EffectiveColor;
@@ -176,6 +178,11 @@ half3 HSV2RGB(half3 c)
     return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
 }
 
+float Remap(float value, float from1, float to1, float from2, float to2)
+{
+    return(value - from1) / (to1 - from1) * (to2 - from2) + from2;
+}
+
 
 #if _DiscolorationSystem
     void Step8Color(half gray, half2 eyeAreaReplace, half2 browReplace, half2 mouthReplace, out half4 color, out half blackArea, out half skinArea, out half eyeArea)
@@ -197,10 +204,8 @@ half3 HSV2RGB(half3 c)
         half grayArea_0 = saturate((smoothstepBetterPerformace(0.95, 1.00, gray_oneminus, 20.0) * 2.0));
         #if _ExpressionEnable
             grayArea_0 = max(grayArea_0, min(1.0, smoothstepBetterPerformace(0.4, 0.5, eyeAreaReplace.x, 10.0) * eyeAreaReplace.y - eyeCenter));
-            #if _ExpressionFormat_FaceSheet
-                grayArea_0 = max(grayArea_0, smoothstepBetterPerformace(0.5, 1.0, browReplace.x, 2.0) * browReplace.y);
-                grayArea_0 = max(grayArea_0, smoothstepBetterPerformace(0.5, 1.0, mouthReplace.x, 2.0) * mouthReplace.y);
-            #endif
+            grayArea_0 = max(grayArea_0, smoothstepBetterPerformace(0.5, 1.0, browReplace.x, 2.0) * browReplace.y);
+            grayArea_0 = max(grayArea_0, smoothstepBetterPerformace(0.5, 1.0, mouthReplace.x, 2.0) * mouthReplace.y);
         #endif
         
         half fillArea_9 = grayArea_9;
@@ -223,7 +228,7 @@ half3 HSV2RGB(half3 c)
         blackArea = fillArea_0;
         skinArea = fillArea_1;
         eyeArea = fillArea_2;
-
+        
         color = _DiscolorationColor_8 * fillArea_8 + _DiscolorationColor_9 * fillArea_9 +
         _DiscolorationColor_7 * fillArea_7 + _DiscolorationColor_6 * fillArea_6 +
         _DiscolorationColor_5 * fillArea_5 + _DiscolorationColor_4 * fillArea_4 +
@@ -311,19 +316,16 @@ half CaculateShadowArea(half4 src, half4 picker, half setpB)
         return input;
     }
     
-    VertexNormalInputs InitVertexNormalInputs(float3 normalOS, float4 tangentOS, uint id)
+    VertexNormalInputs InitVertexNormalInputs(float3 normalOS, uint id)
     {
         VertexNormalInputs tbn;
-        
-        // mikkts space compliant. only normalize when extracting normal at frag.
-        real sign = tangentOS.w * GetOddNegativeScale();
+        tbn.tangentWS = real3(1.0, 0.0, 0.0);
+        tbn.bitangentWS = real3(0.0, 1.0, 0.0);
         #ifdef UNITY_ASSUME_UNIFORM_SCALING
             tbn.normalWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], normalOS.xyz));
         #else
             tbn.normalWS.xyz = SafeNormalize(mul(normalOS, (real3x3)_WorldToObjectBuffer[id]));
         #endif
-        tbn.tangentWS.xyz = SafeNormalize(mul((real3x3)_ObjectToWorldBuffer[id], tangentOS.xyz));
-        tbn.bitangentWS = cross(tbn.normalWS, tbn.tangentWS) * sign;
         return tbn;
     }
 #endif
