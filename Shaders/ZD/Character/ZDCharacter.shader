@@ -482,7 +482,7 @@ Shader "ZDShader/URP/Character"
                 
                 float2 GetBrowArea(float2 uv, float browCount, float selectBrow, half2 offsetScale)
                 {
-                    return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + ((browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0)));
+                    return float2(uv.x * offsetScale.x + 0.5, (uv.y * offsetScale.y + 0.5 - offsetScale.y * 0.5) + (browCount - (selectBrow * 2.0 - 1.0)) / (browCount * 2.0));
                 }
                 
                 float2 GetEyesArea(float2 uv, float eyesCount, float selectFace, half2 offsetScale)
@@ -656,7 +656,7 @@ Shader "ZDShader/URP/Character"
                     half2 blushPivot = GetBrowArea(half2(0.5, 0.5), 4.0, _SelectBlush, browOffset);
                     half2 blushUV = ((blushArea - blushPivot) * _BlushTRS.xy) + blushPivot + half2(_BlushTRS.z * browOffset.x, _BlushTRS.w * browOffset.y);
                     half2 blushMaskUV = (output.uv01.zw - half2(0.5, 0.5)) * _BlushTRS.xy + half2(0.5, 0.5) + _BlushTRS.zw;
-                    half2 blushMaskRect = abs(((blushMaskUV - half2(0.5, 0.5)) * half2(2, 2)));
+                    half2 blushMaskRect = abs(((blushMaskUV - half2(0.5, 0.5)) * half2(2, 1)));
                     output.expressionUVBlush = half4(blushUV, blushMaskRect);
                     
                 #endif
@@ -845,22 +845,22 @@ Shader "ZDShader/URP/Character"
                 #if _ExpressionEnable
                     half faceMapBlend = i.normalWS.w;
                     half mouthMapBlend = i.positionSS.z;
-
-
+                    
+                    
                     half2 browUV = i.expressionUVBrow.xy;
                     half2 browMaskRect = i.expressionUVBrow.zw;
                     half browMask = 1.0 - step(1.0, max(browMaskRect.x, browMaskRect.y));
                     half4 Brow = SAMPLE_TEXTURE2D(_ExpressionMap, sampler_ExpressionMap, browUV);
                     //SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, browUV);
-
-
+                    
+                    
                     half2 blushUV = i.expressionUVBlush.xy;
                     half2 blushMaskRect = i.expressionUVBlush.zw;
                     half blushMask = 1.0 - step(1.0, max(blushMaskRect.x, blushMaskRect.y));
                     half4 Blush = SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionMap, blushUV);
                     //SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, browUV);
-
-
+                    
+                    
                     half2 eyesUV = i.expressionUVEyes.xy;
                     half2 eyesMaskRect = i.expressionUVEyes.zw;
                     half eyesMask = 1.0 - step(1.0, max(eyesMaskRect.x, eyesMaskRect.y));
@@ -873,8 +873,8 @@ Shader "ZDShader/URP/Character"
                     half eyesLeftArea = 1.0 - eyesRightArea;
                     half4 Eyes = lerp(eyesColor1, eyesColor2, max(generateIndex10, faceMapBlend * lerp(eyesLeftArea, eyesRightArea, generateIndex9)));
                     //Eyes = lerp(Eyes, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, eyesUV), _SelectExpressionMap);
-
-
+                    
+                    
                     half4 _MouthsTRS = half4(1.0 / _MouthRect.zw, -_MouthRect.xy);
                     half2 mouthUV = i.expressionUVMouth.xy;
                     half2 mouthMaskRect = i.expressionUVMouth.zw;
@@ -883,15 +883,15 @@ Shader "ZDShader/URP/Character"
                     half4 mouthColor2 = SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionMap, mouthUV);
                     half4 Mouth = lerp(mouthColor1, mouthColor2, mouthMapBlend);
                     //Mouth = lerp(Mouth, SAMPLE_TEXTURE2D(_ExpressionQMap, sampler_ExpressionQMap, mouthUV), _SelectExpressionMap);
-
-
+                    
+                    _diffuse_var.rgb = lerp(_diffuse_var.rgb, Blush.rgb, blushMask * Blush.a * min(1.0, _SelectBlush));
                     _diffuse_var.rgb = lerp(_diffuse_var.rgb, Mouth.rgb, mouthMask * Mouth.a * min(1.0, _SelectMouth));
                     _diffuse_var.rgb = lerp(_diffuse_var.rgb, Eyes.rgb, eyesMask * smoothstep(0.0, 0.5, Eyes.a) * min(1.0, _SelectFace));
                     _diffuse_var.rgb = lerp(_diffuse_var.rgb, Brow.rgb, browMask * Brow.a * min(1.0, _SelectBrow));
-                    _diffuse_var.rgb = lerp(_diffuse_var.rgb, Blush.rgb, blushMask * Blush.a * min(1.0, _SelectBlush));
+                    
                 #endif
-
-
+                
+                
                 half3 halfDirection = normalize(viewDirection + mainLight.direction);
                 half specularValue = floor(pow(max(0, dot(i.normalWS.xyz, halfDirection)), exp2(lerp(1., 11., (_Gloss * glossMask)))) * 2.0);
                 
@@ -905,8 +905,8 @@ Shader "ZDShader/URP/Character"
                 
                 half4 _SpecularColor_var = _SpecularColor;
                 half4 _Color_var = _Color;
-
-
+                
+                
                 #if _DiscolorationSystem
                     //Discoloration
                     half4 step_var ;
@@ -1040,12 +1040,12 @@ Shader "ZDShader/URP/Character"
                 
                 
                 float3 diffuseColor = lerp(_diffuse_var.rgb, _diffuse_var.rgb * shadowColor, 1.0 - PBRShadowArea);
-
-
+                
+                
                 half clampMask = 1.0 - smoothstep(0.99, 1.0, abs(i.effectcoord.y - 0.5) * 2.0);
                 float3 emissionColor = (_EmissionColor_var.rgb * _EmissionxBase_var * _EmissionOn_var);
-
-
+                
+                
                 float3 emissive = (((mainLight.color.rgb * 0.4) * step((1.0 - 0.1), _Flash_var))
                 + diffuseColor) * mainLight.color * _Color.rgb + specularColor +
                 emissionColor + emissionColor * sin((sin(i.effectcoord.x * 2.0 * 6.28 + _Time.y * 3.0)) - 1.5 + _EmissionColor_var.a) * _EmissionFlow * clampMask +
