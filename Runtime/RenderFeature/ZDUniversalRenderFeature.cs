@@ -41,16 +41,20 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
 
     void DefaultSetting()
     {
-        rootRenderer.opaqueLayerMask = -1;
-        rootRenderer.transparentLayerMask = 0;
+        if (rootRenderer.opaqueLayerMask != -1)
+        { rootRenderer.opaqueLayerMask = -1; }
+        if (rootRenderer.transparentLayerMask != 0)
+        { rootRenderer.transparentLayerMask = 0; }
         passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 0;
         passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 0;
         passCatchDatas.m_UniversalForwardOpaque.settings.active = false;
     }
     void iOSSetting()
     {
-        rootRenderer.opaqueLayerMask = 0;
-        rootRenderer.transparentLayerMask = 0;
+        if(rootRenderer.opaqueLayerMask != 0)
+        { rootRenderer.opaqueLayerMask = 0; }
+        if (rootRenderer.transparentLayerMask != 0)
+        { rootRenderer.transparentLayerMask = 0; }
         passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 50;
         passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 50;
         passCatchDatas.m_UniversalForwardOpaque.settings.active = true;
