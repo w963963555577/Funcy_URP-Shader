@@ -31,6 +31,145 @@ Shader "ZDShader/URP/Particles/Additive"
         Pass
         {
             Name "Forward"
+            Tags { "LightMode" = "UniversalForward" }
+            
+            Blend SrcAlpha One
+            ZWrite Off
+            ZTest [_ZTest]
+            Offset 0, 0
+            ColorMask RGBA
+            
+            
+            HLSLPROGRAM
+            
+            #define _RECEIVE_SHADOWS_OFF 1
+            #pragma multi_compile_instancing
+            #define ASE_SRP_VERSION 70201
+            #define REQUIRE_DEPTH_TEXTURE 1
+            
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            
+            
+            
+            sampler2D _MainTex;
+            uniform float4 _CameraDepthTexture_TexelSize;
+            CBUFFER_START(UnityPerMaterial)
+            float4 _MainTex_ST;
+            float4 _MainTex_TexelSize;
+            float4 _TintColor;
+            float _Soft;
+            half4 _Border;
+            half _Slice;
+            half4 _Panner;
+            CBUFFER_END
+            
+            
+            struct VertexInput
+            {
+                float4 vertex: POSITION;
+                float2 ase_texcoord0: TEXCOORD0;					//this shader support uv9slice
+                float2 particleSize: TEXCOORD1;
+                float borderScale: TEXCOORD2;
+                float4 ase_color: COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                float4 ase_texcoord0: TEXCOORD0;
+                float2 particleSize: TEXCOORD1;
+                float4 ase_color: COLOR;
+                float4 ase_texcoord2: TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            float2 uv9slice(float2 uv, half2 texelSize, half4 ST, half4 border, half borderScale, half2 scaleFilter)
+            {
+                half4 b = min(border * texelSize.xyxy, 0.499.xxxx);
+                half2 s = scaleFilter * ST.xy * borderScale;
+                
+                float2 t = saturate((s * uv - b.xy) / (s - b.xy - b.zw));
+                return lerp(uv * s, 1. - s * (1. - uv), t);
+            }
+            
+            VertexOutput vert(VertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                
+                o.ase_texcoord0 = half4(v.ase_texcoord0.xy, v.borderScale.x, 0.0);
+                o.particleSize.xy = v.particleSize.xy;
+                o.ase_color = v.ase_color;
+                
+                //setting value to unused interpolator channels and avoid initialization warnings
+                
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
+                o.clipPos = vertexInput.positionCS;
+                
+                float4 screenPos = ComputeScreenPos(o.clipPos);
+                o.ase_texcoord2 = screenPos;
+                return o;
+            }
+            
+            half4 frag(VertexOutput IN): SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                
+                float2 uv_MainTex = lerp(IN.ase_texcoord0.xy, uv9slice(IN.ase_texcoord0.xy, /*_MainTex_TexelSize.xy*/0.0625.xx, _MainTex_ST, _Border, IN.ase_texcoord0.z, IN.particleSize.xy * 0.1), _Slice) * _MainTex_ST.xy + _MainTex_ST.zw;
+                float4 break13 = (tex2D(_MainTex, uv_MainTex + _Panner.xy * _Time.y * _Panner.z) * IN.ase_color * _TintColor);
+                float3 appendResult14 = (float3(break13.r, break13.g, break13.b));
+                
+                float4 screenPos = IN.ase_texcoord2;
+                float4 ase_screenPosNorm = screenPos / screenPos.w;
+                ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
+                
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                
+                float screenDepth16 = depthQ;
+                
+                float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
+                
+                float3 BakedAlbedo = 0;
+                float3 BakedEmission = 0;
+                float3 Color = appendResult14;
+                float Alpha = saturate((break13.a * saturate(distanceDepth16)));
+                float AlphaClipThreshold = 0.5;
+                
+                #if _AlphaClip
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+                
+                
+                #ifdef LOD_FADE_CROSSFADE
+                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                #endif
+                
+                return half4(Color, Alpha);
+            }
+            
+            ENDHLSL
+            
+        }
+        Pass
+        {
+            Name "Forward"
             Tags { "LightMode" = "MRTTransparent" }
             
             Blend SrcAlpha One
@@ -140,7 +279,7 @@ Shader "ZDShader/URP/Particles/Additive"
                 float4 ase_screenPosNorm = screenPos / screenPos.w;
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
                 
-                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);                
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
                 
                 float screenDepth16 = depthQ;
                 

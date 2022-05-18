@@ -42,7 +42,7 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
     void DefaultSetting()
     {
         rootRenderer.opaqueLayerMask = -1;
-        rootRenderer.transparentLayerMask = -1;
+        rootRenderer.transparentLayerMask = 0;
         passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 0;
         passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 0;
         passCatchDatas.m_UniversalForwardOpaque.settings.active = false;

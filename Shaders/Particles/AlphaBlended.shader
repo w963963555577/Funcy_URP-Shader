@@ -37,6 +37,153 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
         Pass
         {
             Name "Forward"
+            Tags { "LightMode" = "UniversalForward" }
+            
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
+            ZTest LEqual
+            Offset 0, 0
+            ColorMask RGB
+            
+            
+            HLSLPROGRAM
+            
+            #define _RECEIVE_SHADOWS_OFF 1
+            #pragma multi_compile_instancing
+            #define ASE_SRP_VERSION 70201
+            #define REQUIRE_DEPTH_TEXTURE 1
+            
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
+            
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderGraphFunctions.hlsl"
+            
+            
+            
+            sampler2D _MainTex;
+            uniform float4 _CameraDepthTexture_TexelSize;
+            CBUFFER_START(UnityPerMaterial)
+            float4 _TintColor;
+            float4 _MainTex_ST;
+            float _Soft;
+            CBUFFER_END
+            
+            
+            struct VertexInput
+            {
+                float4 vertex: POSITION;
+                float3 ase_normal: NORMAL;
+                float4 ase_color: COLOR;
+                float4 ase_texcoord: TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            
+            struct VertexOutput
+            {
+                float4 clipPos: SV_POSITION;
+                #ifdef ASE_FOG
+                    float fogFactor: TEXCOORD0;
+                #endif
+                float4 ase_color: COLOR;
+                float4 ase_texcoord1: TEXCOORD1;
+                float4 ase_texcoord2: TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            
+            
+            VertexOutput vert(VertexInput v)
+            {
+                VertexOutput o = (VertexOutput)0;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                
+                float4 ase_clipPos = TransformObjectToHClip((v.vertex).xyz);
+                float4 screenPos = ComputeScreenPos(ase_clipPos);
+                o.ase_texcoord2 = screenPos;
+                
+                o.ase_color = v.ase_color;
+                o.ase_texcoord1.xy = v.ase_texcoord.xy;
+                
+                //setting value to unused interpolator channels and avoid initialization warnings
+                o.ase_texcoord1.zw = 0;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    float3 defaultVertexValue = v.vertex.xyz;
+                #else
+                    float3 defaultVertexValue = float3(0, 0, 0);
+                #endif
+                float3 vertexValue = defaultVertexValue;
+                #ifdef ASE_ABSOLUTE_VERTEX_POS
+                    v.vertex.xyz = vertexValue;
+                #else
+                    v.vertex.xyz += vertexValue;
+                #endif
+                v.ase_normal = v.ase_normal;
+                
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(v.vertex.xyz);
+                o.clipPos = vertexInput.positionCS;
+                #ifdef ASE_FOG
+                    o.fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
+                #endif
+                return o;
+            }
+            
+            half4 frag(VertexOutput IN): SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+                
+                float2 uv_MainTex = IN.ase_texcoord1.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+                float4 break32 = (IN.ase_color * _TintColor * tex2D(_MainTex, uv_MainTex));
+                float3 appendResult33 = (float3(break32.r, break32.g, break32.b));
+                
+                float4 screenPos = IN.ase_texcoord2;
+                float4 ase_screenPosNorm = screenPos / screenPos.w;
+                ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
+                
+                
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
+                
+                float screenDepth16 = depthQ;
+                
+                float distanceDepth16 = abs((screenDepth16 - LinearEyeDepth(ase_screenPosNorm.z, _ZBufferParams)) / (_Soft));
+                
+                float3 BakedAlbedo = 0;
+                float3 BakedEmission = 0;
+                float3 Color = appendResult33;
+                float Alpha = (break32.a * saturate(distanceDepth16));
+                float AlphaClipThreshold = 0.5;
+                
+                #if _AlphaClip
+                    clip(Alpha - AlphaClipThreshold);
+                #endif
+                
+                #ifdef ASE_FOG
+                    Color = MixFog(Color, IN.fogFactor);
+                #endif
+                
+                #ifdef LOD_FADE_CROSSFADE
+                    LODDitheringTransition(IN.clipPos.xyz, unity_LODFade.x);
+                #endif
+                
+                return half4(Color, Alpha);
+            }
+            
+            ENDHLSL
+            
+        }
+        Pass
+        {
+            Name "Forward"
             Tags { "LightMode" = "MRTTransparent" }
             
             Blend SrcAlpha OneMinusSrcAlpha
@@ -151,7 +298,7 @@ Shader "ZDShader/URP/Particles/Alpha Blended"
                 ase_screenPosNorm.z = (UNITY_NEAR_CLIP_VALUE >= 0) ? ase_screenPosNorm.z: ase_screenPosNorm.z * 0.5 + 0.5;
                 
                 
-                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);                
+                float depthQ = LinearEyeDepth(SHADERGRAPH_SAMPLE_SCENE_DEPTH(ase_screenPosNorm.xy), _ZBufferParams);
                 
                 float screenDepth16 = depthQ;
                 
