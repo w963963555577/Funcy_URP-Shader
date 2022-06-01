@@ -13,7 +13,8 @@ using System.Reflection;
 public class RadialBlurControl : MonoBehaviour
 {
     public bool playOnAwake = true;
-    public AnimationCurve strengthCurve=new AnimationCurve();
+    public bool playOnEnable = false;
+    public AnimationCurve strengthCurve = new AnimationCurve();
     public AnimationCurve widthCurve = new AnimationCurve();
 
     public RadiusBlurSettings settings;
@@ -43,13 +44,13 @@ public class RadialBlurControl : MonoBehaviour
     private void Awake()
     {
         if (!Application.isPlaying) return;
-        if(playOnAwake)
+        if (playOnAwake)
         {
             Play();
         }
     }
     // Use this for initialization
-    void OnEnable ()
+    void OnEnable()
     {
         radiusblurSettings = ZDUniversalRenderFeature.GetRadiusBlurSettings();
         ZDUniversalRenderFeature.radialBlurControls.Add(this);
@@ -57,7 +58,11 @@ public class RadialBlurControl : MonoBehaviour
         {
             radiusblurSettings.worldPosition = transform.position;
         }
-        
+        if (playOnEnable)
+        {
+            playbackTime = 0;
+            Play();
+        }
     }
     public void Play()
     {
@@ -90,7 +95,7 @@ public class RadialBlurControl : MonoBehaviour
             transform.hasChanged = false;
         }
 
-        
+
     }
     async void RadialBlur(float duration, float width, float strength)
     {
@@ -121,7 +126,7 @@ public class RadialBlurControl : MonoBehaviour
     {
         float result = 0;
 #if UNITY_EDITOR
-        if(Application.isPlaying)
+        if (Application.isPlaying)
         {
             result = Time.realtimeSinceStartup;
         }
@@ -135,8 +140,8 @@ public class RadialBlurControl : MonoBehaviour
         return result;
     }
 
-	private void OnDisable()
-	{
+    private void OnDisable()
+    {
         ZDUniversalRenderFeature.radialBlurControls.Remove(this);
     }
 }
@@ -164,7 +169,7 @@ public class RadialBlurControl_Editor : Editor
                 psList.AddRange(Selection.activeGameObject.GetComponentsInParent<ParticleSystem>());
 
                 if (selectPS)
-                {    
+                {
                     foreach (var p in psList)
                     {
                         control = p.GetComponentInChildren<RadialBlurControl>();
@@ -172,11 +177,11 @@ public class RadialBlurControl_Editor : Editor
                         if (control) break;
                     }
                 }
-                
-                if(!control)
+
+                if (!control)
                 {
                     control = Selection.activeGameObject.GetComponent<RadialBlurControl>();
-                } 
+                }
             }
         };
         EditorApplication.update += () => {
@@ -203,7 +208,7 @@ public class RadialBlurControl_Editor : Editor
             }
             if (control && !selectPS && psList.Count > 0)
             {
-                foreach(var p in psList)
+                foreach (var p in psList)
                 {
                     p.Simulate(control.playbackTime, true, true);
                 }
@@ -237,15 +242,15 @@ public class RadialBlurControl_Editor : Editor
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
-        
+
         EditorGUI.BeginChangeCheck();
         data.playbackTime = EditorGUILayout.Slider("Playback Time", data.playbackTime, 0.0f, data.duration);
-        
+
         EditorGUI.BeginDisabledGroup(true);
         EditorGUILayout.Toggle("Pause", data.pause);
         EditorGUI.EndDisabledGroup();
-        
-        if(EditorGUI.EndChangeCheck())
+
+        if (EditorGUI.EndChangeCheck())
         {
             data.playbackTime = Mathf.Clamp(data.playbackTime, 0.0f, data.duration);
 #if UNITY_EDITOR
@@ -259,7 +264,7 @@ public class RadialBlurControl_Editor : Editor
         bool playing = data.playbackTime > 0.0f && !data.pause;
         if (GUILayout.Button(playing ? "Pause" : "Play"))
         {
-            if(playing)
+            if (playing)
             {
                 data.pause = true;
             }
