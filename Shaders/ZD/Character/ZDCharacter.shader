@@ -182,7 +182,7 @@ Shader "ZDShader/URP/Character"
                 float3 normal: NORMAL;
                 float2 uv: TEXCOORD0;
                 float2 effectcoord: TEXCOORD2;
-                
+                float4 outlineNormal: TEXCOORD3;
                 #ifndef _SKINBONE_ATTACHED
                     float4 boneWeight: BLENDWEIGHTS;
                     uint4 boneIndex: BLENDINDICES;
@@ -255,7 +255,7 @@ Shader "ZDShader/URP/Character"
                 float2 node_1283_rnd = 4.789 * sin(489.123 * (node_1283_skew));
                 half node_1283 = frac(node_1283_rnd.x * node_1283_rnd.y * (1 + node_1283_skew.x));
                 
-                float3 _OEM = v.normal;
+                float3 _OEM = lerp(v.outlineNormal.xyz, v.normal, v.outlineNormal.w);
                 
                 half RTD_OL = (RTD_OL_OLWABVD_OO * 0.01) * lerp(1.0, node_1283, 0.3) * _OutlineWidthControl_var.r;
                 
@@ -289,6 +289,7 @@ Shader "ZDShader/URP/Character"
                 #endif
                 
                 o.vertex = positionCS;
+                o.vertex.z -= .00001;
                 #ifdef SHADER_API_D3D11
                     o.vertex /= _OutlineEnable;
                 #endif
@@ -318,32 +319,33 @@ Shader "ZDShader/URP/Character"
                 half4 effectiveMask = SAMPLE_TEXTURE2D(_EffectiveMap, sampler_EffectiveMap, i.uv.xy);
                 half4 effectiveDisslive = _EffectiveColor;
                 
-                half alphaMinus = 1.0 - _EffectiveColor.a;
-                effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
+                //half alphaMinus = 1.0 - _EffectiveColor.a;
+                //effectiveDisslive.a = smoothstep(alphaMinus - 0.1, alphaMinus + 0.1, (1.0 - effectiveMask.r + 0.1 * (_EffectiveColor.a - 0.5) * 2.0));
                 
                 /*OS Disslove*/
-                half osEffectiveDisslive = _EffectiveDisslove;
-                half osEdgeArea;
-                half osValue = osEffectiveDisslive;
-                half4 osEffectiveMask;
-                osEffectiveDisslive = GetDissloveAlpha(i.OSuv1, i.OSuv2, i.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
+                //half osEffectiveDisslive = _EffectiveDisslove;
+                //half osEdgeArea;
+                //half osValue = osEffectiveDisslive;
+                //half4 osEffectiveMask;
+                //osEffectiveDisslive = GetDissloveAlpha(i.OSuv1, i.OSuv2, i.OSuvMask, osEffectiveDisslive, osEdgeArea, osEffectiveMask);
                 
-                half gradient = smoothstep(osValue + 0.2, osValue - 0.2, (lerp(osEffectiveMask.r, i.OSuv2.w + 0.2 + (0.5 - osValue) + 0.15 * (1.0 - osValue), _DissliveWithDiretion)));
-                i.outlineColor.rgb = lerp(i.outlineColor.rgb, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
+                //half gradient = smoothstep(osValue + 0.2, osValue - 0.2, (lerp(osEffectiveMask.r, i.OSuv2.w + 0.2 + (0.5 - osValue) + 0.15 * (1.0 - osValue), _DissliveWithDiretion)));
+                //i.outlineColor.rgb = lerp(i.outlineColor.rgb, lerp(_EffectiveColor_Light.rgb, _EffectiveColor_Dark.rgb, gradient), osEdgeArea);
                 /*OS Disslove*/
                 
-                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a) * osEffectiveDisslive;
+                half4 col = float4(i.outlineColor.rgb, _Color.a * effectiveDisslive.a);
+                /*
                 #if defined(_ClippingAlbedoAlpha)
                     half4 _diffuse_var = SAMPLE_TEXTURE2D(_diffuse, sampler_diffuse, i.uv.xy);
                     clip(_diffuse_var.a * osEffectiveDisslive - 0.5);
                 #endif
+                */
                 //col = MixGlobalFog(col, i.positionWS_And_FogFactor.xyz, i.positionWS_And_FogFactor.w);
                 return col;
             }
             ENDHLSL
             
         }
-        
         
         Pass
         {
