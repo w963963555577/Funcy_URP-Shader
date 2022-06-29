@@ -30,7 +30,7 @@ Shader "ZDShader/URP/Environment/ToonWater"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "MRTTransparent" }
+            Tags { "LightMode" = "UniversalForward" }
             
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off

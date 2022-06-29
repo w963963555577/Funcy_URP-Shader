@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Insight
+  m_Shader: {fileID: 4800000, guid: 9b3de57c438764a489be994d3339075c, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _GridMap:
+        m_Texture: {fileID: 2800000, guid: 68ad6bdcd32a4f049aeba709c0d94511, type: 3}
+        m_Scale: {x: 0.5, y: 0.5}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TextureSample5:
+        m_Texture: {fileID: 8400000, guid: f8f9a7cc646e24c4e8b75d2aef4ae2e4, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _MaskEdgeWidth: 0.1
+    - _OutlineThickness: 0.5
+    - _SkinLerpToWhite: 0.5
+    - _SkinLerpToWhite1: 0.3
+    m_Colors:
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Fresnel: {r: 0.88910174, g: 1.2163284, b: 1.5079165, a: 1}
+    - _FresnelOther: {r: 1.1757383, g: 1.286657, b: 2.1185474, a: 1}
+    - _FresnelSelect: {r: 1.1757383, g: 2.1185474, b: 1.3199327, a: 1}
+    - _GridColor: {r: 0.6666667, g: 0.7058824, b: 1.498039, a: 1}
+    - _GridTRS: {r: 1, g: 1, b: 0, a: 0}
+    - _ImageEffectColor: {r: 0.7830189, g: 0.7830189, b: 0.7830189, a: 1}
+    - _LineColor: {r: 0.95390093, g: 1.0093603, b: 2.1185474, a: 1}
+    - _MaskEdgeColor: {r: 1.660838, g: 3.688605, b: 2.569896, a: 1}
+    - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineColor1: {r: 0.7830189, g: 0.7830189, b: 0.7830189, a: 1}
+    - _OutlineSelectColor: {r: 0, g: 0, b: 0, a: 1}
+    - _smoothstepMask: {r: 0, g: 0, b: 0, a: 1}

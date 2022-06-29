@@ -77,7 +77,7 @@ Shader "ZDShader/URP/PBR-Base"
             }
             
             Name "StandardLit"
-            Tags { "LightMode" = "MRTOpaque" }
+            Tags { "LightMode" = "UniversalForward" }
             
             Blend[_SrcBlend][_DstBlend]
             ZWrite[_ZWrite]

@@ -28,15 +28,16 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
         FieldInfo fieldInfo = pipelineAsset.GetType().GetField("m_RendererDataList", BindingFlags.Instance | BindingFlags.NonPublic);
         ScriptableRendererData[] rendererDatas = fieldInfo.GetValue(pipelineAsset) as UnityEngine.Rendering.Universal.ScriptableRendererData[];
         rootRenderer = rendererDatas.ToList().Find(x => x.name == "BloomRenderer") as ForwardRendererData;
-        passCatchDatas.m_MRTOpaque.SetActive(false);
-        passCatchDatas.m_MRTTerrain.SetActive(false);
+        //passCatchDatas.m_MRTOpaque.SetActive(false);
+        //passCatchDatas.m_MRTTerrain.SetActive(false);
 #if (UNITY_EDITOR && (UNITY_ANDROID || UNITY_STANDALONE_WIN)) || (UNITY_ANDROID || UNITY_STANDALONE_WIN)
-        DefaultSetting();
+        //DefaultSetting();
 #elif (UNITY_EDITOR && (UNITY_IPHONE || UNITY_STANDALONE_OSX)) || (UNITY_IPHONE || UNITY_STANDALONE_OSX)
         iOSSetting();
 #endif
-        passCatchDatas.m_MRTOpaque.SetActive(true);
-        passCatchDatas.m_MRTTerrain.SetActive(true);
+        //iOSSetting();
+        //passCatchDatas.m_MRTOpaque.SetActive(true);
+        //passCatchDatas.m_MRTTerrain.SetActive(true);
     }
 
     void DefaultSetting()
@@ -45,9 +46,9 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
         { rootRenderer.opaqueLayerMask = -1; }
         if (rootRenderer.transparentLayerMask != 0)
         { rootRenderer.transparentLayerMask = 0; }
-        passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 0;
-        passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 0;
-        passCatchDatas.m_UniversalForwardOpaque.settings.active = false;
+        //passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 0;
+        //passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 0;
+        //passCatchDatas.m_UniversalForwardOpaque.settings.active = false;
     }
     void iOSSetting()
     {
@@ -55,9 +56,9 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
         { rootRenderer.opaqueLayerMask = 0; }
         if (rootRenderer.transparentLayerMask != 0)
         { rootRenderer.transparentLayerMask = 0; }
-        passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 50;
-        passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 50;
-        passCatchDatas.m_UniversalForwardOpaque.settings.active = true;
+        //passCatchDatas.m_MRTOpaque.settings.eventIndexOffset = 50;
+        //passCatchDatas.m_MRTTerrain.settings.eventIndexOffset = 50;
+        //passCatchDatas.m_UniversalForwardOpaque.settings.active = true;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -89,10 +90,10 @@ public class ZDUniversalRenderFeature : ScriptableRendererFeature
     [System.Serializable]
     public class PassCatchDatas
     {
-        public bool test = false;
-        public MRTPass m_MRTOpaque;
-        public MRTPass m_MRTTerrain;
-        public MRTPass m_UniversalForwardOpaque;
+        //public bool test = false;
+        //public MRTPass m_MRTOpaque;
+        //public MRTPass m_MRTTerrain;
+        //public MRTPass m_UniversalForwardOpaque;
     }
 }
 #if UNITY_EDITOR
