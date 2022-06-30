@@ -44,6 +44,8 @@ public class RadialBlurControl : MonoBehaviour
     private void Awake()
     {
         if (!Application.isPlaying) return;
+        radiusblurSettings = ZDUniversalRenderFeature.GetRadiusBlurSettings();
+        ZDUniversalRenderFeature.radialBlurControls.Add(this);
         if (playOnAwake)
         {
             Play();
