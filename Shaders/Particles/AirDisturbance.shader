@@ -32,7 +32,7 @@ Shader "ZDShader/URP/Particles/Custom Effects/AirDisturbance"
 		Pass
 		{
 			Name "Forward"
-			Tags { "LightMode"="MRTTransparent" }
+			Tags { "LightMode"="UniversalForward" }
 			
 			Blend SrcAlpha OneMinusSrcAlpha , One OneMinusSrcAlpha
 			ZWrite Off

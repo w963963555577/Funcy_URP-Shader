@@ -25,7 +25,7 @@ Shader "ZDShader/URP/Particles/Dissolve"
         {
             
             Name "Forward"
-            Tags { "LightMode" = "MRTTransparent" }
+            Tags { "LightMode" = "UniversalForward" }
             
             Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
             ZWrite Off

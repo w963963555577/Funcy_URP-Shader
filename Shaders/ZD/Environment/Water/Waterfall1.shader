@@ -30,7 +30,7 @@ Shader "ZDShader/URP/Environment/Waterfall1"
         Pass
         {
             Name "Forward"
-            Tags { "LightMode" = "MRTTransparent" }
+            Tags { "LightMode" = "UniversalForward" }
             
             Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
             ZWrite On
