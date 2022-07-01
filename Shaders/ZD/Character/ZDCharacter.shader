@@ -118,7 +118,7 @@ Shader "ZDShader/URP/Character"
         [IntRange]_SelectMouth ("Select Mouth ", Range(0, 16)) = 0
         _MouthRect ("Mouth UV Rect", Vector) = (0, -0.97, 0.427, 0.28)
         [IntRange]_SelectBlush ("Select Blush ", Range(0, 2)) = 0
-        _BlushRect ("Blush UV Rect", Vector) = (0, 0, 1, 1)
+        _BlushRect ("Blush UV Rect", Vector) = (0, -0.5, 1, 0.2)
         
         [MaterialToggle] _FloatModel ("Float Model", float) = 0
         
