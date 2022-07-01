@@ -20,7 +20,7 @@ float2 rotate2D(float2 uv, half2 pivot, half angle)
 
 float2 projectorUV(float4 viewRayOS, float3 cameraPosOS, float4 screenUV, float2 scale, float rotateAngle)
 {
-    viewRayOS *= rcp(viewRayOS.w);
+    viewRayOS /= viewRayOS.w;
     screenUV /= screenUV.w;
     #if defined(UNITY_SINGLE_PASS_STEREO)
         screenUV.xy = UnityStereoTransformScreenSpaceTex(screenUV.xy);
