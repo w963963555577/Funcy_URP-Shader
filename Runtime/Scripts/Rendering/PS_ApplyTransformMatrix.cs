@@ -27,7 +27,7 @@ public class PS_ApplyTransformMatrix : MonoBehaviour
          ParticleSystemVertexStream.SizeXYZ,
         });
         ren.SetActiveVertexStreams(streams);
-
+        /*
         var main = ps.main;
         if (!main.startRotation3D)
         {
@@ -52,7 +52,7 @@ public class PS_ApplyTransformMatrix : MonoBehaviour
         minmax = rol.x;
         minmax.constant = minmax.constantMax = minmax.constantMin = 0;
         rol.x = rol.z = minmax;
-
+        */
 
         transform.localEulerAngles = new Vector3(0.0f, transform.localEulerAngles.y, transform.localEulerAngles.z);
         transform.localScale = new Vector3(1.0f, transform.localEulerAngles.z > 1.0f ? transform.localEulerAngles.z : 10.0f, 1.0f);
