@@ -290,9 +290,9 @@ Shader "ZDShader/URP/Character"
                 
                 o.vertex = positionCS;
                 o.vertex.z -= .00001;
-                #ifdef SHADER_API_D3D11
+                //#ifdef SHADER_API_D3D11
                     o.vertex /= _OutlineEnable;
-                #endif
+                //#endif
                 
                 o.positionSS = ComputeScreenPos(positionCS, _ProjectionParams.x);
                 
